@@ -6,7 +6,6 @@ interface TRPCRequestBody {
   id: number;
   method: string;
   path: string;
-  params?: any;
 }
 
 export const weightGetCurrentGoalHandler = http.post(
