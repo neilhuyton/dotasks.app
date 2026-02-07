@@ -23,9 +23,7 @@ export const queryClient = new QueryClient({
 export const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url:
-        import.meta.env.VITE_TRPC_URL ||
-        "http://localhost:8888/.netlify/functions/trpc",
+      url: "/trpc",
       fetch: async (url, options) => {
         const { token, refreshToken, userId, login, logout } =
           useAuthStore.getState();
