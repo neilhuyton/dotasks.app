@@ -14,7 +14,7 @@ import {
 } from '@tanstack/react-router';
 import { router } from '../src/router/router';
 import { verifyEmailHandler } from '../__mocks__/handlers/verifyEmail';
-import { trpcClient, queryClient } from '../src/client'; // ← change to correct path if needed (might be '../src/trpc')
+import { trpcClient, queryClient } from '../src/client';
 
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const mod = await importOriginal<typeof import('@tanstack/react-router')>();

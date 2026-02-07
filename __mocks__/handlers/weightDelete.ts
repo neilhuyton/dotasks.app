@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import { weights } from "./weightsData"; // Import shared weights
 
 export const weightDeleteHandler = http.post(
-  "http://localhost:8888/.netlify/functions/trpc/weight.delete",
+  "/trpc/weight.delete",
   async ({ request }) => {
     type TrpcRequestBody = { [key: string]: { weightId: string; id?: number } };
     const body = (await request.json()) as TrpcRequestBody | null;
@@ -18,18 +18,25 @@ export const weightDeleteHandler = http.post(
             error: {
               message: "Unauthorized",
               code: -32001,
-              data: { code: "UNAUTHORIZED", httpStatus: 401, path: "weight.delete" },
+              data: {
+                code: "UNAUTHORIZED",
+                httpStatus: 401,
+                path: "weight.delete",
+              },
             },
           },
         ],
-        { status: 200 }
+        { status: 200 },
       );
     }
 
     const token = authHeader.split(" ")[1];
     let userId: string | null = null;
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key") as { userId: string };
+      const decoded = jwt.verify(
+        token,
+        process.env.JWT_SECRET || "your-secret-key",
+      ) as { userId: string };
       userId = decoded.userId;
     } catch {
       return HttpResponse.json(
@@ -39,11 +46,15 @@ export const weightDeleteHandler = http.post(
             error: {
               message: "Invalid token",
               code: -32001,
-              data: { code: "UNAUTHORIZED", httpStatus: 401, path: "weight.delete" },
+              data: {
+                code: "UNAUTHORIZED",
+                httpStatus: 401,
+                path: "weight.delete",
+              },
             },
           },
         ],
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -55,11 +66,15 @@ export const weightDeleteHandler = http.post(
             error: {
               message: "Failed to delete weight",
               code: -32002,
-              data: { code: "INTERNAL_SERVER_ERROR", httpStatus: 500, path: "weight.delete" },
+              data: {
+                code: "INTERNAL_SERVER_ERROR",
+                httpStatus: 500,
+                path: "weight.delete",
+              },
             },
           },
         ],
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -72,18 +87,22 @@ export const weightDeleteHandler = http.post(
             error: {
               message: "Invalid input",
               code: -32001,
-              data: { code: "BAD_REQUEST", httpStatus: 400, path: "weight.delete" },
+              data: {
+                code: "BAD_REQUEST",
+                httpStatus: 400,
+                path: "weight.delete",
+              },
             },
           },
         ],
-        { status: 200 }
+        { status: 200 },
       );
     }
 
     if (weights.some((w) => w.id === input.weightId)) {
       weights.splice(
         weights.findIndex((w) => w.id === input.weightId),
-        1
+        1,
       );
       return HttpResponse.json([
         {
@@ -110,7 +129,7 @@ export const weightDeleteHandler = http.post(
           },
         },
       ],
-      { status: 200 }
+      { status: 200 },
     );
-  }
+  },
 );

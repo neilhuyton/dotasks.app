@@ -2,7 +2,7 @@
 // import { http, HttpResponse } from 'msw';
 
 export const handlers = [
-  // http.get('http://localhost:8888/.netlify/functions/trpc/getUsers', () => {
+  // http.get('/trpc/getUsers', () => {
   //   const response = [
   //     {
   //       result: {
@@ -21,7 +21,7 @@ export const handlers = [
   //   ];
   //   return HttpResponse.json(response, { status: 200 });
   // }),
-  // http.post('http://localhost:8888/.netlify/functions/trpc/*', async ({ request, params }) => {
+  // http.post('/trpc/*', async ({ request, params }) => {
   //   const body = await request.json();
   //   const procedure = params[0];
   //   // Assert body as an array of objects with expected shape
@@ -39,10 +39,8 @@ export const handlers = [
   //       { status: 400 }
   //     );
   //   }
-
   //   const input = body[0] as { id?: number; email: string; password: string };
   //   const id = input.id ?? 0;
-
   //   if (procedure === 'register') {
   //     if (!input.email.includes('@')) {
   //       return HttpResponse.json(
@@ -86,7 +84,6 @@ export const handlers = [
   //       },
   //     ]);
   //   }
-
   //   if (procedure === 'login') {
   //     if (input.email === 'testuser@example.com' && input.password === 'password123') {
   //       return HttpResponse.json([
@@ -115,7 +112,6 @@ export const handlers = [
   //       { status: 401 }
   //     );
   //   }
-
   //   return HttpResponse.json(
   //     [
   //       {

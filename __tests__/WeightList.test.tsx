@@ -38,7 +38,7 @@ describe('WeightList Component', () => {
   const trpcClient = trpc.createClient({
     links: [
       httpBatchLink({
-        url: 'http://localhost:8888/.netlify/functions/trpc',
+        url: '/trpc',
         fetch: async (url, options) => {
           const headers = {
             'content-type': 'application/json',

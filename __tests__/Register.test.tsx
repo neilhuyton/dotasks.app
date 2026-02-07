@@ -1,5 +1,13 @@
 // __tests__/Register.test.tsx
-import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  afterEach,
+  vi,
+} from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink } from "@trpc/client";
@@ -27,7 +35,7 @@ describe("Register Component Email Verification", () => {
   const trpcClient = trpc.createClient({
     links: [
       httpBatchLink({
-        url: "http://localhost:8888/.netlify/functions/trpc",
+        url: "/trpc",
         fetch: async (input, options) => fetch(input, { ...options }),
       }),
     ],
@@ -46,7 +54,7 @@ describe("Register Component Email Verification", () => {
           <QueryClientProvider client={queryClient}>
             <RouterProvider router={testRouter} />
           </QueryClientProvider>
-        </trpc.Provider>
+        </trpc.Provider>,
       );
     });
   };
@@ -103,13 +111,13 @@ describe("Register Component Email Verification", () => {
     await waitFor(
       () => {
         expect(screen.getByTestId("register-message")).toHaveTextContent(
-          "Registration successful! Please check your email to verify your account."
+          "Registration successful! Please check your email to verify your account.",
         );
         expect(screen.getByTestId("register-message")).toHaveClass(
-          "text-green-500"
+          "text-green-500",
         );
       },
-      { timeout: 2000 }
+      { timeout: 2000 },
     );
   });
 });

@@ -9,7 +9,7 @@ interface TrpcRequestBody {
 }
 
 export const verifyEmailHandler = http.post(
-  'http://localhost:8888/.netlify/functions/trpc/verifyEmail',
+  '/trpc/verifyEmail',
   async ({ request }) => {
     let body: unknown;
     try {

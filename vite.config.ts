@@ -20,7 +20,7 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./__tests__/setupTests.ts"],
     env: {
-      VITE_TRPC_URL: "http://localhost:8888/.netlify/functions/trpc",
+      VITE_TRPC_URL: "/trpc",
     },
     globals: true,
     testTimeout: 15000,

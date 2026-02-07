@@ -77,7 +77,7 @@ jobs:
       - name: Run Vitest
         run: pnpm test
         env:
-          VITE_TRPC_URL: "http://localhost:8888/.netlify/functions/trpc"
+          VITE_TRPC_URL: "/trpc"
 
   e2e-tests:
     name: Run E2E Tests
@@ -116,7 +116,7 @@ jobs:
       - name: Run Playwright tests
         run: pnpm test:e2e
         env:
-          VITE_TRPC_URL: "http://localhost:8888/.netlify/functions/trpc"
+          VITE_TRPC_URL: "/trpc"
 
       - name: Upload Playwright report
         if: failure() # Upload report on failure for debugging

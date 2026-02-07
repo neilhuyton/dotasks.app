@@ -1,17 +1,17 @@
 // __mocks__/handlers/register.ts
-import { http, HttpResponse } from 'msw';
-import { mockUsers } from '../mockUsers';
-import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
-import type { inferProcedureInput } from '@trpc/server';
-import type { AppRouter } from '../../server/trpc';
+import { http, HttpResponse } from "msw";
+import { mockUsers } from "../mockUsers";
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
+import type { inferProcedureInput } from "@trpc/server";
+import type { AppRouter } from "../../server/trpc";
 
 interface TrpcRequestBody {
-  '0': inferProcedureInput<AppRouter['register']>; // { email: string, password: string }
+  "0": inferProcedureInput<AppRouter["register"]>; // { email: string, password: string }
 }
 
 export const registerHandler = http.post(
-  'http://localhost:8888/.netlify/functions/trpc/register',
+  "/trpc/register",
   async ({ request }) => {
     let body: unknown;
     try {
@@ -22,33 +22,33 @@ export const registerHandler = http.post(
           {
             id: 0,
             error: {
-              message: 'Invalid request body',
+              message: "Invalid request body",
               code: -32600,
-              data: { code: 'BAD_REQUEST', httpStatus: 400, path: 'register' },
+              data: { code: "BAD_REQUEST", httpStatus: 400, path: "register" },
             },
           },
         ],
-        { status: 200 }
+        { status: 200 },
       );
     }
 
-    if (!body || typeof body !== 'object' || !('0' in body)) {
+    if (!body || typeof body !== "object" || !("0" in body)) {
       return HttpResponse.json(
         [
           {
             id: 0,
             error: {
-              message: 'Invalid request body',
+              message: "Invalid request body",
               code: -32600,
-              data: { code: 'BAD_REQUEST', httpStatus: 400, path: 'register' },
+              data: { code: "BAD_REQUEST", httpStatus: 400, path: "register" },
             },
           },
         ],
-        { status: 200 }
+        { status: 200 },
       );
     }
 
-    const input = (body as TrpcRequestBody)['0'];
+    const input = (body as TrpcRequestBody)["0"];
     const { email, password } = input || {};
 
     if (!email || !password) {
@@ -57,29 +57,29 @@ export const registerHandler = http.post(
           {
             id: 0,
             error: {
-              message: 'Email and password are required',
+              message: "Email and password are required",
               code: -32603,
-              data: { code: 'BAD_REQUEST', httpStatus: 400, path: 'register' },
+              data: { code: "BAD_REQUEST", httpStatus: 400, path: "register" },
             },
           },
         ],
-        { status: 200 }
+        { status: 200 },
       );
     }
 
-    if (!email.includes('@')) {
+    if (!email.includes("@")) {
       return HttpResponse.json(
         [
           {
             id: 0,
             error: {
-              message: 'Invalid email address',
+              message: "Invalid email address",
               code: -32001,
-              data: { code: 'BAD_REQUEST', httpStatus: 400, path: 'register' },
+              data: { code: "BAD_REQUEST", httpStatus: 400, path: "register" },
             },
           },
         ],
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -89,13 +89,13 @@ export const registerHandler = http.post(
           {
             id: 0,
             error: {
-              message: 'Password must be at least 8 characters',
+              message: "Password must be at least 8 characters",
               code: -32001,
-              data: { code: 'BAD_REQUEST', httpStatus: 400, path: 'register' },
+              data: { code: "BAD_REQUEST", httpStatus: 400, path: "register" },
             },
           },
         ],
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -105,13 +105,13 @@ export const registerHandler = http.post(
           {
             id: 0,
             error: {
-              message: 'Email already exists',
+              message: "Email already exists",
               code: -32603,
-              data: { code: 'BAD_REQUEST', httpStatus: 400, path: 'register' },
+              data: { code: "BAD_REQUEST", httpStatus: 400, path: "register" },
             },
           },
         ],
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -137,12 +137,13 @@ export const registerHandler = http.post(
             data: {
               id: newUser.id,
               email: newUser.email,
-              message: 'Registration successful! Please check your email to verify your account.',
+              message:
+                "Registration successful! Please check your email to verify your account.",
             },
           },
         },
       ],
-      { status: 200 }
+      { status: 200 },
     );
-  }
+  },
 );

@@ -12,21 +12,21 @@ interface TRPCRequestBody {
 }
 
 export const refreshTokenHandler = http.post(
-  "http://localhost:8888/.netlify/functions/trpc/refreshToken.refresh",
+  "/trpc/refreshToken.refresh",
   async ({ request }) => {
     try {
       const body = (await request.json()) as TRPCRequestBody;
       const { refreshToken } = body["0"].json;
 
       const user = mockUsers.find(
-        (u: MockUser) => u.refreshToken === refreshToken
+        (u: MockUser) => u.refreshToken === refreshToken,
       );
 
       if (user) {
         const newToken = jwt.sign(
           { userId: user.id, email: user.email },
           process.env.JWT_SECRET || "your-secret-key",
-          { expiresIn: "1h" }
+          { expiresIn: "1h" },
         );
         return HttpResponse.json(
           [
@@ -41,7 +41,7 @@ export const refreshTokenHandler = http.post(
               },
             },
           ],
-          { status: 200 }
+          { status: 200 },
         );
       }
 
@@ -60,7 +60,7 @@ export const refreshTokenHandler = http.post(
             },
           },
         ],
-        { status: 200 }
+        { status: 200 },
       );
     } catch {
       return HttpResponse.json(
@@ -78,8 +78,8 @@ export const refreshTokenHandler = http.post(
             },
           },
         ],
-        { status: 200 }
+        { status: 200 },
       );
     }
-  }
+  },
 );

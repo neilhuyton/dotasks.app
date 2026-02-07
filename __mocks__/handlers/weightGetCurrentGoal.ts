@@ -9,7 +9,7 @@ interface TRPCRequestBody {
 }
 
 export const weightGetCurrentGoalHandler = http.post(
-  "http://localhost:8888/.netlify/functions/trpc/weight.getCurrentGoal",
+  "/trpc/weight.getCurrentGoal",
   async ({ request }) => {
     // Clone the request to avoid consuming the body
     const requestClone = request.clone();
@@ -25,16 +25,22 @@ export const weightGetCurrentGoalHandler = http.post(
             error: {
               message: "Invalid request body",
               code: -32000,
-              data: { code: "BAD_REQUEST", httpStatus: 400, path: "weight.getCurrentGoal" },
+              data: {
+                code: "BAD_REQUEST",
+                httpStatus: 400,
+                path: "weight.getCurrentGoal",
+              },
             },
           },
         ],
-        { status: 200 }
+        { status: 200 },
       );
     }
 
     const requests = Array.isArray(requestBody) ? requestBody : [requestBody];
-    const goalRequest = requests.find((req: TRPCRequestBody) => req.path === "weight.getCurrentGoal");
+    const goalRequest = requests.find(
+      (req: TRPCRequestBody) => req.path === "weight.getCurrentGoal",
+    );
 
     if (!goalRequest) {
       return; // Pass to other handlers
@@ -57,7 +63,7 @@ export const weightGetCurrentGoalHandler = http.post(
             },
           },
         ],
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -66,7 +72,7 @@ export const weightGetCurrentGoalHandler = http.post(
     try {
       const decoded = jwt.verify(
         token,
-        process.env.JWT_SECRET || "your-secret-key"
+        process.env.JWT_SECRET || "your-secret-key",
       ) as { userId: string };
       userId = decoded.userId;
     } catch {
@@ -85,7 +91,7 @@ export const weightGetCurrentGoalHandler = http.post(
             },
           },
         ],
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -105,14 +111,14 @@ export const weightGetCurrentGoalHandler = http.post(
             },
           },
         ],
-        { status: 200 }
+        { status: 200 },
       );
     }
 
     if (userId === "empty-user-id") {
       return HttpResponse.json(
         [{ id: goalRequest.id, result: { type: "data", data: null } }],
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -123,7 +129,7 @@ export const weightGetCurrentGoalHandler = http.post(
     };
     return HttpResponse.json(
       [{ id: goalRequest.id, result: { type: "data", data: mockGoal } }],
-      { status: 200 }
+      { status: 200 },
     );
-  }
+  },
 );

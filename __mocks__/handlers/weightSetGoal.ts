@@ -8,7 +8,7 @@ interface TRPCRequestBody {
 }
 
 export const weightSetGoalHandler = http.post(
-  "http://localhost:8888/.netlify/functions/trpc/weight.setGoal",
+  "/trpc/weight.setGoal",
   async ({ request }) => {
     let body: DefaultBodyType;
     try {
@@ -29,7 +29,7 @@ export const weightSetGoalHandler = http.post(
             },
           },
         ],
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -50,7 +50,7 @@ export const weightSetGoalHandler = http.post(
             },
           },
         ],
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -73,7 +73,7 @@ export const weightSetGoalHandler = http.post(
             },
           },
         ],
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -105,7 +105,7 @@ export const weightSetGoalHandler = http.post(
             },
           },
         ],
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -118,5 +118,5 @@ export const weightSetGoalHandler = http.post(
         },
       },
     ]);
-  }
+  },
 );

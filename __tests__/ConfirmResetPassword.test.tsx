@@ -36,7 +36,7 @@ describe("ConfirmResetPasswordForm", () => {
   const trpcClient = trpc.createClient({
     links: [
       httpBatchLink({
-        url: "http://localhost:8888/.netlify/functions/trpc",
+        url: "/trpc",
         fetch: (input, init) => fetch(input, init),
       }),
     ],
