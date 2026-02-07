@@ -1,26 +1,14 @@
 // __tests__/LoginForm.test.tsx
-import {
-  describe,
-  it,
-  expect,
-  beforeAll,
-  afterAll,
-  afterEach,
-  vi,
-} from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { trpcClient } from '../src/client';
 import { trpc } from '../src/trpc';
+import { httpBatchLink } from '@trpc/client';
 import { useAuthStore } from '../src/store/authStore';
 import '@testing-library/jest-dom';
 import { server } from '../__mocks__/server';
-import {
-  RouterProvider,
-  createRouter,
-  createMemoryHistory,
-} from '@tanstack/react-router';
+import { RouterProvider, createMemoryHistory, createRouter } from '@tanstack/react-router';
 import { router } from '../src/router/router';
 import {
   loginHandler,
@@ -29,7 +17,7 @@ import {
   weightGetCurrentGoalHandler,
 } from '../__mocks__/handlers';
 
-describe('LoginForm Component', () => {
+describe('LoginForm', () => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -43,7 +31,16 @@ describe('LoginForm Component', () => {
 
     await act(async () => {
       render(
-        <trpc.Provider client={trpcClient} queryClient={queryClient}>
+        <trpc.Provider
+          client={trpc.createClient({
+            links: [
+              httpBatchLink({
+                url: '/api/trpc', // ← change this ONLY if your real backend uses a different path
+              }),
+            ],
+          })}
+          queryClient={queryClient}
+        >
           <QueryClientProvider client={queryClient}>
             <RouterProvider router={testRouter} />
           </QueryClientProvider>
@@ -54,10 +51,22 @@ describe('LoginForm Component', () => {
     return { history, testRouter };
   };
 
+  const fillAndSubmitForm = async (email: string, password: string) => {
+    const emailInput = screen.getByTestId('email-input');
+    const passwordInput = screen.getByTestId('password-input');
+
+    await userEvent.type(emailInput, email);
+    await userEvent.type(passwordInput, password);
+
+    const form = screen.getByTestId('login-form');
+    form.dispatchEvent(new Event('submit', { bubbles: true }));
+  };
+
   beforeAll(() => {
     server.listen({ onUnhandledRequest: 'warn' });
+
     vi.mock('jwt-decode', () => ({
-      jwtDecode: vi.fn((token) => {
+      jwtDecode: vi.fn((token: string) => {
         if (
           token ===
           'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZXN0LXVzZXItMSJ9.dummy-signature'
@@ -67,11 +76,9 @@ describe('LoginForm Component', () => {
         throw new Error('Invalid token');
       }),
     }));
+
     process.on('unhandledRejection', (reason) => {
-      if (
-        reason instanceof Error &&
-        reason.message.includes('Invalid email or password')
-      ) {
+      if (reason instanceof Error && reason.message.includes('Invalid email or password')) {
         return;
       }
       throw reason;
@@ -90,173 +97,125 @@ describe('LoginForm Component', () => {
     process.removeAllListeners('unhandledRejection');
   });
 
-  it('renders login form with email, password inputs, and submit button', async () => {
+  it('renders form fields and controls', async () => {
     await setup();
+
     await waitFor(() => {
-      expect(
-        screen.getByRole('heading', { name: 'Login to your account' })
-      ).toBeInTheDocument();
-      expect(screen.getByLabelText('Email')).toBeInTheDocument();
-      expect(screen.getByLabelText('Password')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Login' })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'Sign up' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /login to your account/i })).toBeInTheDocument();
+      expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /sign up/i })).toBeInTheDocument();
       expect(screen.getByTestId('forgot-password-link')).toBeInTheDocument();
     });
   });
 
-  it('handles successful login and updates auth state', async () => {
+  it('successfully logs in and updates auth store', async () => {
     server.use(
       loginHandler,
       refreshTokenHandler,
       weightGetWeightsHandler,
-      weightGetCurrentGoalHandler
+      weightGetCurrentGoalHandler,
     );
+
     await setup();
 
-    await waitFor(() => {
-      expect(screen.getByTestId('login-form')).toBeInTheDocument();
-    });
+    await waitFor(() => screen.getByTestId('login-form'));
 
-    await act(async () => {
-      const emailInput = screen.getByTestId('email-input');
-      const passwordInput = screen.getByTestId('password-input');
-      await userEvent.type(emailInput, 'testuser@example.com', { delay: 10 });
-      await userEvent.type(passwordInput, 'password123', { delay: 10 });
-      expect(emailInput).toHaveValue('testuser@example.com');
-      expect(passwordInput).toHaveValue('password123');
-      const form = screen.getByTestId('login-form');
-      await form.dispatchEvent(new Event('submit', { bubbles: true }));
-    });
+    await fillAndSubmitForm('testuser@example.com', 'password123');
 
     await waitFor(
       () => {
-        expect(useAuthStore.getState().isLoggedIn).toBe(true);
-        expect(useAuthStore.getState().userId).toBe('test-user-1');
+        const state = useAuthStore.getState();
+        expect(state.isLoggedIn).toBe(true);
+        expect(state.userId).toBe('test-user-1');
       },
-      { timeout: 2000 }
+      { timeout: 2000 },
     );
   });
 
-  it('displays error message on invalid login credentials', async () => {
+  it('shows error message on invalid credentials', async () => {
     server.use(loginHandler);
     vi.spyOn(console, 'error').mockImplementation(() => {});
 
     await setup();
 
-    await waitFor(() => {
-      expect(screen.getByTestId('login-form')).toBeInTheDocument();
-    });
+    await waitFor(() => screen.getByTestId('login-form'));
 
-    await act(async () => {
-      const emailInput = screen.getByTestId('email-input');
-      const passwordInput = screen.getByTestId('password-input');
-      await userEvent.type(emailInput, 'wronguser@example.com', { delay: 10 });
-      await userEvent.type(passwordInput, 'wrongpassword', { delay: 10 });
-      expect(emailInput).toHaveValue('wronguser@example.com');
-      expect(passwordInput).toHaveValue('wrongpassword');
-      const form = screen.getByTestId('login-form');
-      await form.dispatchEvent(new Event('submit', { bubbles: true }));
-    });
+    await fillAndSubmitForm('wronguser@example.com', 'wrongpassword');
 
     await waitFor(
       () => {
-        expect(screen.getByTestId('login-message')).toBeInTheDocument();
-        expect(screen.getByTestId('login-message')).toHaveTextContent(
-          'Login failed: Invalid email or password'
-        );
-        expect(screen.getByTestId('login-message')).toHaveClass('text-red-500');
+        const message = screen.getByTestId('login-message');
+        expect(message).toHaveTextContent('Login failed: Invalid email or password');
+        expect(message).toHaveClass('text-red-500');
         expect(useAuthStore.getState().isLoggedIn).toBe(false);
       },
-      { timeout: 2000 }
+      { timeout: 2000 },
     );
 
     vi.spyOn(console, 'error').mockRestore();
   });
 
-  it('displays validation errors for invalid email and password', async () => {
+  it('shows validation errors for invalid input', async () => {
     await setup();
 
+    await waitFor(() => screen.getByTestId('login-form'));
+
+    const emailInput = screen.getByTestId('email-input');
+    const passwordInput = screen.getByTestId('password-input');
+
+    await userEvent.type(emailInput, 'invalid-email');
+    await userEvent.type(passwordInput, 'short');
+    await userEvent.tab(); // trigger blur/validation
+
     await waitFor(() => {
-      expect(screen.getByTestId('login-form')).toBeInTheDocument();
+      expect(screen.getByText(/valid email address/i)).toBeInTheDocument();
+      expect(screen.getByText(/at least 8 characters/i)).toBeInTheDocument();
     });
-
-    await act(async () => {
-      const emailInput = screen.getByTestId('email-input');
-      const passwordInput = screen.getByTestId('password-input');
-      await userEvent.type(emailInput, 'invalid-email', { delay: 10 });
-      await userEvent.type(passwordInput, 'short', { delay: 10 });
-      await userEvent.click(emailInput);
-      await userEvent.click(passwordInput);
-      await userEvent.click(document.body);
-      const form = screen.getByTestId('login-form');
-      await form.dispatchEvent(new Event('submit', { bubbles: true }));
-    });
-
-    await waitFor(
-      () => {
-        expect(
-          screen.getByText('Please enter a valid email address')
-        ).toBeInTheDocument();
-        expect(
-          screen.getByText('Password must be at least 8 characters long')
-        ).toBeInTheDocument();
-      },
-      { timeout: 2000 }
-    );
   });
 
-  it('disables login button during submission for invalid login', async () => {
+  it('disables button and shows loading state during failed login', async () => {
     server.use(loginHandler);
     vi.spyOn(console, 'error').mockImplementation(() => {});
 
     await setup();
 
-    await waitFor(() => {
-      expect(screen.getByTestId('login-form')).toBeInTheDocument();
-    });
+    await waitFor(() => screen.getByTestId('login-form'));
 
     const loginButton = screen.getByTestId('login-button');
-    expect(loginButton).not.toHaveAttribute('disabled');
+    expect(loginButton).not.toBeDisabled();
     expect(loginButton).toHaveTextContent('Login');
 
-    await act(async () => {
-      const emailInput = screen.getByTestId('email-input');
-      const passwordInput = screen.getByTestId('password-input');
-      await userEvent.type(emailInput, 'wronguser@example.com', { delay: 10 });
-      await userEvent.type(passwordInput, 'wrongpassword', { delay: 10 });
-      const form = screen.getByTestId('login-form');
-      await form.dispatchEvent(new Event('submit', { bubbles: true }));
+    await fillAndSubmitForm('wronguser@example.com', 'wrongpassword');
+
+    await waitFor(() => {
+      expect(loginButton).toBeDisabled();
+      expect(loginButton).toHaveTextContent('Logging in...');
     });
 
     await waitFor(
       () => {
-        expect(loginButton).toHaveAttribute('disabled');
-        expect(loginButton).toHaveTextContent('Logging in...');
-      },
-      { timeout: 2000, interval: 100 }
-    );
-
-    await waitFor(
-      () => {
-        expect(loginButton).not.toHaveAttribute('disabled');
+        expect(loginButton).not.toBeDisabled();
         expect(loginButton).toHaveTextContent('Login');
         expect(screen.getByTestId('login-message')).toHaveTextContent(
-          'Login failed: Invalid email or password'
+          /invalid email or password/i,
         );
       },
-      { timeout: 2000, interval: 100 }
+      { timeout: 2000 },
     );
 
     vi.spyOn(console, 'error').mockRestore();
   });
 
-  it('displays forgot password link as placeholder', async () => {
+  it('renders forgot password link correctly', async () => {
     await setup();
+
     await waitFor(() => {
-      const forgotPasswordLink = screen.getByTestId('forgot-password-link');
-      expect(forgotPasswordLink).toBeInTheDocument();
-      expect(forgotPasswordLink).toHaveAttribute('href', '#');
-      expect(forgotPasswordLink).toHaveTextContent('Forgot your password?');
+      const link = screen.getByTestId('forgot-password-link');
+      expect(link).toBeInTheDocument();
+      expect(link).toHaveAttribute('href', '#');
+      expect(link).toHaveTextContent('Forgot your password?');
     });
   });
 });

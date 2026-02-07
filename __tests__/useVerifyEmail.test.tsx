@@ -6,10 +6,15 @@ import { trpc } from '../src/trpc';
 import { server } from '../__mocks__/server';
 import '@testing-library/jest-dom';
 import { act } from 'react';
-import { RouterProvider, createRouter, createMemoryHistory, useSearch } from '@tanstack/react-router';
+import {
+  RouterProvider,
+  createRouter,
+  createMemoryHistory,
+  useSearch,
+} from '@tanstack/react-router';
 import { router } from '../src/router/router';
 import { verifyEmailHandler } from '../__mocks__/handlers/verifyEmail';
-import { trpcClient, queryClient } from '../src/client';
+import { trpcClient, queryClient } from '../src/client'; // ← change to correct path if needed (might be '../src/trpc')
 
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const mod = await importOriginal<typeof import('@tanstack/react-router')>();

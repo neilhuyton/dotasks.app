@@ -1,5 +1,13 @@
 // __tests__/ConfirmResetPassword.test.tsx
-import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterEach,
+  afterAll,
+  vi,
+} from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -7,18 +15,17 @@ import { httpBatchLink } from "@trpc/client";
 import { trpc } from "../src/trpc";
 import "@testing-library/jest-dom";
 import { server } from "../__mocks__/server";
-import { act } from "react-dom/test-utils";
 import { resetPasswordConfirmHandler } from "../__mocks__/handlers/resetPasswordConfirm";
 import ConfirmResetPasswordForm from "../src/components/ConfirmResetPasswordForm";
 
-// Mock the router module to avoid router.navigate errors
+// Mock router to prevent navigation errors
 vi.mock("../src/router/router", () => ({
   router: {
     navigate: vi.fn(),
   },
 }));
 
-describe("ConfirmResetPasswordForm Component", () => {
+describe("ConfirmResetPasswordForm", () => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -30,31 +37,34 @@ describe("ConfirmResetPasswordForm Component", () => {
     links: [
       httpBatchLink({
         url: "http://localhost:8888/.netlify/functions/trpc",
-        fetch: async (input, options) => fetch(input, { ...options }),
+        fetch: (input, init) => fetch(input, init),
       }),
     ],
   });
 
-  const setup = (props = { token: "123e4567-e89b-12d3-a456-426614174000" }) => {
+  const renderForm = (token = "123e4567-e89b-12d3-a456-426614174000") => {
     render(
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
-          <ConfirmResetPasswordForm {...props} />
+          <ConfirmResetPasswordForm token={token} />
         </QueryClientProvider>
-      </trpc.Provider>
+      </trpc.Provider>,
     );
   };
 
   beforeAll(() => {
     server.listen({ onUnhandledRequest: "warn" });
     server.use(resetPasswordConfirmHandler);
+
+    // Suppress expected rejection messages
     process.on("unhandledRejection", (reason) => {
-      if (
-        reason instanceof Error &&
-        (reason.message.includes("Token and new password are required") ||
-          reason.message.includes("Invalid or expired token"))
-      ) {
-        return;
+      if (reason instanceof Error) {
+        if (
+          reason.message.includes("Token and new password are required") ||
+          reason.message.includes("Invalid or expired token")
+        ) {
+          return;
+        }
       }
       throw reason;
     });
@@ -72,33 +82,34 @@ describe("ConfirmResetPasswordForm Component", () => {
   });
 
   it("submits valid token and new password and displays success message", async () => {
-    setup({ token: "123e4567-e89b-12d3-a456-426614174000" });
+    renderForm();
 
+    // Wait for form to appear
     await waitFor(() => {
       expect(
-        screen.getByTestId("confirm-reset-password-form")
+        screen.getByTestId("confirm-reset-password-form"),
       ).toBeInTheDocument();
     });
 
-    await act(async () => {
-      const passwordInput = screen.getByTestId("password-input");
-      await userEvent.type(passwordInput, "newSecurePassword123", { delay: 10 });
-      const form = screen.getByTestId("confirm-reset-password-form");
-      await form.dispatchEvent(
-        new Event("submit", { bubbles: true, cancelable: true })
-      );
-    });
+    // Type password
+    const passwordInput = screen.getByTestId("password-input");
+    await userEvent.type(passwordInput, "newSecurePassword123");
 
+    // Submit form using original method
+    const form = screen.getByTestId("confirm-reset-password-form");
+    form.dispatchEvent(
+      new Event("submit", { bubbles: true, cancelable: true }),
+    );
+
+    // Wait for success message
     await waitFor(
       () => {
-        expect(
-          screen.getByTestId("confirm-reset-password-message")
-        ).toHaveTextContent("Password reset successfully");
-        expect(
-          screen.getByTestId("confirm-reset-password-message")
-        ).toHaveClass("text-green-500");
+        const message = screen.getByTestId("confirm-reset-password-message");
+        expect(message).toBeInTheDocument();
+        expect(message).toHaveTextContent("Password reset successfully");
+        expect(message).toHaveClass("text-green-500");
       },
-      { timeout: 2000 }
+      { timeout: 2000 },
     );
   });
 });

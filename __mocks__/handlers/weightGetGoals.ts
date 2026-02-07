@@ -9,7 +9,7 @@ interface TRPCRequestBody {
 }
 
 export const weightGetGoalsHandler = http.post(
-  'http://localhost:8888/.netlify/functions/trpc/:path',
+  'http://localhost:8888/.netlify/functions/trpc/weight.getGoals',
   async ({ request, params }) => {
     let requestBody: unknown;
     try {

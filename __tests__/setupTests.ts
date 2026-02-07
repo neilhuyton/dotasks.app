@@ -1,5 +1,4 @@
 // __tests__/setupTests.ts
-// import { configure } from '@testing-library/dom';
 import '@testing-library/jest-dom';
 import { vi, beforeAll, afterEach, afterAll } from 'vitest';
 import { server } from '../__mocks__/server';
@@ -22,18 +21,6 @@ global.ResizeObserver = vi.fn().mockImplementation(() => ({
   unobserve: vi.fn(),
   disconnect: vi.fn(),
 }));
-
-// Mock console methods for cleaner test output (optional)
-// vi.spyOn(console, 'log').mockImplementation(() => {});
-// vi.spyOn(console, 'error').mockImplementation(() => {});
-// vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-// Suppress HTML output in @testing-library error messages
-// configure({
-//   getElementError: (message: string | null) => {
-//     return new Error(message ?? undefined);
-//   },
-// });
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -111,9 +98,3 @@ export const setupMSW = () => {
   afterEach(() => server.resetHandlers());
   afterAll(() => server.close());
 };
-
-// Enhance console.log for clarity in tests
-// const originalConsoleLog = console.log;
-// console.log = (...args) => {
-//   originalConsoleLog('[TEST LOG]', ...args);
-// };

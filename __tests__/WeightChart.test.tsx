@@ -42,6 +42,7 @@ describe('WeightChart Component', () => {
     links: [
       httpBatchLink({
         url: 'http://localhost:8888/.netlify/functions/trpc',
+        maxItems: 1,
         fetch: async (url, options) => {
           const headers = {
             'content-type': 'application/json',
@@ -135,7 +136,7 @@ describe('WeightChart Component', () => {
           'Error: Failed to fetch weights'
         );
       },
-      { timeout: 5000 }
+      { timeout: 500 }
     );
   });
 
@@ -145,7 +146,7 @@ describe('WeightChart Component', () => {
       () => {
         expect(screen.getByTestId('no-data')).toBeInTheDocument();
       },
-      { timeout: 5000 }
+      { timeout: 500 }
     );
   });
 
@@ -155,7 +156,7 @@ describe('WeightChart Component', () => {
       () => {
         expect(screen.getByTestId('chart-mock')).toBeInTheDocument();
       },
-      { timeout: 5000 }
+      { timeout: 500 }
     );
 
     await act(async () => {
@@ -167,7 +168,7 @@ describe('WeightChart Component', () => {
       () => {
         expect(screen.getByTestId('chart-mock')).toBeInTheDocument();
       },
-      { timeout: 5000 }
+      { timeout: 500 }
     );
   });
 
@@ -177,7 +178,7 @@ describe('WeightChart Component', () => {
       () => {
         expect(screen.getByTestId('latest-weight-card')).toBeInTheDocument();
       },
-      { timeout: 5000 }
+      { timeout: 500 }
     );
   });
 
@@ -188,7 +189,7 @@ describe('WeightChart Component', () => {
         expect(screen.getByTestId('no-data')).toBeInTheDocument();
         expect(screen.queryByTestId('latest-weight-card')).not.toBeInTheDocument();
       },
-      { timeout: 5000 }
+      { timeout: 500 }
     );
   });
 
@@ -198,7 +199,7 @@ describe('WeightChart Component', () => {
       () => {
         expect(screen.getByTestId('goal-weight-card')).toBeInTheDocument();
       },
-      { timeout: 5000 }
+      { timeout: 500 }
     );
   });
 
@@ -209,7 +210,7 @@ describe('WeightChart Component', () => {
         expect(screen.getByTestId('no-data')).toBeInTheDocument();
         expect(screen.queryByTestId('goal-weight-card')).not.toBeInTheDocument();
       },
-      { timeout: 5000 }
+      { timeout: 500 }
     );
   });
 });

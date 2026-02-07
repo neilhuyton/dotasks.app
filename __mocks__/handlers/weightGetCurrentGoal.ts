@@ -10,7 +10,7 @@ interface TRPCRequestBody {
 }
 
 export const weightGetCurrentGoalHandler = http.post(
-  "http://localhost:8888/.netlify/functions/trpc",
+  "http://localhost:8888/.netlify/functions/trpc/weight.getCurrentGoal",
   async ({ request }) => {
     // Clone the request to avoid consuming the body
     const requestClone = request.clone();

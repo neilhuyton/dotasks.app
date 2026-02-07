@@ -1,139 +1,104 @@
 // __tests__/Navigation.test.tsx
-import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
-import Navigation from "../src/components/Navigation";
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import {
   RouterProvider,
   createRouter,
   createMemoryHistory,
   createRootRoute,
   createRoute,
-} from "@tanstack/react-router";
-import { act } from "react";
+} from '@tanstack/react-router';
+import { act } from 'react';
+
+import Navigation from '../src/components/Navigation';
 
 // Mock lucide-react icons
-vi.mock("lucide-react", () => ({
+vi.mock('lucide-react', () => ({
   HomeIcon: () => <div data-testid="home-icon" />,
   ScaleIcon: () => <div data-testid="scale-icon" />,
   LineChartIcon: () => <div data-testid="line-chart-icon" />,
   TargetIcon: () => <div data-testid="target-icon" />,
 }));
 
-describe("Navigation Component", () => {
-  const setup = async (initialPath = "/") => {
-    // Define a minimal route tree
+describe('Navigation Component', () => {
+  const createTestRouter = (initialPath = '/') => {
     const rootRoute = createRootRoute({
-      component: () => <Navigation />,
-    });
-
-    const weightRoute = createRoute({
-      getParentRoute: () => rootRoute,
-      path: "/weight",
-    });
-
-    const goalsRoute = createRoute({
-      getParentRoute: () => rootRoute,
-      path: "/goals",
-    });
-
-    const chartRoute = createRoute({
-      getParentRoute: () => rootRoute,
-      path: "/stats",
+      component: Navigation,
     });
 
     const routeTree = rootRoute.addChildren([
-      weightRoute,
-      goalsRoute,
-      chartRoute,
+      createRoute({ getParentRoute: () => rootRoute, path: '/weight' }),
+      createRoute({ getParentRoute: () => rootRoute, path: '/goals' }),
+      createRoute({ getParentRoute: () => rootRoute, path: '/stats' }),
     ]);
 
     const history = createMemoryHistory({ initialEntries: [initialPath] });
-    const testRouter = createRouter({
-      routeTree,
-      history,
-    });
+    const router = createRouter({ routeTree, history });
+
+    return { router, history };
+  };
+
+  const renderNavigation = async (initialPath = '/') => {
+    const { router } = createTestRouter(initialPath);
 
     await act(async () => {
-      render(<RouterProvider router={testRouter} />);
+      render(<RouterProvider router={router} />);
     });
 
-    return { history, testRouter };
+    return router.history;
   };
 
   afterEach(() => {
     vi.restoreAllMocks();
-    document.body.innerHTML = "";
+    document.body.innerHTML = '';
   });
 
-  it("renders all navigation links correctly", async () => {
-    await setup("/");
+  it('renders all navigation links with correct text, href, and icons', async () => {
+    await renderNavigation('/');
 
-    // Check that all links are rendered using aria-label
-    expect(
-      screen.getByRole("link", { name: "Navigate to Weight" })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Navigate to Goals" })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Navigate to Stats" })
-    ).toBeInTheDocument();
+    const weightLink = screen.getByRole('link', { name: /weight/i });
+    const goalsLink  = screen.getByRole('link', { name: /goals/i });
+    const statsLink  = screen.getByRole('link', { name: /stats/i });
 
-    // Check href attributes
-    expect(
-      screen.getByRole("link", { name: "Navigate to Weight" })
-    ).toHaveAttribute("href", "/weight");
-    expect(
-      screen.getByRole("link", { name: "Navigate to Goals" })
-    ).toHaveAttribute("href", "/goals");
-    expect(
-      screen.getByRole("link", { name: "Navigate to Stats" })
-    ).toHaveAttribute("href", "/stats");
+    // Text content
+    expect(weightLink).toHaveTextContent('Weight');
+    expect(goalsLink).toHaveTextContent('Goals');
+    expect(statsLink).toHaveTextContent('Stats');
 
-    // Check text content of links
-    expect(
-      screen.getByRole("link", { name: "Navigate to Weight" })
-    ).toHaveTextContent("Weight");
-    expect(
-      screen.getByRole("link", { name: "Navigate to Goals" })
-    ).toHaveTextContent("Goals");
-    expect(
-      screen.getByRole("link", { name: "Navigate to Stats" })
-    ).toHaveTextContent("Stats");
+    // href
+    expect(weightLink).toHaveAttribute('href', '/weight');
+    expect(goalsLink).toHaveAttribute('href', '/goals');
+    expect(statsLink).toHaveAttribute('href', '/stats');
 
-    // Check icons are rendered
-    expect(screen.getByTestId("scale-icon")).toBeInTheDocument();
-    expect(screen.getByTestId("line-chart-icon")).toBeInTheDocument();
-    expect(screen.getByTestId("target-icon")).toBeInTheDocument();
+    // Icons
+    expect(screen.getByTestId('scale-icon')).toBeInTheDocument();
+    expect(screen.getByTestId('target-icon')).toBeInTheDocument();
+    expect(screen.getByTestId('line-chart-icon')).toBeInTheDocument();
   });
 
-  it("applies active styles to the current route", async () => {
-    await setup("/weight");
+  it('applies active styles to the current route', async () => {
+    await renderNavigation('/weight');
 
-    await act(async () => {
-      const weightLink = screen.getByRole("link", {
-        name: "Navigate to Weight",
-      });
-      expect(weightLink).toHaveClass("font-semibold");
-      expect(weightLink).toHaveClass("bg-muted");
+    const weightLink = screen.getByRole('link', { name: /weight/i });
 
-      // Verify other links do not have active styles
-      const homeLink = screen.getByRole("link", { name: "Navigate to Goals" });
-      expect(homeLink).not.toHaveClass("font-semibold");
-      expect(homeLink).not.toHaveClass("bg-muted");
-    });
+    expect(weightLink).toHaveClass('font-semibold');
+    expect(weightLink).toHaveClass('bg-muted');
+
+    // Other links should not be active
+    const goalsLink = screen.getByRole('link', { name: /goals/i });
+    expect(goalsLink).not.toHaveClass('font-semibold');
+    expect(goalsLink).not.toHaveClass('bg-muted');
   });
 
-  it("triggers navigation when a link is clicked", async () => {
-    const { history } = await setup("/");
+  it('navigates when a link is clicked', async () => {
+    const history = await renderNavigation('/');
 
-    const weightLink = screen.getByRole("link", { name: "Navigate to Weight" });
+    const weightLink = screen.getByRole('link', { name: /weight/i });
+
     await act(async () => {
       fireEvent.click(weightLink);
     });
 
-    // Check that the router navigated to the correct route
-    expect(history.location.pathname).toBe("/weight");
-    expect(weightLink).toHaveAttribute("href", "/weight");
+    expect(history.location.pathname).toBe('/weight');
   });
 });

@@ -64,7 +64,6 @@ describe('GoalList Component', () => {
             method: 'POST',
             body,
           });
-          const responseBody = await response.clone().json();
           return response;
         },
       }),

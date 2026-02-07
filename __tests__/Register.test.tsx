@@ -3,20 +3,18 @@ import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from "vitest
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink } from "@trpc/client";
+import {
+  createMemoryHistory,
+  createRouter,
+  RouterProvider,
+} from "@tanstack/react-router";
 import { trpc } from "../src/trpc";
 import { server } from "../__mocks__/server";
 import "@testing-library/jest-dom";
-import { act } from "react-dom/test-utils";
+import { act } from "react";
 import { useAuthStore } from "../src/store/authStore";
 import { registerHandler } from "../__mocks__/handlers/register";
-import Register from "../src/components/Register"; // Adjust the import path as needed
-
-// Mock the router module to avoid router.navigate errors
-vi.mock("../src/router/router", () => ({
-  router: {
-    navigate: vi.fn(),
-  },
-}));
+import { router } from "../src/router/router";
 
 describe("Register Component Email Verification", () => {
   const queryClient = new QueryClient({
@@ -36,11 +34,17 @@ describe("Register Component Email Verification", () => {
   });
 
   const setup = async () => {
+    const history = createMemoryHistory({ initialEntries: ["/register"] });
+    const testRouter = createRouter({
+      routeTree: router.routeTree,
+      history,
+    });
+
     await act(async () => {
       render(
         <trpc.Provider client={trpcClient} queryClient={queryClient}>
           <QueryClientProvider client={queryClient}>
-            <Register />
+            <RouterProvider router={testRouter} />
           </QueryClientProvider>
         </trpc.Provider>
       );

@@ -10,7 +10,7 @@ interface TRPCRequestBody {
 }
 
 export const weightGetWeightsHandler = http.post(
-  "http://localhost:8888/.netlify/functions/trpc",
+  "http://localhost:8888/.netlify/functions/trpc/weight.getWeights",
   async ({ request }) => {
     let requestBody: unknown;
     try {
@@ -24,16 +24,22 @@ export const weightGetWeightsHandler = http.post(
             error: {
               message: "Invalid request body",
               code: -32000,
-              data: { code: "BAD_REQUEST", httpStatus: 400, path: "weight.getWeights" },
+              data: {
+                code: "BAD_REQUEST",
+                httpStatus: 400,
+                path: "weight.getWeights",
+              },
             },
           },
         ],
-        { status: 200 }
+        { status: 200 },
       );
     }
 
     const requests = Array.isArray(requestBody) ? requestBody : [requestBody];
-    const weightsRequest = requests.find((req: TRPCRequestBody) => req.path === "weight.getWeights");
+    const weightsRequest = requests.find(
+      (req: TRPCRequestBody) => req.path === "weight.getWeights",
+    );
 
     if (!weightsRequest) {
       return; // Pass to other handlers
@@ -56,7 +62,7 @@ export const weightGetWeightsHandler = http.post(
             },
           },
         ],
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -65,7 +71,7 @@ export const weightGetWeightsHandler = http.post(
     try {
       const decoded = jwt.verify(
         token,
-        process.env.JWT_SECRET || "your-secret-key"
+        process.env.JWT_SECRET || "your-secret-key",
       ) as { userId: string };
       userId = decoded.userId;
     } catch {
@@ -84,7 +90,7 @@ export const weightGetWeightsHandler = http.post(
             },
           },
         ],
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -104,24 +110,29 @@ export const weightGetWeightsHandler = http.post(
             },
           },
         ],
-        { status: 200 }
+        { status: 200 },
       );
     }
 
     if (userId === "empty-user-id") {
       return HttpResponse.json(
         [{ id: weightsRequest.id, result: { type: "data", data: [] } }],
-        { status: 200 }
+        { status: 200 },
       );
     }
 
     const mockWeights = [
       { id: "1", weightKg: 70, createdAt: "2023-10-01T00:00:00Z", note: "" },
-      { id: "2", weightKg: 69, createdAt: "2023-10-02T00:00:00Z", note: "Morning" },
+      {
+        id: "2",
+        weightKg: 69.9,
+        createdAt: "2023-10-02T00:00:00Z",
+        note: "Morning",
+      },
     ];
     return HttpResponse.json(
       [{ id: weightsRequest.id, result: { type: "data", data: mockWeights } }],
-      { status: 200 }
+      { status: 200 },
     );
-  }
+  },
 );
