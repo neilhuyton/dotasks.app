@@ -1,200 +1,186 @@
 // server/routers/weight.ts
-import { t } from "../trpc-base";
-import { z } from "zod";
+import { protectedProcedure, router } from '../trpc-base';
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { Prisma } from '@prisma/client';
 
-export const weightRouter = t.router({
-  create: t.procedure
+export const weightRouter = router({
+  create: protectedProcedure
     .input(
       z.object({
         weightKg: z
           .number()
-          .positive({ message: "Weight must be a positive number" }),
-        note: z.string().optional(),
-      })
+          .positive({ message: 'Weight must be a positive number' })
+          .max(500, { message: 'Weight cannot exceed 500 kg' }),
+        note: z.string().max(500).optional(),
+      }),
     )
     .mutation(async ({ input, ctx }) => {
-      if (!ctx.userId) {
-        throw new Error("Unauthorized: User must be logged in");
-      }
+      // ctx.userId is string here (no ! or if-check needed)
 
       const weight = await ctx.prisma.weightMeasurement.create({
         data: {
           userId: ctx.userId,
           weightKg: input.weightKg,
           note: input.note,
-          createdAt: new Date(),
         },
       });
 
-      // Check if the new weight meets the current goal
       const currentGoal = await ctx.prisma.goal.findFirst({
-        where: { userId: ctx.userId, reachedAt: null },
+        where: {
+          userId: ctx.userId,
+          reachedAt: null,
+        },
+        orderBy: { goalSetAt: 'desc' },
       });
 
-      if (currentGoal) {
-        const isGoalReached = input.weightKg <= currentGoal.goalWeightKg;
-        if (isGoalReached) {
-          await ctx.prisma.goal.update({
-            where: { id: currentGoal.id },
-            data: { reachedAt: new Date() },
-          });
-        }
+      if (currentGoal && input.weightKg <= currentGoal.goalWeightKg) {
+        await ctx.prisma.goal.update({
+          where: { id: currentGoal.id },
+          data: { reachedAt: new Date() },
+        });
       }
 
-      return {
-        id: weight.id,
-        weightKg: weight.weightKg,
-        createdAt: weight.createdAt,
-      };
+      return weight;
     }),
-  getWeights: t.procedure.query(async ({ ctx }) => {
-    if (!ctx.userId) {
-      throw new Error("Unauthorized: User must be logged in");
-    }
 
+  getWeights: protectedProcedure.query(async ({ ctx }) => {
     return ctx.prisma.weightMeasurement.findMany({
       where: { userId: ctx.userId },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        weightKg: true,
+        note: true,
+        createdAt: true,
+      },
     });
   }),
-  delete: t.procedure
+
+  delete: protectedProcedure
     .input(
       z.object({
-        weightId: z.string().uuid({ message: "Invalid weight ID" }),
-      })
+        weightId: z.string().uuid({ message: 'Invalid weight ID' }),
+      }),
     )
     .mutation(async ({ input, ctx }) => {
-      if (!ctx.userId) {
-        throw new Error("Unauthorized: User must be logged in");
+      try {
+        await ctx.prisma.weightMeasurement.delete({
+          where: {
+            id: input.weightId,
+            userId: ctx.userId,
+          },
+        });
+
+        return { success: true, deletedId: input.weightId };
+      } catch (err) {
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Weight measurement not found or not owned by you',
+          });
+        }
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to delete weight measurement',
+        });
       }
-
-      const weight = await ctx.prisma.weightMeasurement.findUnique({
-        where: { id: input.weightId },
-      });
-
-      if (!weight) {
-        throw new Error("Weight measurement not found");
-      }
-
-      if (weight.userId !== ctx.userId) {
-        throw new Error(
-          "Unauthorized: Cannot delete another user's weight measurement"
-        );
-      }
-
-      await ctx.prisma.weightMeasurement.delete({
-        where: { id: input.weightId },
-      });
-
-      return { id: input.weightId };
     }),
-  setGoal: t.procedure
+
+  setGoal: protectedProcedure
     .input(
       z.object({
         goalWeightKg: z
           .number()
-          .positive({ message: "Goal weight must be a positive number" }),
-      })
+          .positive({ message: 'Goal weight must be a positive number' })
+          .max(500),
+      }),
     )
     .mutation(async ({ input, ctx }) => {
-      if (!ctx.userId) {
-        throw new Error("Unauthorized: User must be logged in");
-      }
-
-      // Check if there's an active (unreached) goal
-      const currentGoal = await ctx.prisma.goal.findFirst({
-        where: { userId: ctx.userId, reachedAt: null },
+      const activeGoal = await ctx.prisma.goal.findFirst({
+        where: {
+          userId: ctx.userId,
+          reachedAt: null,
+        },
       });
 
-      if (currentGoal) {
-        throw new Error(
-          "Cannot set a new goal until the current goal is reached or edited"
-        );
+      if (activeGoal) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'You already have an active goal. Reach it, abandon it, or edit it before setting a new one.',
+        });
       }
 
-      const goal = await ctx.prisma.goal.create({
+      return ctx.prisma.goal.create({
         data: {
           userId: ctx.userId,
           goalWeightKg: input.goalWeightKg,
           goalSetAt: new Date(),
         },
       });
-
-      return {
-        id: goal.id,
-        goalWeightKg: goal.goalWeightKg,
-        goalSetAt: goal.goalSetAt,
-      };
     }),
-  updateGoal: t.procedure
+
+  updateGoal: protectedProcedure
     .input(
       z.object({
-        goalId: z.string().uuid({ message: "Invalid goal ID" }),
+        goalId: z.string().uuid({ message: 'Invalid goal ID' }),
         goalWeightKg: z
           .number()
-          .positive({ message: "Goal weight must be a positive number" }),
-      })
+          .positive({ message: 'Goal weight must be a positive number' })
+          .max(500),
+      }),
     )
     .mutation(async ({ input, ctx }) => {
-      if (!ctx.userId) {
-        throw new Error("Unauthorized: User must be logged in");
+      try {
+        return await ctx.prisma.goal.update({
+          where: {
+            id: input.goalId,
+            userId: ctx.userId,
+            reachedAt: null,
+          },
+          data: { goalWeightKg: input.goalWeightKg },
+        });
+      } catch (err) {
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Goal not found, does not belong to you, or is already reached',
+          });
+        }
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to update goal',
+        });
       }
-
-      const goal = await ctx.prisma.goal.findUnique({
-        where: { id: input.goalId },
-      });
-
-      if (!goal) {
-        throw new Error("Goal not found");
-      }
-
-      if (goal.userId !== ctx.userId) {
-        throw new Error("Unauthorized: Cannot edit another user's goal");
-      }
-
-      if (goal.reachedAt) {
-        throw new Error("Cannot edit a goal that has already been reached");
-      }
-
-      const updatedGoal = await ctx.prisma.goal.update({
-        where: { id: input.goalId },
-        data: { goalWeightKg: input.goalWeightKg },
-      });
-
-      return {
-        id: updatedGoal.id,
-        goalWeightKg: updatedGoal.goalWeightKg,
-        goalSetAt: updatedGoal.goalSetAt,
-      };
     }),
-  getCurrentGoal: t.procedure.query(async ({ ctx }) => {
-    if (!ctx.userId) {
-      throw new Error("Unauthorized: User must be logged in");
-    }
 
+  getCurrentGoal: protectedProcedure.query(async ({ ctx }) => {
     const goal = await ctx.prisma.goal.findFirst({
-      where: { userId: ctx.userId, reachedAt: null },
-      orderBy: { goalSetAt: "desc" },
+      where: {
+        userId: ctx.userId,
+        reachedAt: null,
+      },
+      orderBy: { goalSetAt: 'desc' },
+      select: {
+        id: true,
+        goalWeightKg: true,
+        goalSetAt: true,
+      },
     });
 
-    if (!goal) {
-      return null;
-    }
-
-    return {
-      id: goal.id,
-      goalWeightKg: goal.goalWeightKg,
-      goalSetAt: goal.goalSetAt,
-    };
+    return goal ?? null;
   }),
-  getGoals: t.procedure.query(async ({ ctx }) => {
-    if (!ctx.userId) {
-      throw new Error("Unauthorized: User must be logged in");
-    }
 
+  getGoals: protectedProcedure.query(async ({ ctx }) => {
     return ctx.prisma.goal.findMany({
       where: { userId: ctx.userId },
-      orderBy: { goalSetAt: "desc" },
+      orderBy: { goalSetAt: 'desc' },
+      select: {
+        id: true,
+        goalWeightKg: true,
+        goalSetAt: true,
+        reachedAt: true,
+      },
     });
   }),
 });

@@ -1,60 +1,79 @@
 // server/routers/user.ts
-import { t } from "../trpc-base";
-import { z } from "zod";
-import { sendEmailChangeNotification } from "../email";
+import { protectedProcedure, router } from '../trpc-base';
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import { sendEmailChangeNotification } from '../email';
 
-export const userRouter = t.router({
-  updateEmail: t.procedure
+export const userRouter = router({
+  updateEmail: protectedProcedure
     .input(
       z.object({
-        email: z.string().email({ message: "Invalid email address" }),
-      })
+        email: z.string().email({ message: 'Invalid email address' }).trim().toLowerCase(),
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       const { email } = input;
-      const userId = ctx.userId;
+      const userId = ctx.userId; // guaranteed string by protectedProcedure
 
-      if (!userId) {
-        throw new Error("Unauthorized: User must be logged in");
-      }
-
-      // Fetch the current user to get the old email
+      // 1. Fetch current user's email
       const currentUser = await ctx.prisma.user.findUnique({
         where: { id: userId },
         select: { email: true },
       });
 
       if (!currentUser) {
-        throw new Error("User not found");
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'User not found',
+        });
       }
 
       const oldEmail = currentUser.email;
 
-      // Check if email is already in use by another user
-      const existingUser = await ctx.prisma.user.findUnique({
-        where: { email },
-      });
-
-      if (existingUser && existingUser.id !== userId) {
-        throw new Error("Email already in use");
+      // Early return if no change → avoids unnecessary DB write & email
+      if (oldEmail === email) {
+        return {
+          message: 'Email is already up to date',
+          email,
+        };
       }
 
-      // Update the user's email
+      // 2. Check for email conflict
+      const conflictingUser = await ctx.prisma.user.findUnique({
+        where: { email },
+        select: { id: true },
+      });
+
+      if (conflictingUser && conflictingUser.id !== userId) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'This email is already in use by another account',
+        });
+      }
+
+      // 3. Update email in database
       const updatedUser = await ctx.prisma.user.update({
         where: { id: userId },
         data: { email },
+        select: { email: true },
       });
 
-      // Send notification to the old email if it has changed
+      // 4. Send notification to old email (fire-and-forget, non-blocking)
       if (oldEmail !== email) {
-        const emailResult = await sendEmailChangeNotification(oldEmail, email);
-        if (!emailResult.success) {
-          // Note: Don't throw an error to avoid reverting the email update
-        }
+        sendEmailChangeNotification(oldEmail, email).catch((err) => {
+          // Log failure without affecting the response
+          // Replace console.error with your actual logger (winston, pino, etc.)
+          console.error('Failed to send email change notification:', {
+            userId,
+            oldEmail,
+            newEmail: email,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        });
       }
 
       return {
-        message: "Email updated successfully",
+        message: 'Email updated successfully',
         email: updatedUser.email,
       };
     }),

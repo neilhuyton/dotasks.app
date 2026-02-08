@@ -1,39 +1,63 @@
 // server/context.ts
-import { PrismaClient } from "@prisma/client";
-import jwt from "jsonwebtoken";
-import type { IncomingMessage } from "http";
+import { PrismaClient } from '@prisma/client';
+import jwt from 'jsonwebtoken';
+import type { IncomingMessage } from 'http';
 
-const prisma = new PrismaClient();
+// ───────────────────────────────────────────────
+// 1. Prisma in serverless → better to create per-request
+//    (avoids connection pool exhaustion & stale connections)
+const prisma = globalThis.prisma ?? new PrismaClient();
 
+if (process.env.NODE_ENV !== 'production') {
+  globalThis.prisma = prisma;
+}
+
+// ───────────────────────────────────────────────
 export type Context = {
   prisma: PrismaClient;
   userId?: string;
   email?: string;
+  // Optional: add more when needed (roles, session id, etc.)
+  // isAdmin?: boolean;
 };
 
-export function createContext({ req }: { req: IncomingMessage }): Context {
+export async function createContext({ req }: { req: IncomingMessage }): Promise<Context> {
   let userId: string | undefined;
   let email: string | undefined;
+
   const authHeader = req.headers.authorization;
 
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    const token = authHeader.split("Bearer ")[1];
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.split('Bearer ')[1];
+
     try {
-      const decoded = jwt.verify(
-        token,
-        process.env.JWT_SECRET || "your-secret-key"
-      ) as {
-        userId: string;
-        email: string;
-        iat: number;
-        exp: number;
-      };
-      userId = decoded.userId;
-      email = decoded.email;
-    } catch {
-      // Don’t throw; let procedures handle unauthenticated state
+      const secret = process.env.JWT_SECRET;
+
+      if (!secret) {
+        console.warn('JWT_SECRET is not set — authentication disabled');
+        // You might want to throw in development
+      } else {
+        const decoded = jwt.verify(token, secret) as {
+          userId: string;
+          email: string;
+          iat?: number;
+          exp?: number;
+          // ... other claims you use
+        };
+
+        userId = decoded.userId;
+        email = decoded.email;
+      }
+    } catch (err) {
+      // Very common in production: expired / malformed / wrong secret
+      // Just swallow → let protected procedures handle it
+      console.debug('Invalid JWT', (err as Error).message);
     }
   }
 
-  return { prisma, userId, email };
+  return {
+    prisma,
+    userId,
+    email,
+  };
 }

@@ -1,72 +1,107 @@
 // server/routers/resetPassword.ts
-import { t } from "../trpc-base";
-import { z } from "zod";
-import crypto from "crypto";
+import { publicProcedure, router } from '../trpc-base';
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import crypto from 'node:crypto';
+import bcrypt from 'bcryptjs';
 import {
   sendResetPasswordEmail,
   sendPasswordChangeNotification,
-} from "../email";
-import bcrypt from "bcryptjs";
+} from '../email';
 
-export const resetPasswordRouter = t.router({
-  request: t.procedure
+export const resetPasswordRouter = router({
+  request: publicProcedure
     .input(
       z.object({
-        email: z.string().email({ message: "Invalid email address" }),
-      })
+        email: z
+          .string()
+          .email({ message: 'Invalid email address' })
+          .trim()
+          .toLowerCase(),
+      }),
     )
     .mutation(async ({ input, ctx }) => {
       const { email } = input;
 
+      // 1. Find user (don't reveal existence)
       const user = await ctx.prisma.user.findUnique({
         where: { email },
+        select: { id: true, email: true },
       });
 
+      // Always return the same success message (prevents user enumeration)
       if (!user) {
-        // Return success to avoid leaking user existence
-        return { message: "If the email exists, a reset link has been sent." };
+        return {
+          message: 'If an account with this email exists, a reset link has been sent.',
+        };
       }
 
+      // 2. Generate secure one-time token
       const resetToken = crypto.randomUUID();
-      const resetTokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour expiry
+      const resetTokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+      // Optional improvement: hash the token before storing (stronger against DB leaks)
+      // const hashedResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
 
       await ctx.prisma.user.update({
-        where: { email },
+        where: { id: user.id },
         data: {
-          resetPasswordToken: resetToken,
+          resetPasswordToken: resetToken, // or hashedResetToken if you switch
           resetPasswordTokenExpiresAt: resetTokenExpiresAt,
         },
       });
 
-      const emailResult = await sendResetPasswordEmail(email, resetToken);
-      if (!emailResult.success) {
-        throw new Error("Failed to send reset email");
-      }
+      // 3. Send reset email (fire-and-forget — don't block success)
+      sendResetPasswordEmail(email, resetToken).catch((err) => {
+        console.error('Failed to send password reset email:', {
+          userId: user.id,
+          email,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        // In prod: use structured logger + alerting (Sentry, etc.)
+      });
 
-      return { message: "Reset link sent to your email" };
+      return {
+        message: 'If an account with this email exists, a reset link has been sent.',
+      };
     }),
-  confirm: t.procedure
+
+  confirm: publicProcedure
     .input(
       z.object({
-        token: z.string().min(1, { message: "Reset token is required" }),
+        token: z.string().uuid({ message: 'Invalid reset token format' }),
         newPassword: z
           .string()
-          .min(8, { message: "Password must be at least 8 characters" }),
-      })
+          .min(8, { message: 'Password must be at least 8 characters' })
+          .max(128, { message: 'Password is too long' }),
+      }),
     )
     .mutation(async ({ input, ctx }) => {
+      const { token, newPassword } = input;
+
+      // 1. Find valid, non-expired token
       const user = await ctx.prisma.user.findFirst({
         where: {
-          resetPasswordToken: input.token,
+          resetPasswordToken: token,
           resetPasswordTokenExpiresAt: { gt: new Date() },
+        },
+        select: {
+          id: true,
+          email: true,
         },
       });
 
       if (!user) {
-        throw new Error("Invalid or expired token");
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Invalid or expired reset token.',
+        });
       }
 
-      const hashedPassword = await bcrypt.hash(input.newPassword, 10);
+      // 2. Hash new password (cost 12 — modern 2026 recommendation: 12–14)
+      const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+      // 3. Update password & clear reset token (makes it single-use)
       const updatedUser = await ctx.prisma.user.update({
         where: { id: user.id },
         data: {
@@ -74,16 +109,18 @@ export const resetPasswordRouter = t.router({
           resetPasswordToken: null,
           resetPasswordTokenExpiresAt: null,
         },
+        select: { email: true },
       });
 
-      // Send notification to the user's email
-      const emailResult = await sendPasswordChangeNotification(
-        updatedUser.email
-      );
-      if (!emailResult.success) {
-        // Note: Don't throw an error to avoid reverting the password update
-      }
+      // 4. Send change notification (non-blocking)
+      sendPasswordChangeNotification(updatedUser.email).catch((err) => {
+        console.error('Failed to send password change notification:', {
+          userId: user.id,
+          email: updatedUser.email,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
 
-      return { message: "Password reset successfully" };
+      return { message: 'Password reset successfully. Please log in.' };
     }),
 });

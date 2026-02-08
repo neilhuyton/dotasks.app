@@ -1,8 +1,20 @@
 // server/trpc-base.ts
-import { initTRPC } from '@trpc/server';
+import { initTRPC, TRPCError } from '@trpc/server';
 import type { Context } from './context';
 
-// Initialize TRPC with context
 const t = initTRPC.context<Context>().create();
 
-export { t };
+export const router = t.router;
+export const publicProcedure = t.procedure;
+
+export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
+  if (!ctx.userId) {
+    throw new TRPCError({ code: 'UNAUTHORIZED' });
+  }
+  return next({
+    ctx: {
+      ...ctx,
+      userId: ctx.userId,           // now TS knows userId: string inside protected procedures
+    },
+  });
+});
