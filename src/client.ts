@@ -102,10 +102,10 @@ export const trpcClient = trpc.createClient({
               await trpcClient.refreshToken.refresh.mutate({
                 refreshToken,
               });
-            login(userId, refreshResponse.token, refreshResponse.refreshToken);
+            login(userId, refreshResponse.refreshToken, refreshResponse.refreshToken);
             const newHeaders = {
               ...headers,
-              Authorization: `Bearer ${refreshResponse.token}`,
+              Authorization: `Bearer ${refreshResponse.refreshToken}`,
             };
             return await fetch(url, { ...fetchOptions, headers: newHeaders });
           } catch {
