@@ -1,5 +1,4 @@
 // __mocks__/mockUsers.ts
-import bcrypt from "bcryptjs";
 import { TEST_VERIFICATION_TOKENS } from "../__tests__/test-constants";
 
 export interface MockUser {
