@@ -11,7 +11,7 @@ import {
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { httpBatchLink } from "@trpc/client";
+import { httpLink } from "@trpc/client";
 import { trpc } from "../src/trpc";
 import "@testing-library/jest-dom";
 import { server } from "../__mocks__/server";
@@ -35,7 +35,7 @@ describe("ConfirmResetPasswordForm", () => {
 
   const trpcClient = trpc.createClient({
     links: [
-      httpBatchLink({
+      httpLink({
         url: "/trpc",
         fetch: (input, init) => fetch(input, init),
       }),

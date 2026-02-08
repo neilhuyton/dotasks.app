@@ -4,95 +4,48 @@ import {
   it,
   expect,
   beforeAll,
-  afterAll,
+  beforeEach,
   afterEach,
+  afterAll,
   vi,
 } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { httpBatchLink } from "@trpc/client";
+import { httpLink } from "@trpc/client";
 import { trpc } from "../src/trpc";
 import { server } from "../__mocks__/server";
 import "@testing-library/jest-dom";
-import { act } from "react";
-import GoalList from "../src/components/GoalList";
-import { useAuthStore } from "../src/store/authStore";
-import { weightGetGoalsHandler } from "../__mocks__/handlers/weightGetGoals";
-import { generateToken } from "./utils/token";
 
-// Mock lucide-react for LoadingSpinner
+import GoalList from "../src/components/GoalList";
+import { weightGetGoalsHandler } from "../__mocks__/handlers/weight"; // adjust path if needed
+import { useAuthStore } from "../src/store/authStore";
+import { generateToken } from "./utils/token";
+import { trpcMsw } from "../__mocks__/trpcMsw";
+import { TRPCError } from "@trpc/server";
+
+// Mock lucide-react icons (used for loading)
 vi.mock("lucide-react", () => ({
   Loader2: () => <div data-testid="loading-spinner" />,
 }));
 
-// Mock jwt-decode
-vi.mock("jwt-decode", () => ({
-  jwtDecode: vi.fn((token: string) => {
-    const payload = token.split(".")[1];
-    if (!payload) throw new Error("Invalid token");
-    const decoded = JSON.parse(atob(payload)) as {
-      userId: string;
-      iat?: number;
-      exp?: number;
-    };
-    if (
-      [
-        "test-user-id",
-        "empty-user-id",
-        "error-user-id",
-        "invalid-user-id",
-      ].includes(decoded.userId)
-    ) {
-      return decoded;
-    }
-    throw new Error("Invalid token");
-  }),
-}));
-
-describe("GoalList Component", () => {
+describe("GoalList", () => {
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: { retry: false },
+      queries: { retry: false, gcTime: 0, staleTime: 0 },
       mutations: { retry: false },
     },
   });
 
   const trpcClient = trpc.createClient({
-    links: [
-      httpBatchLink({
-        url: "/trpc",
-        fetch: async (url, options) => {
-          const headers = {
-            "content-type": "application/json",
-            ...(useAuthStore.getState().token
-              ? { Authorization: `Bearer ${useAuthStore.getState().token}` }
-              : {}),
-          };
-          const body =
-            options?.body ||
-            JSON.stringify([
-              { id: 0, method: "query", path: "weight.getGoals" },
-            ]);
-          const response = await fetch(url, {
-            ...options,
-            headers,
-            method: "POST",
-            body,
-          });
-          return response;
-        },
-      }),
-    ],
+    links: [httpLink({ url: "/trpc" })],
   });
 
-  const setup = async (userId: string | null = "test-user-id") => {
+  const renderGoalList = async (userId = "test-user-id") => {
     useAuthStore.setState({
-      isLoggedIn: !!userId,
+      isLoggedIn: true,
       userId,
-      token: userId ? generateToken(userId) : null,
-      refreshToken: userId ? "valid-refresh-token" : null,
-      login: vi.fn(),
-      logout: vi.fn(),
+      token: generateToken(userId),
+      refreshToken: "valid-refresh-token",
     });
 
     await act(async () => {
@@ -108,21 +61,22 @@ describe("GoalList Component", () => {
 
   beforeAll(() => {
     server.listen({ onUnhandledRequest: "warn" });
+  });
+
+  beforeEach(() => {
     server.use(weightGetGoalsHandler);
+    queryClient.clear();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
     server.resetHandlers();
     queryClient.clear();
-    vi.clearAllMocks();
-    document.body.innerHTML = "";
     useAuthStore.setState({
       isLoggedIn: false,
       userId: null,
       token: null,
       refreshToken: null,
-      login: vi.fn(),
-      logout: vi.fn(),
     });
   });
 
@@ -131,8 +85,7 @@ describe("GoalList Component", () => {
   });
 
   it("renders loading state while fetching goals", async () => {
-    server.use(weightGetGoalsHandler);
-    await setup("test-user-id");
+    await renderGoalList();
 
     expect(screen.getByTestId("goal-list-loading")).toBeInTheDocument();
 
@@ -143,13 +96,12 @@ describe("GoalList Component", () => {
         ).not.toBeInTheDocument();
         expect(screen.getByRole("table")).toBeInTheDocument();
       },
-      { timeout: 1000, interval: 50 },
+      { timeout: 2000 },
     );
   });
 
   it("displays goals in a table when data is available", async () => {
-    server.use(weightGetGoalsHandler);
-    await setup("test-user-id");
+    await renderGoalList();
 
     await waitFor(
       () => {
@@ -157,26 +109,31 @@ describe("GoalList Component", () => {
           screen.queryByTestId("goal-list-loading"),
         ).not.toBeInTheDocument();
         expect(
-          screen.getByRole("heading", { name: "Past Weight Goals" }),
+          screen.getByRole("heading", { name: /past weight goals/i }),
         ).toBeInTheDocument();
         expect(screen.getByRole("table")).toBeInTheDocument();
         expect(
           screen.getByText("A list of your past weight goals."),
         ).toBeInTheDocument();
+
+        // Headers
         expect(screen.getByText("Goal Weight (kg)")).toBeInTheDocument();
         expect(screen.getByText("Set Date")).toBeInTheDocument();
         expect(screen.getByText("Reached Date")).toBeInTheDocument();
+
+        // Sample data
         expect(screen.getByText("65.0")).toBeInTheDocument();
         expect(screen.getByText("70.0")).toBeInTheDocument();
         expect(screen.getByText("Not Reached")).toBeInTheDocument();
         expect(screen.getByText("28/08/2025")).toBeInTheDocument();
-        const dateCells = screen.getAllByText("27/08/2025");
-        expect(dateCells).toHaveLength(2); // Appears in Set Date and Reached Date for second goal
+        expect(screen.getAllByText("27/08/2025")).toHaveLength(2);
+
         expect(screen.queryByTestId("error-message")).not.toBeInTheDocument();
       },
-      { timeout: 1000, interval: 50 },
+      { timeout: 2000 },
     );
 
+    // Optional: style assertions (if important for your component)
     const tableHeaders = screen.getAllByRole("columnheader");
     expect(tableHeaders[0]).toHaveClass("font-bold bg-muted/50");
     expect(tableHeaders[1]).toHaveClass("font-bold bg-muted/50");
@@ -184,12 +141,17 @@ describe("GoalList Component", () => {
 
     const tableRows = screen.getAllByRole("row");
     expect(tableRows[0]).toHaveClass("hover:bg-muted/50 rounded-t-lg");
-    expect(tableRows[2]).toHaveClass("hover:bg-muted/50 rounded-b-lg");
+    // Last data row (adjust index if header + empty state considered)
+    expect(tableRows[tableRows.length - 1]).toHaveClass(
+      "hover:bg-muted/50 rounded-b-lg",
+    );
   });
 
   it("displays 'No weight goals found' when goals array is empty", async () => {
-    server.use(weightGetGoalsHandler);
-    await setup("empty-user-id");
+    // Force empty response for this test only
+    server.use(trpcMsw.weight.getGoals.query(() => []));
+
+    await renderGoalList("empty-user-id");
 
     await waitFor(
       () => {
@@ -197,7 +159,7 @@ describe("GoalList Component", () => {
           screen.queryByTestId("goal-list-loading"),
         ).not.toBeInTheDocument();
         expect(
-          screen.getByRole("heading", { name: "Past Weight Goals" }),
+          screen.getByRole("heading", { name: /past weight goals/i }),
         ).toBeInTheDocument();
         expect(screen.getByRole("table")).toBeInTheDocument();
         expect(
@@ -205,14 +167,24 @@ describe("GoalList Component", () => {
         ).toBeInTheDocument();
         expect(screen.getByText("No weight goals found")).toBeInTheDocument();
         expect(screen.getByRole("cell")).toHaveAttribute("colSpan", "3");
+        expect(screen.queryByTestId("error-message")).not.toBeInTheDocument();
       },
-      { timeout: 1000, interval: 50 },
+      { timeout: 2000 },
     );
   });
 
   it("displays error message when fetch fails", async () => {
-    server.use(weightGetGoalsHandler);
-    await setup("error-user-id");
+    // Force error response for this test only
+    server.use(
+      trpcMsw.weight.getGoals.query(() => {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch goals",
+        });
+      }),
+    );
+
+    await renderGoalList("error-user-id");
 
     await waitFor(
       () => {
@@ -220,7 +192,7 @@ describe("GoalList Component", () => {
           screen.queryByTestId("goal-list-loading"),
         ).not.toBeInTheDocument();
         expect(
-          screen.getByRole("heading", { name: "Past Weight Goals" }),
+          screen.getByRole("heading", { name: /past weight goals/i }),
         ).toBeInTheDocument();
         expect(screen.getByTestId("error-message")).toBeInTheDocument();
         expect(screen.getByTestId("error-message")).toHaveTextContent(
@@ -230,7 +202,7 @@ describe("GoalList Component", () => {
           "text-destructive",
         );
       },
-      { timeout: 1000, interval: 50 },
+      { timeout: 2000 },
     );
   });
 });

@@ -5,15 +5,19 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { trpc } from "../trpc";
 import { useAuthStore } from "../store/authStore";
 import { useEffect, useState } from "react";
-import { useRouter } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";  // ← change here
 import type { TRPCClientErrorLike } from "@trpc/client";
 import type { AppRouter } from "server/trpc";
 
+// Adjust this interface to match your actual tRPC response shape
 interface LoginResponse {
-  id: string;
-  email: string;
-  token: string;
-  refreshToken: string;
+  user: {
+    id: string;
+    email: string;
+  };
+  accessToken: string;
+  refreshToken: string;  // or `${string}-${string}-...` if you want the literal
+  message: string;
 }
 
 const formSchema = z.object({
@@ -41,7 +45,9 @@ export const useLogin = (): UseLoginReturn => {
 
   const [message, setMessage] = useState<string | null>(null);
   const { login } = useAuthStore();
-  const router = useRouter();
+
+  // Use useNavigate() instead of useRouter().navigate
+  const navigate = useNavigate();
 
   const loginMutation = trpc.login.useMutation({
     onMutate: () => {
@@ -49,9 +55,13 @@ export const useLogin = (): UseLoginReturn => {
     },
     onSuccess: (data: LoginResponse) => {
       setMessage("Login successful!");
-      login(data.id, data.token, data.refreshToken);
+      // Update store with the correct fields
+      login(data.user.id, data.accessToken, data.refreshToken);
+
       form.reset();
-      router.navigate({ to: "/weight" });
+
+      // Navigate — this is more reliable in v1 than router.navigate in callbacks
+      navigate({ to: "/weight" });
     },
     onError: (error: TRPCClientErrorLike<AppRouter>) => {
       setMessage(`Login failed: ${error.message || "Unknown error"}`);

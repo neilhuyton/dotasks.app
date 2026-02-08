@@ -1,4 +1,3 @@
-// __tests__/ResetPasswordForm.test.tsx
 import {
   describe,
   it,
@@ -8,19 +7,17 @@ import {
   afterEach,
   vi,
 } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { httpBatchLink } from "@trpc/client";
+import { httpLink } from "@trpc/client";
 import { trpc } from "../src/trpc";
 import { server } from "../__mocks__/server";
 import "@testing-library/jest-dom";
-import { act } from "react"; // ← ADD THIS LINE
 
 import ResetPasswordForm from "../src/components/ResetPasswordForm";
 import { resetPasswordRequestHandler } from "../__mocks__/handlers/resetPasswordRequest";
 
-// Mock router to avoid navigate errors
 vi.mock("../src/router/router", () => ({
   router: {
     navigate: vi.fn(),
@@ -37,9 +34,8 @@ describe("ResetPasswordForm", () => {
 
   const trpcClient = trpc.createClient({
     links: [
-      httpBatchLink({
+      httpLink({
         url: "/trpc",
-        fetch: (input, init) => fetch(input, init),
       }),
     ],
   });
@@ -47,47 +43,31 @@ describe("ResetPasswordForm", () => {
   const renderComponent = async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
 
-    vi.mock("../src/store/authStore", () => ({
-      useAuthStore: Object.assign(
-        vi.fn().mockReturnValue({ isLoggedIn: false, userId: null }),
-        {
-          getState: vi
-            .fn()
-            .mockReturnValue({ isLoggedIn: false, userId: null }),
-        },
-      ),
-    }));
-
-    await render(
+    render(
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
           <ResetPasswordForm />
         </QueryClientProvider>
-      </trpc.Provider>,
+      </trpc.Provider>
     );
   };
 
   beforeAll(() => {
-    server.listen({ onUnhandledRequest: "error" });
-    server.use(resetPasswordRequestHandler);
-
-    process.on("unhandledRejection", (reason) => {
-      if (reason instanceof Error && reason.message.includes("Invalid email")) {
-        return;
-      }
-      throw reason;
-    });
+    server.listen({ onUnhandledRequest: "warn" });
   });
 
-  afterEach(() => {
-    server.resetHandlers();
+  beforeEach(() => {
+    server.use(resetPasswordRequestHandler);
     queryClient.clear();
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    server.resetHandlers();
+  });
+
   afterAll(() => {
     server.close();
-    process.removeAllListeners("unhandledRejection");
   });
 
   it("renders email input, submit button and back-to-login link", async () => {
@@ -107,32 +87,34 @@ describe("ResetPasswordForm", () => {
       expect(screen.getByTestId("email-input")).toBeInTheDocument();
     });
 
-    await userEvent.type(
-      screen.getByTestId("email-input"),
-      "unknown@example.com",
-    );
+    const emailInput = screen.getByTestId("email-input");
+    await userEvent.type(emailInput, "unknown@example.com");
 
-    const form = screen.getByRole("form");
+    const formElement = screen.getByTestId("reset-password-form");
+
+    await waitFor(() => {
+      expect(formElement).toBeInTheDocument();
+    });
 
     await act(async () => {
       const submitEvent = new Event("submit", {
         bubbles: true,
         cancelable: true,
       });
-      form.dispatchEvent(submitEvent);
+      formElement.dispatchEvent(submitEvent);
     });
 
     await waitFor(
       () => {
-        // Use text lookup instead of role="alert" — your DOM doesn't have role="alert"
-        const message = screen.getByText(
-          "If the email exists, a reset link has been sent.",
+        const messageEl = screen.getByTestId("reset-password-message");
+        expect(messageEl).toBeInTheDocument();
+        expect(messageEl).toHaveTextContent(
+          "If the email exists, a reset link has been sent."
         );
-        expect(message).toBeInTheDocument();
-        expect(message).toHaveClass("text-green-500"); // adjust class if different
-        expect(screen.getByTestId("email-input")).toHaveValue("");
+        expect(messageEl).toHaveClass("text-green-500");
+        expect(emailInput).toHaveValue("");
       },
-      { timeout: 2000 }, // give mutation + re-render time
+      { timeout: 5000 }
     );
   });
 

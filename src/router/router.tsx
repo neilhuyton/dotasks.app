@@ -1,3 +1,4 @@
+// src/router/router.tsx
 import { createRouter, createRootRoute } from "@tanstack/react-router";
 import Root from "../components/Root";
 import { queryClient, trpcClient } from "../client";
@@ -14,8 +15,8 @@ import {
   profileRoute,
 } from "./routes";
 
-// Define root route
-const rootRoute = createRootRoute({
+// 1. Create root route **without** relying on Register yet
+const rootRoute = createRootRoute<unknown>({
   component: () => <Root queryClient={queryClient} trpcClient={trpcClient} />,
   errorComponent: (props) => (
     <div>
@@ -24,8 +25,8 @@ const rootRoute = createRootRoute({
   ),
 });
 
-// Create route tree
-const routeTree = rootRoute.addChildren([
+// 2. Build the tree
+export const routeTree = rootRoute.addChildren([
   homeRoute(rootRoute),
   registerRoute(rootRoute),
   loginRoute(rootRoute),
@@ -38,10 +39,11 @@ const routeTree = rootRoute.addChildren([
   profileRoute(rootRoute),
 ]);
 
-// Create router
+// 3. Create the router
 export const router = createRouter({ routeTree });
 
-// Register router for type safety
+// 4. ONLY NOW register it for global type safety
+//    This must come after router is created
 declare module "@tanstack/react-router" {
   interface Register {
     router: typeof router;

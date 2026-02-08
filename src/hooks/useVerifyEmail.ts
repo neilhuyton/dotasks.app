@@ -12,7 +12,12 @@ export function useVerifyEmail() {
       setMessage(data.message);
     },
     onError: (error) => {
-      setMessage(error.message); // Use raw error message
+      console.log("ERROR SHAPE:", error.shape, "MESSAGE:", error.message);
+      setMessage(
+        error.shape?.message ||
+          error.message ||
+          "Unknown error during verification",
+      );
     },
   });
 
@@ -22,7 +27,7 @@ export function useVerifyEmail() {
     } else if (!token) {
       setMessage("No verification token provided");
     }
-  }, [token, verifyEmailMutation.isPending, message]);
+  }, [token, verifyEmailMutation.isPending, message, verifyEmailMutation]);
 
   return {
     message,

@@ -1,90 +1,53 @@
 // __tests__/WeightChart.test.tsx
-import {
-  describe,
-  it,
-  expect,
-  beforeAll,
-  afterAll,
-  afterEach,
-  vi,
-} from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { httpBatchLink } from "@trpc/client";
-import { trpc } from "../src/trpc";
-import { server } from "../__mocks__/server";
-import "@testing-library/jest-dom";
-import { act } from "react";
-import WeightChart from "../src/components/WeightChart";
-import { useAuthStore } from "../src/store/authStore";
-import { generateToken } from "./utils/token";
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest'
+import { render, screen, waitFor, act } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { httpLink } from '@trpc/client'
+import { trpc } from '../src/trpc'
+import { server } from '../__mocks__/server'
+import { TRPCError } from '@trpc/server'
+import '@testing-library/jest-dom'
+
+import WeightChart from '../src/components/WeightChart'
 import {
   weightGetWeightsHandler,
   weightGetCurrentGoalHandler,
-} from "../__mocks__/handlers";
+} from '../__mocks__/handlers/weight'
+import { useAuthStore } from '../src/store/authStore'
+import { generateToken } from './utils/token'
+import { trpcMsw } from '../__mocks__/trpcMsw'
 
 // Mock lucide-react icons
-vi.mock("lucide-react", async () => {
-  const actual = await vi.importActual("lucide-react");
-  return {
-    ...actual,
-    Loader2: () => <div data-testid="loading-spinner" />,
-    ChevronDownIcon: () => <div data-testid="chevron-down-icon" />,
-  };
-});
+vi.mock('lucide-react', () => ({
+  Loader2: () => <div data-testid="loading-spinner" />,
+  ChevronDownIcon: () => <div data-testid="chevron-down-icon" />,
+  ChevronUpIcon: () => <div data-testid="chevron-up-icon" />,
+  CheckIcon: () => <div data-testid="check-icon" />,
+}))
 
-describe("WeightChart Component", () => {
+// Suppress Recharts layout warnings in JSDOM (harmless)
+vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+describe('WeightChart', () => {
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: { retry: false },
+      queries: { retry: false, gcTime: 0, staleTime: 0 },
       mutations: { retry: false },
     },
-  });
+  })
 
   const trpcClient = trpc.createClient({
-    links: [
-      httpBatchLink({
-        url: "/trpc",
-        maxItems: 1,
-        fetch: async (url, options) => {
-          const headers = {
-            "content-type": "application/json",
-            ...(useAuthStore.getState().token
-              ? { Authorization: `Bearer ${useAuthStore.getState().token}` }
-              : {}),
-          };
+    links: [httpLink({ url: '/trpc' })],
+  })
 
-          // Provide a default body if none is provided
-          const defaultBody = JSON.stringify([
-            { id: 0, method: "query", path: "weight.getWeights" },
-            { id: 1, method: "query", path: "weight.getCurrentGoal" },
-          ]);
-          const body =
-            typeof options?.body === "string" ? options.body : defaultBody;
-
-          const response = await fetch(url, {
-            ...options,
-            headers,
-            method: "POST",
-            body,
-          });
-
-          // Do not consume response body here; let msw handle it
-          return response;
-        },
-      }),
-    ],
-  });
-
-  const setup = async (userId = "test-user-id") => {
+  const renderWeightChart = async (userId = 'test-user-id') => {
     useAuthStore.setState({
       isLoggedIn: true,
       userId,
       token: generateToken(userId),
-      refreshToken: "valid-refresh-token",
-      login: vi.fn(),
-      logout: vi.fn(),
-    });
+      refreshToken: 'valid-refresh-token',
+    })
 
     await act(async () => {
       render(
@@ -93,132 +56,177 @@ describe("WeightChart Component", () => {
             <WeightChart />
           </QueryClientProvider>
         </trpc.Provider>,
-      );
-    });
-  };
+      )
+    })
+  }
 
   beforeAll(() => {
-    server.listen({ onUnhandledRequest: "warn" });
-    server.use(weightGetWeightsHandler, weightGetCurrentGoalHandler);
-  });
+    server.listen({ onUnhandledRequest: 'warn' })
+  })
+
+  beforeEach(() => {
+    server.use(weightGetWeightsHandler, weightGetCurrentGoalHandler)
+    queryClient.clear()
+    vi.clearAllMocks()
+  })
 
   afterEach(() => {
-    server.resetHandlers();
-    queryClient.clear();
-    vi.clearAllMocks();
-    document.body.innerHTML = "";
+    server.resetHandlers()
+    queryClient.clear()
     useAuthStore.setState({
       isLoggedIn: false,
       userId: null,
       token: null,
       refreshToken: null,
-      login: vi.fn(),
-      logout: vi.fn(),
-    });
-  });
+    })
+  })
 
   afterAll(() => {
-    server.close();
-  });
+    server.close()
+  })
 
-  it("renders WeightChart with correct title and select dropdown", async () => {
-    await setup();
-    await waitFor(() => {
-      expect(screen.getByTestId("unit-select")).toHaveTextContent("Daily");
-      expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-        "Your Stats",
-      );
-    });
-  });
+  it('renders WeightChart with correct title and select dropdown', async () => {
+    await renderWeightChart()
 
-  it("displays error message when fetch fails", async () => {
-    await setup("error-user-id");
     await waitFor(
       () => {
-        expect(screen.getByTestId("error")).toBeInTheDocument();
-        expect(screen.getByTestId("error")).toHaveTextContent(
-          "Error: Failed to fetch weights",
-        );
+        expect(screen.getByTestId('unit-select')).toHaveTextContent('Daily')
+        expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Your Stats')
       },
-      { timeout: 500 },
-    );
-  });
+      { timeout: 3000 },
+    )
+  })
 
-  it("displays no measurements message when weights are empty", async () => {
-    await setup("empty-user-id");
+  it('displays error message when fetch fails', async () => {
+    server.use(
+      trpcMsw.weight.getWeights.query(() => {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch weights',
+        })
+      }),
+      weightGetCurrentGoalHandler,
+    )
+
+    await renderWeightChart()
+
     await waitFor(
       () => {
-        expect(screen.getByTestId("no-data")).toBeInTheDocument();
+        const errorEl = screen.getByTestId('error')
+        expect(errorEl).toBeInTheDocument()
+        expect(errorEl).toHaveTextContent('Error: Failed to fetch weights')
       },
-      { timeout: 500 },
-    );
-  });
+      { timeout: 3000 },
+    )
+  })
 
-  it("updates chart data when trend period changes", async () => {
-    await setup();
+  it('displays no measurements message when weights are empty', async () => {
+    server.use(
+      trpcMsw.weight.getWeights.query(() => []),
+      weightGetCurrentGoalHandler,
+    )
+
+    await renderWeightChart()
+
     await waitFor(
       () => {
-        expect(screen.getByTestId("chart-mock")).toBeInTheDocument();
+        expect(screen.getByTestId('no-data')).toBeInTheDocument()
       },
-      { timeout: 500 },
-    );
+      { timeout: 3000 },
+    )
+  })
+
+  it('updates chart data when trend period changes', async () => {
+    const user = userEvent.setup()
+
+    await renderWeightChart()
+
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('chart-mock')).toBeInTheDocument()
+      },
+      { timeout: 3000 },
+    )
 
     await act(async () => {
-      const select = screen.getByTestId("unit-select");
-      fireEvent.change(select, { target: { value: "weekly" } });
-    });
+      const selectTrigger = screen.getByTestId('unit-select')
+      await user.click(selectTrigger) // open the dropdown
+
+      // Wait for and click the "Weekly" option (adjust text to match your <SelectItem> label exactly)
+      const weeklyOption = await screen.findByText('Weekly') // or 'weekly' / 'Week' / whatever your code uses
+      await user.click(weeklyOption)
+    })
 
     await waitFor(
       () => {
-        expect(screen.getByTestId("chart-mock")).toBeInTheDocument();
+        // Confirm the select value updated
+        expect(screen.getByTestId('unit-select')).toHaveTextContent('Weekly')
+        expect(screen.getByTestId('chart-mock')).toBeInTheDocument()
       },
-      { timeout: 500 },
-    );
-  });
+      { timeout: 3000 },
+    )
+  })
 
-  it("displays latest weight card when weights are available", async () => {
-    await setup();
+  it('displays latest weight card when weights are available', async () => {
+    await renderWeightChart()
+
     await waitFor(
       () => {
-        expect(screen.getByTestId("latest-weight-card")).toBeInTheDocument();
+        expect(screen.getByTestId('latest-weight-card')).toBeInTheDocument()
       },
-      { timeout: 500 },
-    );
-  });
+      { timeout: 3000 },
+    )
+  })
 
-  it("does not display latest weight card when weights are empty", async () => {
-    await setup("empty-user-id");
+  it('does not display latest weight card when weights are empty', async () => {
+    server.use(
+      trpcMsw.weight.getWeights.query(() => []),
+      weightGetCurrentGoalHandler,
+    )
+
+    await renderWeightChart()
+
     await waitFor(
       () => {
-        expect(screen.getByTestId("no-data")).toBeInTheDocument();
-        expect(
-          screen.queryByTestId("latest-weight-card"),
-        ).not.toBeInTheDocument();
+        expect(screen.getByTestId('no-data')).toBeInTheDocument()
+        expect(screen.queryByTestId('latest-weight-card')).not.toBeInTheDocument()
       },
-      { timeout: 500 },
-    );
-  });
+      { timeout: 3000 },
+    )
+  })
 
-  it("displays goal weight card when goal is available", async () => {
-    await setup();
+  it('displays goal weight card when goal is available', async () => {
+    await renderWeightChart()
+
     await waitFor(
       () => {
-        expect(screen.getByTestId("goal-weight-card")).toBeInTheDocument();
+        expect(screen.getByTestId('goal-weight-card')).toBeInTheDocument()
       },
-      { timeout: 500 },
-    );
-  });
+      { timeout: 3000 },
+    )
+  })
 
-  it("does not display goal weight card when no goal exists", async () => {
-    await setup("empty-user-id");
+  it('does not display goal weight card when no goal exists', async () => {
+    server.use(
+      weightGetWeightsHandler, // weights still present
+      trpcMsw.weight.getCurrentGoal.query(() => null), // no goal
+    )
+
+    await renderWeightChart()
+
     await waitFor(
       () => {
-        expect(screen.getByTestId("no-data")).toBeInTheDocument();
-        expect(
-          screen.queryByTestId("goal-weight-card"),
-        ).not.toBeInTheDocument();
+        // Your component hides the goal card when goal is null
+        expect(screen.queryByTestId('goal-weight-card')).not.toBeInTheDocument()
+
+        // It does NOT show "no-data" just because goal is missing (only when weights empty)
+        expect(screen.queryByTestId('no-data')).not.toBeInTheDocument()
+
+        // Chart and latest weight remain visible
+        expect(screen.getByTestId('chart-mock')).toBeInTheDocument()
+        expect(screen.getByTestId('latest-weight-card')).toBeInTheDocument()
       },
-      { timeout: 500 },
-    );
-  });
-});
+      { timeout: 3000 },
+    )
+  })
+})

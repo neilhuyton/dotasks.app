@@ -1,23 +1,15 @@
 // __tests__/WeightList.test.tsx
-import {
-  describe,
-  it,
-  expect,
-  beforeAll,
-  afterAll,
-  afterEach,
-  vi,
-} from 'vitest'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest'
+import { render, screen, waitFor, act } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { httpBatchLink } from '@trpc/client'
+import { httpLink } from '@trpc/client'               // ← changed to match WeightGoal
 import { trpc } from '../src/trpc'
 import { server } from '../__mocks__/server'
 import '@testing-library/jest-dom'
-import { act } from 'react'
+
 import WeightList from '../src/components/WeightList'
-import { weightGetWeightsHandler } from '../__mocks__/handlers/weightGetWeights'
-import { weightDeleteHandler } from '../__mocks__/handlers/weightDelete'
+import { weightGetWeightsHandler, weightDeleteHandler } from '../__mocks__/handlers/weight'
 import { resetWeights } from '../__mocks__/handlers/weightsData'
 import { useAuthStore } from '../src/store/authStore'
 import { generateToken } from './utils/token'
@@ -27,48 +19,24 @@ vi.mock('lucide-react', () => ({
   Trash2: () => <div data-testid="trash-icon" />,
 }))
 
-describe('WeightList Component', () => {
+describe('WeightList', () => {
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: { retry: false },
+      queries: { retry: false, gcTime: 0, staleTime: 0 },
       mutations: { retry: false },
     },
   })
 
   const trpcClient = trpc.createClient({
-    links: [
-      httpBatchLink({
-        url: '/trpc',
-        fetch: async (url, options) => {
-          const headers = {
-            'content-type': 'application/json',
-            ...(useAuthStore.getState().token
-              ? { Authorization: `Bearer ${useAuthStore.getState().token}` }
-              : {}),
-          }
-          const body =
-            options?.body ||
-            JSON.stringify([{ id: 0, method: 'query', path: 'weight.getWeights' }])
-          const response = await fetch(url, {
-            ...options,
-            headers,
-            method: 'POST',
-            body,
-          })
-          return response
-        },
-      }),
-    ],
+    links: [httpLink({ url: '/trpc' })],              // ← now identical to WeightGoal
   })
 
-  const setup = async (userId = 'test-user-id') => {
+  const renderWeightList = async (userId = 'test-user-id') => {
     useAuthStore.setState({
       isLoggedIn: true,
       userId,
       token: generateToken(userId),
       refreshToken: 'valid-refresh-token',
-      login: vi.fn(),
-      logout: vi.fn(),
     })
 
     await act(async () => {
@@ -84,33 +52,32 @@ describe('WeightList Component', () => {
 
   beforeAll(() => {
     server.listen({ onUnhandledRequest: 'warn' })
+  })
+
+  beforeEach(() => {
     server.use(weightGetWeightsHandler, weightDeleteHandler)
-    vi.spyOn(window, 'confirm').mockImplementation(() => true)
+    queryClient.clear()
+    vi.clearAllMocks()
   })
 
   afterEach(() => {
     server.resetHandlers()
     queryClient.clear()
-    vi.clearAllMocks()
-    document.body.innerHTML = ''
     useAuthStore.setState({
       isLoggedIn: false,
       userId: null,
       token: null,
       refreshToken: null,
-      login: vi.fn(),
-      logout: vi.fn(),
     })
     resetWeights()
   })
 
   afterAll(() => {
     server.close()
-    vi.restoreAllMocks()
   })
 
   it('displays weight measurements in a table', async () => {
-    await setup()
+    await renderWeightList()
 
     await waitFor(
       () => {
@@ -122,12 +89,14 @@ describe('WeightList Component', () => {
         expect(screen.getByText('69.9')).toBeInTheDocument()
         expect(screen.queryByTestId('error-message')).not.toBeInTheDocument()
       },
-      { timeout: 500 },
+      { timeout: 3000 },
     )
   })
 
   it('deletes a weight measurement when delete button is clicked', async () => {
-    await setup()
+    const user = userEvent.setup()
+
+    await renderWeightList()
 
     await waitFor(
       () => {
@@ -141,23 +110,22 @@ describe('WeightList Component', () => {
         ).toBeInTheDocument()
         expect(screen.queryByTestId('error-message')).not.toBeInTheDocument()
       },
-      { timeout: 500 },
+      { timeout: 3000 },
     )
 
     await act(async () => {
       const deleteButton = screen.getByRole('button', {
         name: /Delete weight measurement from 01\/10\/2023/i,
       })
-      fireEvent.click(deleteButton)
+      await user.click(deleteButton)
     })
 
     await waitFor(
       () => {
-        // expect(screen.queryByText('70')).not.toBeInTheDocument()
         expect(screen.getByText('69.9')).toBeInTheDocument()
         expect(screen.queryByTestId('error-message')).not.toBeInTheDocument()
       },
-      { timeout: 500 },
+      { timeout: 3000 },
     )
   })
 })

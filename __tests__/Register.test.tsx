@@ -10,7 +10,7 @@ import {
 } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { httpBatchLink } from "@trpc/client";
+import { httpLink } from "@trpc/client";
 import {
   createMemoryHistory,
   createRouter,
@@ -34,7 +34,7 @@ describe("Register Component Email Verification", () => {
 
   const trpcClient = trpc.createClient({
     links: [
-      httpBatchLink({
+      httpLink({
         url: "/trpc",
         fetch: async (input, options) => fetch(input, { ...options }),
       }),

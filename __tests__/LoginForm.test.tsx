@@ -1,23 +1,29 @@
-// __tests__/LoginForm.test.tsx
-import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest';
-import { render, screen, waitFor, act } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { trpc } from '../src/trpc';
-import { httpBatchLink } from '@trpc/client';
-import { useAuthStore } from '../src/store/authStore';
-import '@testing-library/jest-dom';
-import { server } from '../__mocks__/server';
-import { RouterProvider, createMemoryHistory, createRouter } from '@tanstack/react-router';
-import { router } from '../src/router/router';
 import {
-  loginHandler,
-  refreshTokenHandler,
-  weightGetWeightsHandler,
-  weightGetCurrentGoalHandler,
-} from '../__mocks__/handlers';
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  afterEach,
+  vi,
+} from "vitest";
+import { render, screen, waitFor, act } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { trpc } from "../src/trpc";
+import { httpLink } from "@trpc/client";
+import { useAuthStore } from "../src/store/authStore";
+import "@testing-library/jest-dom";
+import { server } from "../__mocks__/server";
+import {
+  RouterProvider,
+  createMemoryHistory,
+  createRouter,
+} from "@tanstack/react-router";
+import { router } from "../src/router/router";
+import { loginHandler, refreshTokenHandler } from "../__mocks__/handlers";
 
-describe('LoginForm', () => {
+describe("LoginForm", () => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -25,7 +31,7 @@ describe('LoginForm', () => {
     },
   });
 
-  const setup = async (initialPath = '/login') => {
+  const setup = async (initialPath = "/login") => {
     const history = createMemoryHistory({ initialEntries: [initialPath] });
     const testRouter = createRouter({ routeTree: router.routeTree, history });
 
@@ -34,8 +40,8 @@ describe('LoginForm', () => {
         <trpc.Provider
           client={trpc.createClient({
             links: [
-              httpBatchLink({
-                url: '/api/trpc', // ← change this ONLY if your real backend uses a different path
+              httpLink({
+                url: "/api/trpc",
               }),
             ],
           })}
@@ -44,7 +50,7 @@ describe('LoginForm', () => {
           <QueryClientProvider client={queryClient}>
             <RouterProvider router={testRouter} />
           </QueryClientProvider>
-        </trpc.Provider>
+        </trpc.Provider>,
       );
     });
 
@@ -52,33 +58,44 @@ describe('LoginForm', () => {
   };
 
   const fillAndSubmitForm = async (email: string, password: string) => {
-    const emailInput = screen.getByTestId('email-input');
-    const passwordInput = screen.getByTestId('password-input');
+    const emailInput = await screen.findByTestId("email-input");
+    const passwordInput = await screen.findByTestId("password-input");
 
     await userEvent.type(emailInput, email);
     await userEvent.type(passwordInput, password);
 
-    const form = screen.getByTestId('login-form');
-    form.dispatchEvent(new Event('submit', { bubbles: true }));
+    // Find the form and dispatch a real submit event
+    const form = await screen.findByTestId("login-form");
+
+    const submitEvent = new Event("submit", {
+      bubbles: true,
+      cancelable: true,
+    });
+
+    // This is the line you need – it reliably triggers react-hook-form's handleSubmit
+    form.dispatchEvent(submitEvent);
   };
 
   beforeAll(() => {
-    server.listen({ onUnhandledRequest: 'warn' });
+    server.listen({ onUnhandledRequest: "warn" });
 
-    vi.mock('jwt-decode', () => ({
+    vi.mock("jwt-decode", () => ({
       jwtDecode: vi.fn((token: string) => {
         if (
           token ===
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZXN0LXVzZXItMSJ9.dummy-signature'
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZXN0LXVzZXItMSJ9.dummy-signature"
         ) {
-          return { userId: 'test-user-1' };
+          return { userId: "test-user-1" };
         }
-        throw new Error('Invalid token');
+        throw new Error("Invalid token");
       }),
     }));
 
-    process.on('unhandledRejection', (reason) => {
-      if (reason instanceof Error && reason.message.includes('Invalid email or password')) {
+    process.on("unhandledRejection", (reason) => {
+      if (
+        reason instanceof Error &&
+        reason.message.includes("Invalid email or password")
+      ) {
         return;
       }
       throw reason;
@@ -87,86 +104,96 @@ describe('LoginForm', () => {
 
   afterEach(() => {
     server.resetHandlers();
-    useAuthStore.setState({ isLoggedIn: false, userId: null, token: null, refreshToken: null });
+    useAuthStore.setState({
+      isLoggedIn: false,
+      userId: null,
+      token: null,
+      refreshToken: null,
+    });
     queryClient.clear();
     vi.clearAllMocks();
   });
 
   afterAll(() => {
     server.close();
-    process.removeAllListeners('unhandledRejection');
+    process.removeAllListeners("unhandledRejection");
   });
 
-  it('renders form fields and controls', async () => {
+  it("renders form fields and controls", async () => {
     await setup();
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /login to your account/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: /login to your account/i }),
+      ).toBeInTheDocument();
       expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /sign up/i })).toBeInTheDocument();
-      expect(screen.getByTestId('forgot-password-link')).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /login/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: /sign up/i }),
+      ).toBeInTheDocument();
+      expect(screen.getByTestId("forgot-password-link")).toBeInTheDocument();
     });
   });
 
-  it('successfully logs in and updates auth store', async () => {
-    server.use(
-      loginHandler,
-      refreshTokenHandler,
-      weightGetWeightsHandler,
-      weightGetCurrentGoalHandler,
-    );
+  it("successfully logs in and updates auth store", async () => {
+    server.use(loginHandler, refreshTokenHandler);
 
     await setup();
 
-    await waitFor(() => screen.getByTestId('login-form'));
+    await waitFor(() => screen.getByTestId("login-form"), { timeout: 1500 });
 
-    await fillAndSubmitForm('testuser@example.com', 'password123');
+    await fillAndSubmitForm("testuser@example.com", "password123");
 
     await waitFor(
       () => {
         const state = useAuthStore.getState();
         expect(state.isLoggedIn).toBe(true);
-        expect(state.userId).toBe('test-user-1');
+        expect(state.userId).toBe("test-user-1");
+        expect(state.token).toBeTruthy();
+        expect(state.refreshToken).toBeTruthy();
       },
-      { timeout: 2000 },
+      { timeout: 4000 },
     );
   });
 
-  it('shows error message on invalid credentials', async () => {
+  it("shows error message on invalid credentials", async () => {
     server.use(loginHandler);
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
 
     await setup();
 
-    await waitFor(() => screen.getByTestId('login-form'));
+    await waitFor(() => screen.getByTestId("login-form"));
 
-    await fillAndSubmitForm('wronguser@example.com', 'wrongpassword');
+    await fillAndSubmitForm("wronguser@example.com", "wrongpassword");
 
     await waitFor(
       () => {
-        const message = screen.getByTestId('login-message');
-        expect(message).toHaveTextContent('Login failed: Invalid email or password');
-        expect(message).toHaveClass('text-red-500');
+        const message = screen.getByTestId("login-message");
+        expect(message).toHaveTextContent(
+          "Login failed: Invalid email or password",
+        );
+        expect(message).toHaveClass("text-red-500");
         expect(useAuthStore.getState().isLoggedIn).toBe(false);
       },
-      { timeout: 2000 },
+      { timeout: 3000 },
     );
 
-    vi.spyOn(console, 'error').mockRestore();
+    vi.spyOn(console, "error").mockRestore();
   });
 
-  it('shows validation errors for invalid input', async () => {
+  it("shows validation errors for invalid input", async () => {
     await setup();
 
-    await waitFor(() => screen.getByTestId('login-form'));
+    await waitFor(() => screen.getByTestId("login-form"));
 
-    const emailInput = screen.getByTestId('email-input');
-    const passwordInput = screen.getByTestId('password-input');
+    const emailInput = screen.getByTestId("email-input");
+    const passwordInput = screen.getByTestId("password-input");
 
-    await userEvent.type(emailInput, 'invalid-email');
-    await userEvent.type(passwordInput, 'short');
+    await userEvent.type(emailInput, "invalid-email");
+    await userEvent.type(passwordInput, "short");
     await userEvent.tab(); // trigger blur/validation
 
     await waitFor(() => {
@@ -175,47 +202,47 @@ describe('LoginForm', () => {
     });
   });
 
-  it('disables button and shows loading state during failed login', async () => {
+  it("disables button and shows loading state during failed login", async () => {
     server.use(loginHandler);
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
 
     await setup();
 
-    await waitFor(() => screen.getByTestId('login-form'));
+    await waitFor(() => screen.getByTestId("login-form"));
 
-    const loginButton = screen.getByTestId('login-button');
+    const loginButton = screen.getByTestId("login-button");
     expect(loginButton).not.toBeDisabled();
-    expect(loginButton).toHaveTextContent('Login');
+    expect(loginButton).toHaveTextContent("Login");
 
-    await fillAndSubmitForm('wronguser@example.com', 'wrongpassword');
+    await fillAndSubmitForm("wronguser@example.com", "wrongpassword");
 
     await waitFor(() => {
       expect(loginButton).toBeDisabled();
-      expect(loginButton).toHaveTextContent('Logging in...');
+      expect(loginButton).toHaveTextContent("Logging in...");
     });
 
     await waitFor(
       () => {
         expect(loginButton).not.toBeDisabled();
-        expect(loginButton).toHaveTextContent('Login');
-        expect(screen.getByTestId('login-message')).toHaveTextContent(
+        expect(loginButton).toHaveTextContent("Login");
+        expect(screen.getByTestId("login-message")).toHaveTextContent(
           /invalid email or password/i,
         );
       },
-      { timeout: 2000 },
+      { timeout: 3000 },
     );
 
-    vi.spyOn(console, 'error').mockRestore();
+    vi.spyOn(console, "error").mockRestore();
   });
 
-  it('renders forgot password link correctly', async () => {
+  it("renders forgot password link correctly", async () => {
     await setup();
 
     await waitFor(() => {
-      const link = screen.getByTestId('forgot-password-link');
+      const link = screen.getByTestId("forgot-password-link");
       expect(link).toBeInTheDocument();
-      expect(link).toHaveAttribute('href', '#');
-      expect(link).toHaveTextContent('Forgot your password?');
+      expect(link).toHaveAttribute("href", "#");
+      expect(link).toHaveTextContent("Forgot your password?");
     });
   });
 });

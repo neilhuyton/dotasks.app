@@ -1,5 +1,4 @@
 // __mocks__/mockUsers.ts
-
 import bcrypt from "bcryptjs";
 import { TEST_VERIFICATION_TOKENS } from "../__tests__/test-constants";
 
@@ -13,33 +12,33 @@ export interface MockUser {
   resetPasswordTokenExpiresAt: string | null;
   createdAt: string;
   updatedAt: string;
-  refreshToken: string | null; // Add refreshToken property
+  refreshToken: string | null;
 }
 
 export const mockUsers: MockUser[] = [
   {
-    id: "test-user-1", // Changed from 'test-user-id' to match test expectation
+    id: "test-user-1",
     email: "testuser@example.com",
-    password: bcrypt.hashSync("password123", 10),
+    password: "$2b$10$BfZjnkEBinREhMQwsUwFjOdeidxX1dvXSKn.n3MxdwmRTcfV8JR16", // correct for "password123"
     verificationToken: null,
     isEmailVerified: true,
     resetPasswordToken: null,
     resetPasswordTokenExpiresAt: null,
     createdAt: "2025-08-16T10:40:39.214Z",
     updatedAt: "2025-08-16T10:40:39.214Z",
-    refreshToken: "mock-refresh-token", // Add refreshToken
+    refreshToken: "550e8400-e29b-41d4-a716-446655440000",
   },
   {
     id: "verified-user-id",
     email: "verifieduser@example.com",
-    password: bcrypt.hashSync("password123", 10),
+    password: "$2b$10$BfZjnkEBinREhMQwsUwFjOdeidxX1dvXSKn.n3MxdwmRTcfV8JR16", // same correct hash
     isEmailVerified: true,
     verificationToken: TEST_VERIFICATION_TOKENS.ALREADY_VERIFIED,
     resetPasswordToken: null,
     resetPasswordTokenExpiresAt: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    refreshToken: "mock-refresh-token-verified", // Add refreshToken
+    refreshToken: "123e4567-e89b-12d3-a456-426614174000",
   },
   {
     id: "27e72eb9-a0ad-4714-bd7a-c148ac1b903e",
@@ -53,7 +52,7 @@ export const mockUsers: MockUser[] = [
     ).toISOString(),
     createdAt: "2025-08-16T10:40:39.214Z",
     updatedAt: "2025-08-16T11:10:39.214Z",
-    refreshToken: null, // No refreshToken for unverified user
+    refreshToken: null,
   },
   {
     id: "fb208768-1bf8-4f8d-bcad-1f94c882ed93",
@@ -65,6 +64,6 @@ export const mockUsers: MockUser[] = [
     resetPasswordTokenExpiresAt: null,
     createdAt: "2025-08-16T19:57:56.561Z",
     updatedAt: "2025-08-16T19:58:22.721Z",
-    refreshToken: "mock-refresh-token-hi", // Add refreshToken
+    refreshToken: "987fcdeb-1234-5678-9abc-def012345678",
   },
 ];

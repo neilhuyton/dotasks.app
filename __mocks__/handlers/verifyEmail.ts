@@ -1,65 +1,48 @@
 // __mocks__/handlers/verifyEmail.ts
-import { http, HttpResponse } from "msw";
-import { mockUsers, type MockUser } from "../mockUsers";
-import { TEST_VERIFICATION_TOKENS } from "../../__tests__/test-constants";
-import type { inferProcedureInput } from "@trpc/server";
-import type { AppRouter } from "../../server/trpc";
-import { badRequestResponse } from "./utils";
+import { trpcMsw } from '../trpcMsw'; // adjust import path if needed
+import { TRPCError } from '@trpc/server';
+import { mockUsers, type MockUser } from '../mockUsers';
+import { TEST_VERIFICATION_TOKENS } from '../../__tests__/test-constants';
 
-interface TrpcRequestBody {
-  "0": inferProcedureInput<AppRouter["verifyEmail"]>; // { token: string }
-}
+export const verifyEmailHandler = trpcMsw.verifyEmail.mutation(async ({ input }) => {
+  // Handle batched tRPC shape ({ "0": { token } })
+  const actualInput = '0' in input ? input['0'] : input;
+  const { token } = actualInput as { token?: string } ?? {};
 
-export const verifyEmailHandler = http.post(
-  "/trpc/verifyEmail",
-  async ({ request }) => {
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return badRequestResponse("Invalid request body", "verifyEmail");
-    }
+  if (!token) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'No verification token provided',
+    });
+  }
 
-    if (!body || typeof body !== "object" || !("0" in body)) {
-      return badRequestResponse("Invalid request body", "verifyEmail");
-    }
+  // Simulate delay for specific test case
+  if (token === TEST_VERIFICATION_TOKENS.DELAYED_SUCCESS) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
 
-    const input = (body as TrpcRequestBody)["0"];
-    const { token } = input || {};
+  const user = mockUsers.find((u: MockUser) => u.verificationToken === token);
+  if (!user) {
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'Invalid or expired verification token',
+    });
+  }
 
-    if (!token) {
-      return badRequestResponse("No verification token provided", "verifyEmail");
-    }
+  if (user.isEmailVerified) {
+    throw new TRPCError({
+      code: 'CONFLICT',
+      message: 'Email already verified',
+    });
+  }
 
-    if (token === TEST_VERIFICATION_TOKENS.DELAYED_SUCCESS) {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    }
+  // Update mock user state
+  user.isEmailVerified = true;
+  user.verificationToken = null;
+  user.updatedAt = new Date().toISOString();
 
-    const user = mockUsers.find((u: MockUser) => u.verificationToken === token);
-    if (!user) {
-      return badRequestResponse("Invalid or expired verification token", "verifyEmail");
-    }
-
-    if (user.isEmailVerified) {
-      return badRequestResponse("Email already verified", "verifyEmail");
-    }
-
-    user.isEmailVerified = true;
-    user.verificationToken = null;
-    user.updatedAt = new Date().toISOString();
-
-    return HttpResponse.json(
-      [
-        {
-          id: 0,
-          result: {
-            data: {
-              message: "Email verified successfully!",
-            },
-          },
-        },
-      ],
-      { status: 200 },
-    );
-  },
-);
+  return {
+    message: 'Email verified successfully!',
+    email: user.email,           // ← added: required by your output schema
+  };
+});

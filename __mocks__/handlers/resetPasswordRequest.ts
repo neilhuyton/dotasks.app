@@ -1,46 +1,47 @@
 // __mocks__/handlers/resetPasswordRequest.ts
-import { http, HttpResponse } from "msw";
-import type { inferProcedureInput } from "@trpc/server";
-import type { AppRouter } from "../../server/trpc";
-import { invalidJsonResponse, badRequestResponse } from "./utils";  // ← assuming badRequestResponse is now available
-
-interface TrpcRequestBody {
-  "0": inferProcedureInput<AppRouter["resetPassword"]["request"]>; // { email: string }
-}
+import { http, HttpResponse } from 'msw';
 
 export const resetPasswordRequestHandler = http.post(
-  "/trpc/resetPassword.request",
+  '/trpc/resetPassword.request',
   async ({ request }) => {
     let body: unknown;
+
     try {
       body = await request.json();
     } catch {
-      return invalidJsonResponse('resetPassword.request');
+      return HttpResponse.json(
+        { message: 'Invalid JSON request' },
+        { status: 400 }
+      );
     }
 
-    if (!body || typeof body !== "object" || !("0" in body)) {
-      return badRequestResponse("Invalid request body", "resetPassword.request");
+    if (!body || typeof body !== 'object' || body === null) {
+      return HttpResponse.json(
+        { message: 'Invalid request body' },
+        { status: 400 }
+      );
     }
 
-    const input = (body as TrpcRequestBody)["0"];
-    const { email } = input || {};
+    const input = body as { email?: unknown };
+    const email = input.email;
 
-    if (!email) {
-      return badRequestResponse("Invalid email", "resetPassword.request");
+    if (typeof email !== 'string' || email.trim() === '') {
+      return HttpResponse.json(
+        { message: 'Invalid email' },
+        { status: 400 }
+      );
     }
 
+    // ← This is the important change
     return HttpResponse.json(
-      [
-        {
-          id: 0,
-          result: {
-            data: {
-              message: "If the email exists, a reset link has been sent.",
-            },
-          },
-        },
-      ],
-      { status: 200 },
+      {
+        result: {
+          data: {
+            message: 'If the email exists, a reset link has been sent.'
+          }
+        }
+      },
+      { status: 200 }
     );
-  },
+  }
 );

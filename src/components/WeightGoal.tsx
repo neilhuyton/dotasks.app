@@ -48,7 +48,10 @@ function WeightGoal() {
           </p>
         )}
         {currentGoal && (
-          <p className="text-center text-sm font-medium text-foreground mb-6">
+          <p
+            className="text-center text-sm font-medium text-foreground mb-6"
+            data-testid="current-goal-display"
+          >
             Current Goal: {currentGoal.goalWeightKg} kg (Set on{" "}
             {new Date(currentGoal.goalSetAt).toLocaleDateString("en-GB")})
             {isGoalAchieved && (
@@ -95,7 +98,7 @@ function WeightGoal() {
               "text-center text-sm font-medium mt-6",
               message.toLowerCase().includes("success")
                 ? "text-success"
-                : "text-destructive"
+                : "text-destructive",
             )}
             id="goal-weight-error"
             data-testid="goal-message"
