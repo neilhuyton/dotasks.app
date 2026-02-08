@@ -1,94 +1,86 @@
 // netlify/functions/trpc.ts
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
-import type { HandlerEvent, HandlerResponse } from '@netlify/functions';
+import type { IncomingMessage } from 'http';
 import { appRouter } from '../../server/trpc';
 import { createContext } from '../../server/context';
-import type { IncomingMessage } from 'http';
 import { TRPCError } from '@trpc/server';
 import { getHTTPStatusCodeFromError } from '@trpc/server/http';
 
-export const handler = async (event: HandlerEvent): Promise<HandlerResponse> => {
-  const queryString = event.queryStringParameters
-    ? new URLSearchParams(event.queryStringParameters as Record<string, string>).toString()
-    : '';
-  const path = event.path.replace('/.netlify/functions/trpc', '/trpc');
-  const url = `https://${event.headers.host || 'localhost:8888'}${path}${queryString ? `?${queryString}` : ''}`;
+const ALLOWED_ORIGIN = process.env.VITE_APP_URL || 'http://localhost:5173';
 
-  const headers = Object.fromEntries(
-    Object.entries(event.headers || {}).filter(([, value]) => value !== undefined)
-  ) as Record<string, string>;
+export default async function handler(req: Request): Promise<Response> {
+  const url = new URL(req.url);
 
-  const isLocalhost = headers['origin']?.includes('localhost');
-  const allowedOrigin = isLocalhost
-    ? headers['origin']
-    : process.env.VITE_APP_URL || 'http://localhost:5173';
+  // If your local/dev setup still sees /.netlify/functions/trpc prefix (uncommon now, but safe to keep)
+  // Remove or comment out if requests arrive at /trpc directly
+  const pathname = url.pathname.replace(/^\/.netlify\/functions\/trpc/, '/trpc');
 
+  const origin = req.headers.get('origin');
+  const isAllowed = origin && (origin.includes('localhost') || origin === ALLOWED_ORIGIN);
   const corsHeaders: Record<string, string> = {
-    'Access-Control-Allow-Origin': allowedOrigin || 'http://localhost:5173',
+    'Access-Control-Allow-Origin': isAllowed ? origin! : ALLOWED_ORIGIN,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Credentials': 'true',
   };
 
-  if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 204,
-      headers: corsHeaders,
-      body: '',
-    };
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
+
+  // Safe adapter: shape-match only what's likely used (headers most common)
+  // Extend { method: req.method, url: req.url, ... } if your createContext reads them
+  const adaptedReq = {
+    headers: Object.fromEntries(req.headers) as IncomingMessage['headers'],
+  } as IncomingMessage;
 
   try {
-    const request = new Request(url, {
-      method: event.httpMethod,
-      headers,
-      body: event.httpMethod !== 'GET' && event.body ? event.body : undefined,
-    });
-
     const response = await fetchRequestHandler({
       endpoint: '/trpc',
-      req: request,
+      req,
       router: appRouter,
-      createContext: () => createContext({ req: { headers } as IncomingMessage }),
-      batching: {
-        enabled: true,
-      },
+      createContext: () => createContext({ req: adaptedReq }),
+      batching: { enabled: true },
       allowMethodOverride: true,
-      responseMeta: () => ({
-        headers: corsHeaders,
-        status: 200,
-      }),
     });
 
-    const responseBody = await response.text();
+    const headers = new Headers(response.headers);
+    Object.entries(corsHeaders).forEach(([key, value]) => headers.set(key, value));
 
-    return {
-      statusCode: response.status,
-      headers: { ...Object.fromEntries(response.headers), ...corsHeaders },
-      body: responseBody,
-    };
-  } catch (error: unknown) {
-    const trpcError = error instanceof TRPCError ? error : new TRPCError({
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'An unexpected error occurred',
-      cause: error,
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
     });
-    const statusCode = getHTTPStatusCodeFromError(trpcError);
-    return {
-      statusCode,
-      headers: { 'content-type': 'application/json', ...corsHeaders },
-      body: JSON.stringify([{
-        error: {
-          message: trpcError.message,
-          code: trpcError.code,
-          data: {
-            code: trpcError.code,
-            httpStatus: statusCode,
-            stack: trpcError.stack,
-            path: path.split('/trpc/')[1]?.split('?')[0],
-          },
+  } catch (cause) {
+    const error = cause instanceof TRPCError
+      ? cause
+      : new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'An unexpected error occurred',
+          cause,
+        });
+
+    const statusCode = getHTTPStatusCodeFromError(error);
+
+    const body = JSON.stringify([{
+      error: {
+        message: error.message,
+        code: error.code,
+        data: {
+          code: error.code,
+          httpStatus: statusCode,
+          stack: error.stack,
+          path: pathname.split('/trpc/')[1]?.split('?')[0] || '',
         },
-      }]),
-    };
+      },
+    }]);
+
+    const errorHeaders = new Headers({
+      'content-type': 'application/json',
+      ...corsHeaders,
+    });
+
+    return new Response(body, { status: statusCode, headers: errorHeaders });
   }
-};
+}
