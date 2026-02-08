@@ -1,6 +1,10 @@
 // __mocks__/handlers/weightGetCurrentGoal.ts
 import { http, HttpResponse } from "msw";
-import jwt from "jsonwebtoken";
+import {
+  authenticateRequest,
+  invalidJsonResponse,
+  internalServerErrorResponse,
+} from "./utils";
 
 interface TRPCRequestBody {
   id: number;
@@ -11,30 +15,14 @@ interface TRPCRequestBody {
 export const weightGetCurrentGoalHandler = http.post(
   "/trpc/weight.getCurrentGoal",
   async ({ request }) => {
-    // Clone the request to avoid consuming the body
+    // Clone because we need to read the body multiple times if needed
     const requestClone = request.clone();
     let requestBody: unknown;
+
     try {
       requestBody = await requestClone.json();
-    } catch (error) {
-      console.error("Failed to parse request body:", error);
-      return HttpResponse.json(
-        [
-          {
-            id: 1,
-            error: {
-              message: "Invalid request body",
-              code: -32000,
-              data: {
-                code: "BAD_REQUEST",
-                httpStatus: 400,
-                path: "weight.getCurrentGoal",
-              },
-            },
-          },
-        ],
-        { status: 200 },
-      );
+    } catch {
+      return invalidJsonResponse("weight.getCurrentGoal");
     }
 
     const requests = Array.isArray(requestBody) ? requestBody : [requestBody];
@@ -43,76 +31,37 @@ export const weightGetCurrentGoalHandler = http.post(
     );
 
     if (!goalRequest) {
-      return; // Pass to other handlers
+      return; // Not our procedure → let other handlers deal with it
     }
 
-    const authHeader = request.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return HttpResponse.json(
-        [
-          {
-            id: goalRequest.id,
-            error: {
-              message: "Unauthorized",
-              code: -32001,
-              data: {
-                code: "UNAUTHORIZED",
-                httpStatus: 401,
-                path: "weight.getCurrentGoal",
-              },
-            },
-          },
-        ],
-        { status: 200 },
-      );
+    // Use the reusable authentication helper
+    const auth = authenticateRequest(request, "weight.getCurrentGoal");
+
+    if (auth.response) {
+      // Auth failed → patch the correct id and return the error response
+      const body = await auth.response.json();
+      if (body.length > 0) {
+        body[0].id = goalRequest.id;
+      }
+      return HttpResponse.json(body, { status: auth.response.status || 200 });
     }
 
-    const token = authHeader.split(" ")[1];
-    let userId: string | null = null;
-    try {
-      const decoded = jwt.verify(
-        token,
-        process.env.JWT_SECRET || "your-secret-key",
-      ) as { userId: string };
-      userId = decoded.userId;
-    } catch {
-      return HttpResponse.json(
-        [
-          {
-            id: goalRequest.id,
-            error: {
-              message: "Invalid token",
-              code: -32001,
-              data: {
-                code: "UNAUTHORIZED",
-                httpStatus: 401,
-                path: "weight.getCurrentGoal",
-              },
-            },
-          },
-        ],
-        { status: 200 },
-      );
-    }
+    const { userId } = auth;
 
+    // Special test cases
     if (userId === "error-user-id") {
-      return HttpResponse.json(
-        [
-          {
-            id: goalRequest.id,
-            error: {
-              message: "Failed to fetch goal",
-              code: -32002,
-              data: {
-                code: "INTERNAL_SERVER_ERROR",
-                httpStatus: 500,
-                path: "weight.getCurrentGoal",
-              },
-            },
-          },
-        ],
-        { status: 200 },
+      const errorResponse = internalServerErrorResponse(
+        "Failed to fetch goal",
+        "weight.getCurrentGoal",
       );
+
+      // Patch the real request id
+      const errorBody = await errorResponse.json();
+      if (errorBody.length > 0) {
+        errorBody[0].id = goalRequest.id;
+      }
+
+      return HttpResponse.json(errorBody, { status: 200 });
     }
 
     if (userId === "empty-user-id") {
@@ -122,13 +71,23 @@ export const weightGetCurrentGoalHandler = http.post(
       );
     }
 
+    // Normal success case
     const mockGoal = {
       id: "1",
       goalWeightKg: 65,
       goalSetAt: "2023-10-01T00:00:00Z",
     };
+
     return HttpResponse.json(
-      [{ id: goalRequest.id, result: { type: "data", data: mockGoal } }],
+      [
+        {
+          id: goalRequest.id,
+          result: {
+            type: "data",
+            data: mockGoal,
+          },
+        },
+      ],
       { status: 200 },
     );
   },

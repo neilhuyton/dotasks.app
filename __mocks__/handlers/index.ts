@@ -12,7 +12,6 @@ import { weightGetCurrentGoalHandler } from './weightGetCurrentGoal';
 import { weightSetGoalHandler } from './weightSetGoal';
 import { weightUpdateGoalHandler } from './weightUpdateGoal';
 import { weightGetGoalsHandler } from './weightGetGoals';
-// import { catchAllHandler } from './catchAll';
 import { refreshTokenHandler } from './refreshToken';
 
 export const handlers = [
@@ -29,7 +28,6 @@ export const handlers = [
   weightSetGoalHandler,
   weightUpdateGoalHandler,
   weightGetGoalsHandler,
-  // catchAllHandler,
   refreshTokenHandler,
 ];
 
@@ -47,6 +45,5 @@ export {
   weightSetGoalHandler,
   weightUpdateGoalHandler,
   weightGetGoalsHandler,
-  // catchAllHandler,
   refreshTokenHandler,
 };

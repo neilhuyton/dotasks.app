@@ -6,15 +6,11 @@ import { trpc } from '../src/trpc';
 import { server } from '../__mocks__/server';
 import '@testing-library/jest-dom';
 import { act } from 'react';
-import {
-  RouterProvider,
-  createRouter,
-  createMemoryHistory,
-  useSearch,
-} from '@tanstack/react-router';
+import { RouterProvider, createRouter, createMemoryHistory, useSearch } from '@tanstack/react-router';
 import { router } from '../src/router/router';
 import { verifyEmailHandler } from '../__mocks__/handlers/verifyEmail';
 import { trpcClient, queryClient } from '../src/client';
+import { TEST_VERIFICATION_TOKENS } from "./test-constants";
 
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const mod = await importOriginal<typeof import('@tanstack/react-router')>();
@@ -64,8 +60,8 @@ describe('useVerifyEmail Hook', () => {
   });
 
   it('verifies email successfully with valid token', async () => {
-    vi.mocked(useSearch).mockReturnValue({ token: '42c6b154-c097-4a71-9b34-5b28669ea467' });
-    await setup('/verify-email', { token: '42c6b154-c097-4a71-9b34-5b28669ea467' });
+    vi.mocked(useSearch).mockReturnValue({ token: TEST_VERIFICATION_TOKENS.DELAYED_SUCCESS });
+    await setup('/verify-email', { token: TEST_VERIFICATION_TOKENS.DELAYED_SUCCESS });
 
     await act(async () => {
       await waitFor(
@@ -80,8 +76,8 @@ describe('useVerifyEmail Hook', () => {
   });
 
   it('handles invalid token with error message', async () => {
-    vi.mocked(useSearch).mockReturnValue({ token: '123e4567-e89b-12d3-a456-426614174000' });
-    await setup('/verify-email', { token: '123e4567-e89b-12d3-a456-426614174000' });
+    vi.mocked(useSearch).mockReturnValue({ token: TEST_VERIFICATION_TOKENS.INVALID });
+    await setup('/verify-email', { token: TEST_VERIFICATION_TOKENS.INVALID });
 
     await act(async () => {
       await waitFor(

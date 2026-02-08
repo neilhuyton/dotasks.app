@@ -1,3 +1,4 @@
+// netlify/functions/trpc.ts
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
 import type { HandlerEvent, HandlerResponse } from '@netlify/functions';
 import { appRouter } from '../../server/trpc';

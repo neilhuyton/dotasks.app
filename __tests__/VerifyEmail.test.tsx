@@ -13,6 +13,7 @@ import "@testing-library/jest-dom";
 
 import { verifyEmailHandler } from "../__mocks__/handlers/verifyEmail";
 import { mockUsers, type MockUser } from "../__mocks__/mockUsers";
+import { TEST_VERIFICATION_TOKENS } from "./test-constants";
 
 describe("Email Verification", () => {
   const queryClient = new QueryClient({
@@ -81,8 +82,7 @@ describe("Email Verification", () => {
   });
 
   it("successfully verifies email with valid token", async () => {
-    const validToken = "42c6b154-c097-4a71-9b34-5b28669ea467";
-    await setup("/verify-email", validToken);
+    await setup("/verify-email", TEST_VERIFICATION_TOKENS.DELAYED_SUCCESS);
 
     await waitFor(
       () => {
@@ -100,8 +100,7 @@ describe("Email Verification", () => {
   });
 
   it("displays error message for invalid or expired verification token", async () => {
-    const invalidToken = "00000000-0000-0000-0000-000000000000";
-    await setup("/verify-email", invalidToken);
+    await setup("/verify-email", TEST_VERIFICATION_TOKENS.INVALID);
 
     await waitFor(
       () => {
@@ -118,8 +117,7 @@ describe("Email Verification", () => {
   });
 
   it("displays error message for already verified email", async () => {
-    const token = "987fcdeb-12d3-4e5a-9876-426614174000";
-    await setup("/verify-email", token);
+    await setup("/verify-email", TEST_VERIFICATION_TOKENS.ALREADY_VERIFIED);
 
     await waitFor(
       () => {
@@ -136,8 +134,7 @@ describe("Email Verification", () => {
   });
 
   it("displays verifying message during verification process", async () => {
-    const token = "42c6b154-c097-4a71-9b34-5b28669ea467";
-    await setup("/verify-email", token);
+    await setup("/verify-email", TEST_VERIFICATION_TOKENS.DELAYED_SUCCESS);
 
     await waitFor(
       () => {

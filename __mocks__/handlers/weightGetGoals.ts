@@ -1,5 +1,10 @@
 // __mocks__/handlers/weightGetGoals.ts
 import { http, HttpResponse } from "msw";
+import {
+  authenticateRequest,
+  invalidJsonResponse,
+  internalServerErrorResponse,
+} from "./utils";
 
 interface TRPCRequestBody {
   id: number;
@@ -9,29 +14,12 @@ interface TRPCRequestBody {
 
 export const weightGetGoalsHandler = http.post(
   "/trpc/weight.getGoals",
-  async ({ request, params }) => {
+  async ({ request }) => {
     let requestBody: unknown;
     try {
       requestBody = await request.json();
-    } catch (error) {
-      console.error("Failed to parse request body:", error);
-      return HttpResponse.json(
-        [
-          {
-            id: 0,
-            error: {
-              message: "Invalid request body",
-              code: -32000,
-              data: {
-                code: "BAD_REQUEST",
-                httpStatus: 400,
-                path: params.path ?? "weight.getGoals",
-              },
-            },
-          },
-        ],
-        { status: 200 },
-      );
+    } catch {
+      return invalidJsonResponse("weight.getGoals");
     }
 
     const procedurePath = Array.isArray(requestBody)
@@ -42,51 +30,17 @@ export const weightGetGoalsHandler = http.post(
       return; // Pass to next handler
     }
 
-    const authHeader = request.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return HttpResponse.json(
-        [
-          {
-            id: 0,
-            error: {
-              message: "Unauthorized",
-              code: -32001,
-              data: {
-                code: "UNAUTHORIZED",
-                httpStatus: 401,
-                path: params.path ?? "weight.getGoals",
-              },
-            },
-          },
-        ],
-        { status: 200 },
-      );
+    const auth = authenticateRequest(request, "weight.getGoals");
+
+    if (auth.response) {
+      const body = await auth.response.json();
+      if (body.length > 0) {
+        body[0].id = 0; // this handler uses fixed id: 0
+      }
+      return HttpResponse.json(body, { status: auth.response.status || 200 });
     }
 
-    const token = authHeader.replace("Bearer ", "");
-    let userId: string | null = null;
-    try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      userId = payload.userId;
-    } catch {
-      return HttpResponse.json(
-        [
-          {
-            id: 0,
-            error: {
-              message: "Invalid token",
-              code: -32001,
-              data: {
-                code: "UNAUTHORIZED",
-                httpStatus: 401,
-                path: params.path ?? "weight.getGoals",
-              },
-            },
-          },
-        ],
-        { status: 200 },
-      );
-    }
+    const { userId } = auth;
 
     if (userId === "test-user-id") {
       return HttpResponse.json(
@@ -124,62 +78,30 @@ export const weightGetGoalsHandler = http.post(
     }
 
     if (userId === "error-user-id") {
-      return HttpResponse.json(
-        [
-          {
-            id: 0,
-            error: {
-              message: "Failed to fetch goals",
-              code: -32002,
-              data: {
-                code: "INTERNAL_SERVER_ERROR",
-                httpStatus: 500,
-                path: params.path?.includes("weight.getGoals")
-                  ? "weight.getGoals"
-                  : "unknown",
-              },
-            },
-          },
-        ],
-        { status: 200 },
+      const errorResponse = internalServerErrorResponse(
+        "Failed to fetch goals",
+        "weight.getGoals",
       );
+
+      // Patch the fixed id (this handler always uses 0)
+      const errorBody = await errorResponse.json();
+      if (errorBody.length > 0) {
+        errorBody[0].id = 0;
+      }
+
+      return HttpResponse.json(errorBody, { status: 200 });
     }
 
     if (userId === "invalid-user-id") {
-      return HttpResponse.json(
-        [
-          {
-            id: 0,
-            error: {
-              message: "Invalid token",
-              code: -32001,
-              data: {
-                code: "UNAUTHORIZED",
-                httpStatus: 401,
-                path: params.path ?? "weight.getGoals",
-              },
-            },
-          },
-        ],
-        { status: 200 },
-      );
+      // Optional: treat as token invalid even though JWT verified
+      return invalidJsonResponse("weight.getGoals");
+      // or return invalidTokenResponse("weight.getGoals");
     }
 
+    // No fallback unauthorized here anymore — we trust the token
+    // If you reach here → it's a valid user we don't have special mock data for → return empty or default
     return HttpResponse.json(
-      [
-        {
-          id: 0,
-          error: {
-            message: "Unauthorized",
-            code: -32001,
-            data: {
-              code: "UNAUTHORIZED",
-              httpStatus: 401,
-              path: params.path ?? "weight.getGoals",
-            },
-          },
-        },
-      ],
+      [{ id: 0, result: { type: "data", data: [] } }],
       { status: 200 },
     );
   },

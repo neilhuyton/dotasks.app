@@ -1,5 +1,6 @@
 // __mocks__/handlers/weightCreate.ts
 import { http, HttpResponse } from "msw";
+import { badRequestResponse, unauthorizedResponse } from "./utils";
 
 export const weightCreateHandler = http.post(
   "/trpc/weight.create",
@@ -8,23 +9,7 @@ export const weightCreateHandler = http.post(
     try {
       body = await request.json();
     } catch {
-      return HttpResponse.json(
-        [
-          {
-            id: 0,
-            error: {
-              message: "Invalid request body",
-              code: -32600,
-              data: {
-                code: "BAD_REQUEST",
-                httpStatus: 400,
-                path: "weight.create",
-              },
-            },
-          },
-        ],
-        { status: 400 },
-      );
+      return badRequestResponse("Invalid request body", "weight.create");
     }
 
     const headers = Object.fromEntries(request.headers.entries());
@@ -37,41 +22,12 @@ export const weightCreateHandler = http.post(
     const userId = headers["authorization"]?.split("Bearer ")[1];
 
     if (!userId) {
-      return HttpResponse.json(
-        [
-          {
-            id,
-            error: {
-              message: "Unauthorized: User must be logged in",
-              code: -32001,
-              data: {
-                code: "UNAUTHORIZED",
-                httpStatus: 401,
-                path: "weight.create",
-              },
-            },
-          },
-        ],
-        { status: 401 },
-      );
+      return unauthorizedResponse("weight.create");
     }
     if (!input?.weightKg || input.weightKg <= 0) {
-      return HttpResponse.json(
-        [
-          {
-            id,
-            error: {
-              message: "Weight must be a positive number",
-              code: -32001,
-              data: {
-                code: "BAD_REQUEST",
-                httpStatus: 400,
-                path: "weight.create",
-              },
-            },
-          },
-        ],
-        { status: 400 },
+      return badRequestResponse(
+        "Weight must be a positive number",
+        "weight.create",
       );
     }
     return HttpResponse.json([

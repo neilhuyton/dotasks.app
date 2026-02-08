@@ -1,4 +1,5 @@
 import { trpc } from '../trpc';
+import { formatDate } from "../utils/date"; 
 
 interface Weight {
   userId: string;
@@ -22,14 +23,6 @@ export function useWeightList() {
       utils.weight.getWeights.invalidate();
     },
   });
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-  };
 
   const handleDelete = (weightId: string) => {
     // if (window.confirm('Are you sure you want to delete this weight measurement?')) {

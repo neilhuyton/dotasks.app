@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import type { inferProcedureInput } from "@trpc/server";
 import type { AppRouter } from "../../server/trpc";
+import { invalidJsonResponse, badRequestResponse } from "./utils";
 
 interface TrpcRequestBody {
   "0": inferProcedureInput<AppRouter["register"]>; // { email: string, password: string }
@@ -17,102 +18,30 @@ export const registerHandler = http.post(
     try {
       body = await request.json();
     } catch {
-      return HttpResponse.json(
-        [
-          {
-            id: 0,
-            error: {
-              message: "Invalid request body",
-              code: -32600,
-              data: { code: "BAD_REQUEST", httpStatus: 400, path: "register" },
-            },
-          },
-        ],
-        { status: 200 },
-      );
+      return invalidJsonResponse('register');
     }
 
     if (!body || typeof body !== "object" || !("0" in body)) {
-      return HttpResponse.json(
-        [
-          {
-            id: 0,
-            error: {
-              message: "Invalid request body",
-              code: -32600,
-              data: { code: "BAD_REQUEST", httpStatus: 400, path: "register" },
-            },
-          },
-        ],
-        { status: 200 },
-      );
+      return badRequestResponse("Invalid request body", "register");
     }
 
     const input = (body as TrpcRequestBody)["0"];
     const { email, password } = input || {};
 
     if (!email || !password) {
-      return HttpResponse.json(
-        [
-          {
-            id: 0,
-            error: {
-              message: "Email and password are required",
-              code: -32603,
-              data: { code: "BAD_REQUEST", httpStatus: 400, path: "register" },
-            },
-          },
-        ],
-        { status: 200 },
-      );
+      return badRequestResponse("Email and password are required", "register");
     }
 
     if (!email.includes("@")) {
-      return HttpResponse.json(
-        [
-          {
-            id: 0,
-            error: {
-              message: "Invalid email address",
-              code: -32001,
-              data: { code: "BAD_REQUEST", httpStatus: 400, path: "register" },
-            },
-          },
-        ],
-        { status: 200 },
-      );
+      return badRequestResponse("Invalid email address", "register");
     }
 
     if (password.length < 8) {
-      return HttpResponse.json(
-        [
-          {
-            id: 0,
-            error: {
-              message: "Password must be at least 8 characters",
-              code: -32001,
-              data: { code: "BAD_REQUEST", httpStatus: 400, path: "register" },
-            },
-          },
-        ],
-        { status: 200 },
-      );
+      return badRequestResponse("Password must be at least 8 characters", "register");
     }
 
     if (mockUsers.find((u) => u.email === email)) {
-      return HttpResponse.json(
-        [
-          {
-            id: 0,
-            error: {
-              message: "Email already exists",
-              code: -32603,
-              data: { code: "BAD_REQUEST", httpStatus: 400, path: "register" },
-            },
-          },
-        ],
-        { status: 200 },
-      );
+      return badRequestResponse("Email already exists", "register");
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);

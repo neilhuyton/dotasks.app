@@ -1,122 +1,106 @@
 import { http, HttpResponse } from "msw";
 import jwt from "jsonwebtoken";
-import type { DefaultBodyType } from "msw";
+import {
+  badRequestResponse,
+  invalidJsonResponse,
+  invalidTokenResponse,
+  unauthorizedResponse,
+} from "./utils";
 
-interface TRPCRequestBody {
-  id?: number;
-  input?: { goalWeightKg?: number };
+interface UpdateGoalInput {
+  goalId: string;
+  goalWeightKg: number;
 }
 
-export const weightSetGoalHandler = http.post(
-  "/trpc/weight.setGoal",
+interface TrpcRequestItem {
+  id?: number | unknown;
+  json?: unknown;
+  input?: unknown;
+  params?: { input?: unknown } | unknown;
+}
+
+export const weightUpdateGoalHandler = http.post(
+  "/trpc/weight.updateGoal",
   async ({ request }) => {
-    let body: DefaultBodyType;
+    let body: unknown;
     try {
       body = await request.json();
     } catch {
-      return HttpResponse.json(
-        [
-          {
-            id: 0,
-            error: {
-              message: "Invalid request body",
-              code: -32600,
-              data: {
-                code: "BAD_REQUEST",
-                httpStatus: 400,
-                path: "weight.setGoal",
-              },
-            },
-          },
-        ],
-        { status: 400 },
-      );
+      return invalidJsonResponse("weight.updateGoal");
     }
 
+    // Normalize to array (handle both batch and single request)
+    const requests: TrpcRequestItem[] = Array.isArray(body) ? body : [body as TrpcRequestItem];
+
+    if (requests.length === 0) {
+      return badRequestResponse("Empty request batch", "weight.updateGoal");
+    }
+
+    const req = requests[0];
+    if (typeof req !== "object" || req === null) {
+      return badRequestResponse("Invalid request item", "weight.updateGoal");
+    }
+
+    const id: number = typeof req.id === "number" ? req.id : 0;
+
+    // Flexible input extraction - covers most common tRPC client shapes
+    let inputRaw: unknown;
+
+    if ("json" in req && req.json !== undefined) {
+      inputRaw = req.json;
+    } else if ("input" in req && req.input !== undefined) {
+      inputRaw = req.input;
+    } else if ("params" in req && typeof req.params === "object" && req.params !== null) {
+      if ("input" in req.params && req.params.input !== undefined) {
+        inputRaw = req.params.input;
+      }
+    }
+
+    if (typeof inputRaw !== "object" || inputRaw === null) {
+      return badRequestResponse("Missing or invalid input", "weight.updateGoal");
+    }
+
+    const input = inputRaw as UpdateGoalInput;
+
+    const { goalId, goalWeightKg } = input;
+
+    // Authentication
     const authHeader = request.headers.get("Authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return HttpResponse.json(
-        [
-          {
-            id: 0,
-            error: {
-              message: "Unauthorized: User must be logged in",
-              code: -32001,
-              data: {
-                code: "UNAUTHORIZED",
-                httpStatus: 401,
-                path: "weight.setGoal",
-              },
-            },
-          },
-        ],
-        { status: 401 },
-      );
+      return unauthorizedResponse("weight.updateGoal");
     }
 
     const token = authHeader.split(" ")[1];
     try {
       jwt.verify(token, process.env.JWT_SECRET || "your-secret-key");
     } catch {
-      return HttpResponse.json(
-        [
-          {
-            id: 0,
-            error: {
-              message: "Invalid token",
-              code: -32001,
-              data: {
-                code: "UNAUTHORIZED",
-                httpStatus: 401,
-                path: "weight.setGoal",
-              },
-            },
-          },
-        ],
-        { status: 200 },
+      return invalidTokenResponse("weight.updateGoal");
+    }
+
+    // Validation
+    if (typeof goalId !== "string" || typeof goalWeightKg !== "number" || goalWeightKg <= 0) {
+      return badRequestResponse(
+        "goalId (string) and positive goalWeightKg (number) are required",
+        "weight.updateGoal",
       );
     }
 
-    let input: { goalWeightKg?: number } | undefined;
-    let id: number = 0;
-    if (Array.isArray(body)) {
-      input = (body[0] as TRPCRequestBody)?.input;
-      id = (body[0] as TRPCRequestBody)?.id ?? 0;
-    } else if (body && typeof body === "object" && "input" in body) {
-      input = (body as TRPCRequestBody).input;
-      id = (body as TRPCRequestBody).id ?? 0;
-    }
-
-    const goalWeightKg = input?.goalWeightKg;
-
-    if (!goalWeightKg || goalWeightKg <= 0) {
-      return HttpResponse.json(
-        [
-          {
-            id,
-            error: {
-              message: "Goal weight must be a positive number",
-              code: -32001,
-              data: {
-                code: "BAD_REQUEST",
-                httpStatus: 400,
-                path: "weight.setGoal",
-              },
+    // Success
+    return HttpResponse.json(
+      [
+        {
+          id,
+          result: {
+            type: "data",
+            data: {
+              id: goalId,
+              goalWeightKg,
+              goalSetAt: new Date().toISOString(),
             },
           },
-        ],
-        { status: 400 },
-      );
-    }
-
-    return HttpResponse.json([
-      {
-        id,
-        result: {
-          type: "data",
-          data: { id: "2", goalWeightKg, goalSetAt: new Date().toISOString() },
         },
-      },
-    ]);
+      ],
+      { status: 200 },
+    );
   },
 );

@@ -1,123 +1,88 @@
 // __mocks__/handlers/weightDelete.ts
 import { http, HttpResponse } from "msw";
-import jwt from "jsonwebtoken";
-import { weights } from "./weightsData"; // Import shared weights
+import {
+  authenticateRequest,
+  badRequestResponse,
+  internalServerErrorResponse,
+} from "./utils";
+import { weights } from "./weightsData"; // shared weights array
+
+interface TrpcInput {
+  weightId: string;
+  id?: number;
+}
 
 export const weightDeleteHandler = http.post(
   "/trpc/weight.delete",
   async ({ request }) => {
-    type TrpcRequestBody = { [key: string]: { weightId: string; id?: number } };
-    const body = (await request.json()) as TrpcRequestBody | null;
-
-    const authHeader = request.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return HttpResponse.json(
-        [
-          {
-            id: 0,
-            error: {
-              message: "Unauthorized",
-              code: -32001,
-              data: {
-                code: "UNAUTHORIZED",
-                httpStatus: 401,
-                path: "weight.delete",
-              },
-            },
-          },
-        ],
-        { status: 200 },
-      );
-    }
-
-    const token = authHeader.split(" ")[1];
-    let userId: string | null = null;
+    let body: unknown;
     try {
-      const decoded = jwt.verify(
-        token,
-        process.env.JWT_SECRET || "your-secret-key",
-      ) as { userId: string };
-      userId = decoded.userId;
+      body = await request.json();
     } catch {
-      return HttpResponse.json(
-        [
-          {
-            id: 0,
-            error: {
-              message: "Invalid token",
-              code: -32001,
-              data: {
-                code: "UNAUTHORIZED",
-                httpStatus: 401,
-                path: "weight.delete",
-              },
-            },
-          },
-        ],
-        { status: 200 },
-      );
+      return badRequestResponse("Invalid request body", "weight.delete");
     }
 
+    // Safely extract the tRPC input object
+    const inputObj = body && typeof body === "object" && "0" in body
+      ? (body as { [key: string]: TrpcInput | undefined })["0"]
+      : undefined;
+
+    const requestId = inputObj?.id ?? 0;
+
+    // Reusable authentication
+    const auth = authenticateRequest(request, "weight.delete");
+
+    if (auth.response) {
+      const errorBody = await auth.response.json();
+      if (errorBody.length > 0) {
+        errorBody[0].id = requestId;
+      }
+      return HttpResponse.json(errorBody, { status: auth.response.status || 200 });
+    }
+
+    const { userId } = auth;
+
+    // Special test cases
     if (userId === "error-user-id") {
+      const errorResponse = internalServerErrorResponse(
+        "Failed to delete weight",
+        "weight.delete",
+      );
+
+      // Patch the real request id
+      const errorBody = await errorResponse.json();
+      if (errorBody.length > 0) {
+        errorBody[0].id = requestId;
+      }
+
+      return HttpResponse.json(errorBody, { status: 200 });
+    }
+
+    if (!inputObj || !inputObj.weightId) {
+      return badRequestResponse("Invalid input: weightId is required", "weight.delete");
+    }
+
+    const weightIndex = weights.findIndex((w) => w.id === inputObj.weightId);
+
+    if (weightIndex !== -1) {
+      weights.splice(weightIndex, 1);
       return HttpResponse.json(
         [
           {
-            id: 0,
-            error: {
-              message: "Failed to delete weight",
-              code: -32002,
-              data: {
-                code: "INTERNAL_SERVER_ERROR",
-                httpStatus: 500,
-                path: "weight.delete",
-              },
+            id: requestId,
+            result: {
+              data: { id: inputObj.weightId },
             },
           },
         ],
         { status: 200 },
       );
-    }
-
-    const input = body?.["0"];
-    if (!input || !input.weightId) {
-      return HttpResponse.json(
-        [
-          {
-            id: 0,
-            error: {
-              message: "Invalid input",
-              code: -32001,
-              data: {
-                code: "BAD_REQUEST",
-                httpStatus: 400,
-                path: "weight.delete",
-              },
-            },
-          },
-        ],
-        { status: 200 },
-      );
-    }
-
-    if (weights.some((w) => w.id === input.weightId)) {
-      weights.splice(
-        weights.findIndex((w) => w.id === input.weightId),
-        1,
-      );
-      return HttpResponse.json([
-        {
-          id: input?.id ?? 0,
-          result: {
-            data: { id: input.weightId },
-          },
-        },
-      ]);
     }
 
     return HttpResponse.json(
       [
         {
-          id: input?.id ?? 0,
+          id: requestId,
           error: {
             message: "Weight measurement not found",
             code: -32001,

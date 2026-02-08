@@ -1,6 +1,9 @@
 // __mocks__/handlers/refreshToken.ts
 import { http, HttpResponse } from "msw";
 import jwt from "jsonwebtoken";
+import {
+  internalServerErrorResponse,
+} from "./utils"; // assuming internalServerErrorResponse is exported from utils.ts
 import { mockUsers, type MockUser } from "../mockUsers";
 
 interface TRPCRequestBody {
@@ -45,6 +48,7 @@ export const refreshTokenHandler = http.post(
         );
       }
 
+      // Invalid refresh token
       return HttpResponse.json(
         [
           {
@@ -63,23 +67,19 @@ export const refreshTokenHandler = http.post(
         { status: 200 },
       );
     } catch {
-      return HttpResponse.json(
-        [
-          {
-            id: 0,
-            error: {
-              message: "Internal server error",
-              code: -32002,
-              data: {
-                code: "INTERNAL_SERVER_ERROR",
-                httpStatus: 500,
-                path: "refreshToken.refresh",
-              },
-            },
-          },
-        ],
-        { status: 200 },
+      // Use the reusable internal server error helper
+      const errorResponse = internalServerErrorResponse(
+        "Internal server error",
+        "refreshToken.refresh",
       );
+
+      // Since this handler always uses id: 0, we can patch it directly
+      const errorBody = await errorResponse.json();
+      if (errorBody.length > 0) {
+        errorBody[0].id = 0;
+      }
+
+      return HttpResponse.json(errorBody, { status: 200 });
     }
   },
 );

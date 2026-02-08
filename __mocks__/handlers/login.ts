@@ -2,26 +2,16 @@
 import { http, HttpResponse } from "msw";
 import { mockUsers, type MockUser } from "../mockUsers";
 import bcrypt from "bcryptjs";
+import { invalidJsonResponse, badRequestResponse } from "./utils";
 
 export const loginHandler = http.post("/trpc/login", async ({ request }) => {
   await new Promise((resolve) => setTimeout(resolve, 50));
+
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return HttpResponse.json(
-      [
-        {
-          id: 0,
-          error: {
-            message: "Invalid request body",
-            code: -32600,
-            data: { code: "BAD_REQUEST", httpStatus: 400, path: "login" },
-          },
-        },
-      ],
-      { status: 200 },
-    );
+    return invalidJsonResponse('login');
   }
 
   const input =
@@ -32,71 +22,23 @@ export const loginHandler = http.post("/trpc/login", async ({ request }) => {
         : body;
 
   if (!input || !input.email || !input.password) {
-    return HttpResponse.json(
-      [
-        {
-          id: 0,
-          error: {
-            message: "Invalid email or password",
-            code: -32600,
-            data: { code: "BAD_REQUEST", httpStatus: 400, path: "login" },
-          },
-        },
-      ],
-      { status: 200 },
-    );
+    return badRequestResponse("Invalid email or password", "login");
   }
 
   const { email, password } = input;
 
   const user = mockUsers.find((u: MockUser) => u.email === email);
   if (!user) {
-    return HttpResponse.json(
-      [
-        {
-          id: 0,
-          error: {
-            message: "Invalid email or password",
-            code: -32602,
-            data: { code: "BAD_REQUEST", httpStatus: 400, path: "login" },
-          },
-        },
-      ],
-      { status: 200 },
-    );
+    return badRequestResponse("Invalid email or password", "login");
   }
 
   if (!user.isEmailVerified) {
-    return HttpResponse.json(
-      [
-        {
-          id: 0,
-          error: {
-            message: "Please verify your email before logging in",
-            code: -32602,
-            data: { code: "BAD_REQUEST", httpStatus: 400, path: "login" },
-          },
-        },
-      ],
-      { status: 200 },
-    );
+    return badRequestResponse("Please verify your email before logging in", "login");
   }
 
   const isPasswordValid = await bcrypt.compare(password, user.password);
   if (!isPasswordValid) {
-    return HttpResponse.json(
-      [
-        {
-          id: 0,
-          error: {
-            message: "Invalid email or password",
-            code: -32602,
-            data: { code: "BAD_REQUEST", httpStatus: 400, path: "login" },
-          },
-        },
-      ],
-      { status: 200 },
-    );
+    return badRequestResponse("Invalid email or password", "login");
   }
 
   return HttpResponse.json(

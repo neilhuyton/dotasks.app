@@ -55,16 +55,12 @@ describe("WeightGoal Component", () => {
             JSON.stringify([
               { id: 0, method: "query", path: "weight.getCurrentGoal" },
             ]);
-          console.log("tRPC Fetch Headers:", headers);
-          console.log("tRPC Fetch Body:", body);
           const response = await fetch(url, {
             ...options,
             headers,
             method: "POST",
             body,
           });
-          const responseBody = await response.clone().json();
-          console.log("tRPC Response:", responseBody);
           return response;
         },
       }),

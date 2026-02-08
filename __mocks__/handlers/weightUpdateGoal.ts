@@ -1,6 +1,12 @@
 // __mocks__/handlers/weightUpdateGoal.ts
 import { http, HttpResponse } from "msw";
 import jwt from "jsonwebtoken";
+import {
+  badRequestResponse,
+  invalidJsonResponse,
+  invalidTokenResponse,
+  unauthorizedResponse,
+} from "./utils";
 
 interface TRPCRequestBody {
   id?: number;
@@ -14,67 +20,19 @@ export const weightUpdateGoalHandler = http.post(
     try {
       body = await request.json();
     } catch {
-      return HttpResponse.json(
-        [
-          {
-            id: 0,
-            error: {
-              message: "Invalid request body",
-              code: -32600,
-              data: {
-                code: "BAD_REQUEST",
-                httpStatus: 400,
-                path: "weight.updateGoal",
-              },
-            },
-          },
-        ],
-        { status: 400 },
-      );
+      return invalidJsonResponse("weight.updateGoal");
     }
 
     const authHeader = request.headers.get("Authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return HttpResponse.json(
-        [
-          {
-            id: 0,
-            error: {
-              message: "Unauthorized: User must be logged in",
-              code: -32001,
-              data: {
-                code: "UNAUTHORIZED",
-                httpStatus: 401,
-                path: "weight.updateGoal",
-              },
-            },
-          },
-        ],
-        { status: 401 },
-      );
+      return unauthorizedResponse("weight.updateGoal");
     }
 
     const token = authHeader.split(" ")[1];
     try {
       jwt.verify(token, process.env.JWT_SECRET || "your-secret-key");
     } catch {
-      return HttpResponse.json(
-        [
-          {
-            id: 0,
-            error: {
-              message: "Invalid token",
-              code: -32001,
-              data: {
-                code: "UNAUTHORIZED",
-                httpStatus: 401,
-                path: "weight.updateGoal",
-              },
-            },
-          },
-        ],
-        { status: 401 },
-      );
+      return invalidTokenResponse("weight.updateGoal");
     }
 
     let input: { goalId?: string; goalWeightKg?: number } | undefined;
@@ -95,23 +53,7 @@ export const weightUpdateGoalHandler = http.post(
     const { goalId, goalWeightKg } = input || {};
 
     if (!goalId || !goalWeightKg || goalWeightKg <= 0) {
-      return HttpResponse.json(
-        [
-          {
-            id,
-            error: {
-              message: "Goal ID and valid weight are required",
-              code: -32001,
-              data: {
-                code: "BAD_REQUEST",
-                httpStatus: 400,
-                path: "weight.updateGoal",
-              },
-            },
-          },
-        ],
-        { status: 400 },
-      );
+      return badRequestResponse("Goal ID and valid weight are required", "weight.updateGoal");
     }
 
     return HttpResponse.json(

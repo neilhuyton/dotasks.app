@@ -1,4 +1,7 @@
+// __mocks__/mockUsers.ts
+
 import bcrypt from "bcryptjs";
+import { TEST_VERIFICATION_TOKENS } from "../__tests__/test-constants";
 
 export interface MockUser {
   id: string;
@@ -31,7 +34,7 @@ export const mockUsers: MockUser[] = [
     email: "verifieduser@example.com",
     password: bcrypt.hashSync("password123", 10),
     isEmailVerified: true,
-    verificationToken: "987fcdeb-12d3-4e5a-9876-426614174000",
+    verificationToken: TEST_VERIFICATION_TOKENS.ALREADY_VERIFIED,
     resetPasswordToken: null,
     resetPasswordTokenExpiresAt: null,
     createdAt: new Date().toISOString(),
@@ -42,9 +45,9 @@ export const mockUsers: MockUser[] = [
     id: "27e72eb9-a0ad-4714-bd7a-c148ac1b903e",
     email: "neil.huyton@gmail.com",
     password: "$2b$10$jEeurRBvzMKgzXNYqihFiedyVyMCJDlC293i/MYoY9IPVrWeZOhX",
-    verificationToken: "42c6b154-c097-4a71-9b34-5b28669ea467",
+    verificationToken: TEST_VERIFICATION_TOKENS.DELAYED_SUCCESS,
     isEmailVerified: false,
-    resetPasswordToken: "123e4567-e89b-12d3-a456-426614174000",
+    resetPasswordToken: TEST_VERIFICATION_TOKENS.RESET_PASSWORD_EXAMPLE,
     resetPasswordTokenExpiresAt: new Date(
       Date.now() + 60 * 60 * 1000
     ).toISOString(),
