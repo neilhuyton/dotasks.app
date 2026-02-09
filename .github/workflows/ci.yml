@@ -113,7 +113,9 @@ jobs:
       - name: Generate Prisma client
         env:
           DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
-        run: DATABASE_URL="$DATABASE_URL" pnpm build
+        run: |
+          DATABASE_URL="$DATABASE_URL" npx prisma generate
+          pnpm vite build   # separate vite step if build does more
 
       - name: Run Playwright tests
         run: pnpm test:e2e
