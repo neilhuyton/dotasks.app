@@ -111,7 +111,9 @@ jobs:
         run: pnpm exec playwright install --with-deps
 
       - name: Generate Prisma client
-        run: pnpm build
+        env:
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
+        run: DATABASE_URL="$DATABASE_URL" pnpm build
 
       - name: Run Playwright tests
         run: pnpm test:e2e
