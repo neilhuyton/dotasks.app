@@ -1,13 +1,13 @@
 // prisma.config.ts
-import 'dotenv/config';               // loads .env file
-import { defineConfig, env } from 'prisma/config';
+import 'dotenv/config';
+import { defineConfig } from 'prisma/config';
 
 export default defineConfig({
-  schema: 'prisma/schema.prisma',     // or wherever your schema lives
+  schema: 'prisma/schema.prisma',
   migrations: {
     path: 'prisma/migrations',
   },
   datasource: {
-    url: env('DATABASE_URL'),         // type-safe env access (throws if missing)
+    url: process.env.DATABASE_URL || 'postgresql://dummy:dummy@localhost:5432/dummy?schema=public',
   },
 });
