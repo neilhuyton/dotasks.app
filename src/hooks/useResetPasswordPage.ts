@@ -1,4 +1,4 @@
-// src/hooks/useResetPassword.ts
+// src/hooks/useResetPasswordPage.ts
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,7 +18,7 @@ interface UseResetPasswordReturn {
   handleSubmit: (data: FormValues) => Promise<void>;
 }
 
-export const useResetPassword = (): UseResetPasswordReturn => {
+export const useResetPasswordPage = (): UseResetPasswordReturn => {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { email: "" },

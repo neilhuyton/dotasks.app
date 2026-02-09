@@ -1,4 +1,4 @@
-// src/hooks/useHome.ts
+// src/hooks/useHomePage.ts
 import { useAuthStore } from "../store/authStore";
 import { trpc } from "../trpc";
 
@@ -9,7 +9,7 @@ type Goal = {
   reachedAt: Date | null;
 };
 
-export const useHome = () => {
+export const useHomePage = () => {
   const { isLoggedIn } = useAuthStore();
 
   // tRPC queries

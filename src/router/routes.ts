@@ -1,15 +1,15 @@
 // src/router/routes.ts
 import { createRoute, redirect, type RootRoute } from "@tanstack/react-router";
-import Home from "../components/Home";
-import Weight from "../components/Weight";
-import WeightChart from "../components/WeightChart";
-import WeightGoal from "../components/WeightGoal";
-import Register from "../components/Register";
-import LoginForm from "../components/LoginForm";
-import ResetPasswordForm from "../components/ResetPasswordForm";
-import ConfirmResetPasswordForm from "../components/ConfirmResetPasswordForm";
-import VerifyEmail from "../components/VerifyEmail";
-import Profile from "../components/Profile";
+import Home from "../pages/HomePage";
+import WeightLogPage from "../pages/WeightLogPage";
+import WeightChartPage from "../pages/WeightChartPage";
+import WeightGoalPage from "../pages/WeightGoalPage";
+import RegisterPage from "../pages/RegisterPage";
+import LoginPage from "../pages/LoginPage";
+import ResetPasswordPage from "../pages/ResetPasswordPage";
+import ConfirmResetPasswordPage from "../pages/ConfirmResetPasswordPage";
+import VerifyEmailPage from "../pages/VerifyEmailPage";
+import ProfilePage from "../pages/ProfilePage";
 import { useAuthStore } from "../store/authStore";
 import {
   verifyEmailSearchSchema,
@@ -57,21 +57,21 @@ export const registerRoute = (rootRoute: RootRoute) =>
   createRoute({
     getParentRoute: () => rootRoute,
     path: "/register",
-    component: Register,
+    component: RegisterPage,
   });
 
 export const loginRoute = (rootRoute: RootRoute) =>
   createRoute({
     getParentRoute: () => rootRoute,
     path: "/login",
-    component: LoginForm,
+    component: LoginPage,
   });
 
 export const resetPasswordRoute = (rootRoute: RootRoute) =>
   createRoute({
     getParentRoute: () => rootRoute,
     path: "/reset-password",
-    component: ResetPasswordForm,
+    component: ResetPasswordPage,
   });
 
 export const confirmResetPasswordRoute = (rootRoute: RootRoute) =>
@@ -79,7 +79,7 @@ export const confirmResetPasswordRoute = (rootRoute: RootRoute) =>
     getParentRoute: () => rootRoute,
     path: "/confirm-reset-password",
     validateSearch: confirmResetPasswordSearchSchema,
-    component: ConfirmResetPasswordForm,
+    component: ConfirmResetPasswordPage,
   });
 
 export const weightRoute = (rootRoute: RootRoute) =>
@@ -91,7 +91,7 @@ export const weightRoute = (rootRoute: RootRoute) =>
         return; // Allow trpcClient to attempt refresh
       }
     },
-    component: Weight,
+    component: WeightLogPage,
   });
 
 export const weightChartRoute = (rootRoute: RootRoute) =>
@@ -103,7 +103,7 @@ export const weightChartRoute = (rootRoute: RootRoute) =>
         return; // Allow trpcClient to attempt refresh
       }
     },
-    component: WeightChart,
+    component: WeightChartPage,
   });
 
 export const weightGoalRoute = (rootRoute: RootRoute) =>
@@ -115,7 +115,7 @@ export const weightGoalRoute = (rootRoute: RootRoute) =>
         return; // Allow trpcClient to attempt refresh
       }
     },
-    component: WeightGoal,
+    component: WeightGoalPage,
   });
 
 export const verifyEmailRoute = (rootRoute: RootRoute) =>
@@ -123,7 +123,7 @@ export const verifyEmailRoute = (rootRoute: RootRoute) =>
     getParentRoute: () => rootRoute,
     path: "/verify-email",
     validateSearch: verifyEmailSearchSchema,
-    component: VerifyEmail,
+    component: VerifyEmailPage,
   });
 
 export const profileRoute = (rootRoute: RootRoute) =>
@@ -135,5 +135,5 @@ export const profileRoute = (rootRoute: RootRoute) =>
         return; // Allow trpcClient to attempt refresh
       }
     },
-    component: Profile,
+    component: ProfilePage,
   });

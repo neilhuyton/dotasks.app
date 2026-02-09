@@ -1,4 +1,4 @@
-// src/components/ResetPasswordForm.tsx
+// src/components/RegisterPage.tsx
 import { cn } from "@/lib/utils";
 import {
   Form,
@@ -10,23 +10,24 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { useResetPassword } from "../hooks/useResetPassword";
-import { router } from "../router/router";
-import { Logo } from "./Logo";
-import { LoadingSpinner } from "./LoadingSpinner";
+import { useRegisterPage } from "../hooks/useRegisterPage";
+import { useRouter } from "@tanstack/react-router";
+import { Logo } from "../components/Logo";
+import { LoadingSpinner } from "../components/LoadingSpinner";
 
-interface ResetPasswordFormProps {
+interface RegisterPageProps {
   className?: string;
 }
 
-function ResetPasswordForm({ className }: ResetPasswordFormProps) {
-  const { form, message, isPending, handleSubmit } = useResetPassword();
+function RegisterPage({ className }: RegisterPageProps) {
+  const { form, message, isRegistering, handleRegister } = useRegisterPage();
+  const router = useRouter();
 
   return (
     <div
       className={cn(
         "min-h-[100dvh] flex flex-col items-center p-1 sm:p-2 lg:p-3",
-        className
+        className,
       )}
     >
       <div className="pt-14">
@@ -38,18 +39,15 @@ function ResetPasswordForm({ className }: ResetPasswordFormProps) {
           role="heading"
           aria-level={1}
         >
-          Reset your password
+          Create an account
         </h1>
         <p className="text-muted-foreground text-center mb-6">
-          Enter your email to receive a password reset link
+          Enter your details below to create an account
         </p>
         <Form {...form}>
           <form
-            onSubmit={(e) => {
-              form.handleSubmit(handleSubmit)(e);
-            }}
-            role="form"
-            data-testid="reset-password-form"
+            onSubmit={form.handleSubmit(handleRegister)}
+            data-testid="register-form"
             className="w-full"
           >
             <div className="flex flex-col gap-6">
@@ -68,8 +66,8 @@ function ResetPasswordForm({ className }: ResetPasswordFormProps) {
                           type="email"
                           placeholder="m@example.com"
                           required
-                          disabled={isPending}
                           data-testid="email-input"
+                          disabled={isRegistering}
                           tabIndex={1}
                           {...field}
                         />
@@ -79,21 +77,46 @@ function ResetPasswordForm({ className }: ResetPasswordFormProps) {
                   )}
                 />
               </div>
-              {isPending && (
+              <div className="grid gap-3">
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <Label htmlFor="password" data-testid="password-label">
+                        Password
+                      </Label>
+                      <FormControl>
+                        <Input
+                          id="password"
+                          type="password"
+                          placeholder="Enter your password"
+                          required
+                          data-testid="password-input"
+                          disabled={isRegistering}
+                          tabIndex={2}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              {isRegistering && (
                 <div className="flex justify-center py-4">
-                  <LoadingSpinner size="md" testId="reset-password-loading" />
+                  <LoadingSpinner size="md" testId="register-loading" />
                 </div>
               )}
               {message && (
                 <p
-                  role="alert"
+                  data-testid="register-message"
                   className={cn(
                     "text-sm text-center",
                     message.includes("failed")
                       ? "text-red-500"
-                      : "text-green-500"
+                      : "text-green-500",
                   )}
-                  data-testid="reset-password-message"
                 >
                   {message}
                 </p>
@@ -101,13 +124,14 @@ function ResetPasswordForm({ className }: ResetPasswordFormProps) {
               <Button
                 type="submit"
                 className="w-full mt-4"
-                disabled={isPending}
-                data-testid="submit-button"
-                tabIndex={2}
+                data-testid="register-button"
+                disabled={isRegistering}
+                tabIndex={3}
               >
-                {isPending ? "Sending..." : "Send Reset Link"}
+                {isRegistering ? "Registering..." : "Register"}
               </Button>
               <div className="mt-4 text-center text-sm">
+                Already have an account?{" "}
                 <a
                   href="#"
                   role="link"
@@ -116,10 +140,10 @@ function ResetPasswordForm({ className }: ResetPasswordFormProps) {
                     router.navigate({ to: "/login" });
                   }}
                   className="underline underline-offset-4"
-                  data-testid="back-to-login-link"
-                  tabIndex={3}
+                  data-testid="login-link"
+                  tabIndex={4}
                 >
-                  Back to login
+                  Login
                 </a>
               </div>
             </div>
@@ -130,4 +154,4 @@ function ResetPasswordForm({ className }: ResetPasswordFormProps) {
   );
 }
 
-export default ResetPasswordForm;
+export default RegisterPage;

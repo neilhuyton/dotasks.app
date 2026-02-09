@@ -14,16 +14,16 @@ const FROM = `${process.env.APP_NAME} <${process.env.EMAIL_FROM}>`;
 
 export async function sendVerificationEmail(
   to: string,
-  verificationToken: string
+  verificationToken: string,
 ) {
   const verificationUrl = `${
-    process.env.VITE_APP_URL || "http://localhost:5173"
+    process.env.VITE_APP_URL || "http://localhost:8888"
   }/verify-email?token=${verificationToken}`;
 
   const mailOptions = {
     from: FROM,
     to,
-    subject: "Verify Your Email Address",
+    subject: "Verify Your Email Address boop",
     html: `
       <h1>Welcome!</h1>
       <p>Please verify your email address by clicking the link below:</p>
@@ -42,7 +42,7 @@ export async function sendVerificationEmail(
 
 export async function sendResetPasswordEmail(to: string, resetToken: string) {
   const resetUrl = `${
-    process.env.VITE_APP_URL || "http://localhost:5173"
+    process.env.VITE_APP_URL || "http://localhost:8888"
   }/confirm-reset-password?token=${resetToken}`;
 
   const mailOptions = {
@@ -67,7 +67,7 @@ export async function sendResetPasswordEmail(to: string, resetToken: string) {
 
 export async function sendEmailChangeNotification(
   oldEmail: string,
-  newEmail: string
+  newEmail: string,
 ) {
   const mailOptions = {
     from: FROM,

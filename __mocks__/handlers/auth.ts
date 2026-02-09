@@ -25,37 +25,23 @@ export const loginHandler = trpcMsw.login.mutation(async ({ input }) => {
   const email = (rawInput as LoginInput | undefined)?.email ?? '';
   const password = (rawInput as LoginInput | undefined)?.password ?? '';
 
-  console.log('[MOCK LOGIN] Received input (after unwrap):', { email, password });
-
   if (!email || !password) {
-    console.log('[MOCK LOGIN] Missing email/password');
     throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid email or password" });
   }
 
   const user = mockUsers.find((u: MockUser) => u.email === email);
-  console.log('[MOCK LOGIN] Found user?', !!user, user?.email || 'not found');
 
   if (!user) {
-    console.log('[MOCK LOGIN] User not found for email:', email);
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password" });
   }
 
   if (!user.isEmailVerified) {
-    console.log('[MOCK LOGIN] Email not verified for:', email);
     throw new TRPCError({ code: "FORBIDDEN", message: "Please verify your email before logging in" });
   }
 
   const isPasswordValid = await bcrypt.compare(password, user.password);
-  console.log(
-    '[MOCK LOGIN] Password valid?',
-    isPasswordValid,
-    ' (input pw length:',
-    password.length,
-    ')'
-  );
 
   if (!isPasswordValid) {
-    console.log('[MOCK LOGIN] Password mismatch for user:', email);
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password" });
   }
 

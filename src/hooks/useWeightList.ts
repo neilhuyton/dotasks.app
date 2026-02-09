@@ -1,21 +1,20 @@
+// src/hooks/useWeightList.ts
 import { trpc } from '../trpc';
 import { formatDate } from "../utils/date"; 
 
-interface Weight {
-  userId: string;
-  id: string;
-  createdAt: string;
-  weightKg: number;
-  note: string | null;
-}
-
 export function useWeightList() {
   const {
-    data: weights,
+    data: weightsRaw,
     isLoading,
     isError,
     error,
   } = trpc.weight.getWeights.useQuery(undefined, {});
+
+  const weights = weightsRaw
+    ? [...weightsRaw].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
+    : undefined;
 
   const utils = trpc.useUtils();
   const deleteMutation = trpc.weight.delete.useMutation({
@@ -25,13 +24,14 @@ export function useWeightList() {
   });
 
   const handleDelete = (weightId: string) => {
+    // Uncomment in production:
     // if (window.confirm('Are you sure you want to delete this weight measurement?')) {
-      deleteMutation.mutate({ weightId });
+    deleteMutation.mutate({ weightId });
     // }
   };
 
   return {
-    weights: weights as Weight[] | undefined,
+    weights,              // now sorted newest → oldest
     isLoading,
     isError,
     error,

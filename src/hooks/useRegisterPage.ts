@@ -1,4 +1,4 @@
-// src/hooks/useRegister.ts
+// src/hooks/useRegisterPage.ts
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -29,7 +29,7 @@ interface UseRegisterReturn {
   handleRegister: (data: FormValues) => Promise<void>;
 }
 
-export const useRegister = (): UseRegisterReturn => {
+export const useRegisterPage = (): UseRegisterReturn => {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { email: '', password: '' },

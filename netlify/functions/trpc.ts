@@ -6,7 +6,7 @@ import { createContext } from '../../server/context';
 import { TRPCError } from '@trpc/server';
 import { getHTTPStatusCodeFromError } from '@trpc/server/http';
 
-const ALLOWED_ORIGIN = process.env.VITE_APP_URL || 'http://localhost:5173';
+const ALLOWED_ORIGIN = process.env.VITE_APP_URL || 'http://localhost:8888';
 
 export default async function handler(req: Request): Promise<Response> {
   const url = new URL(req.url);

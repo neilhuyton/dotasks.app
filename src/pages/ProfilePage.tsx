@@ -1,10 +1,10 @@
 // src/components/Profile.tsx
 import { Link } from "@tanstack/react-router";
 import { MailIcon, LockIcon, LogOutIcon } from "lucide-react";
-import { useProfile } from "../hooks/useProfile";
-import { LoadingSpinner } from "./LoadingSpinner";
+import { useProfilePage } from "../hooks/useProfilePage";
+import { LoadingSpinner } from "../components/LoadingSpinner";
 
-function Profile() {
+function ProfilePage() {
   const {
     emailForm,
     passwordForm,
@@ -15,7 +15,7 @@ function Profile() {
     handleEmailSubmit,
     handlePasswordSubmit,
     handleLogout,
-  } = useProfile();
+  } = useProfilePage();
 
   return (
     <div className="p-4 sm:p-6 bg-background text-foreground flex flex-col items-center overflow-auto">
@@ -152,4 +152,4 @@ function Profile() {
   );
 }
 
-export default Profile;
+export default ProfilePage;

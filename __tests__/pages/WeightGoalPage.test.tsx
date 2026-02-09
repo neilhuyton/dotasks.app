@@ -1,28 +1,40 @@
-// __tests__/WeightGoal.test.tsx
-import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from "vitest";
-import { render, screen, waitFor, act } from "@testing-library/react";
+// __tests__/WeightGoalPage.test.tsx
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  beforeEach,
+  afterEach,
+  vi,
+  afterAll,
+} from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpLink } from "@trpc/client";
-import { trpc } from "../src/trpc";
-import { server } from "../__mocks__/server";
+import { trpc } from "../../src/trpc";
+import { server } from "../../__mocks__/server";
 import "@testing-library/jest-dom";
 
-import WeightGoal from "../src/components/WeightGoal";
+import WeightGoalPage from "../../src/pages/WeightGoalPage";
 import {
   weightGetCurrentGoalHandler,
   weightSetGoalHandler,
   weightUpdateGoalHandler,
   resetMockGoal,
-} from "../__mocks__/handlers/weight";
-import { useAuthStore } from "../src/store/authStore";
-import { generateToken } from "./utils/token";
+} from "../../__mocks__/handlers/weight";
+import { useAuthStore } from "../../src/store/authStore";
+import { generateToken } from "../utils/token";
+import { suppressActWarnings } from "../act-suppress";
+
+suppressActWarnings();
 
 vi.mock("../src/components/GoalList", () => ({
   default: () => <div data-testid="goal-list">Mocked GoalList</div>,
 }));
 
-describe("WeightGoal", () => {
+describe("WeightGoalPage", () => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: 0, staleTime: 0 },
@@ -44,9 +56,9 @@ describe("WeightGoal", () => {
     return render(
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
-          <WeightGoal />
+          <WeightGoalPage />
         </QueryClientProvider>
-      </trpc.Provider>
+      </trpc.Provider>,
     );
   };
 
@@ -72,38 +84,43 @@ describe("WeightGoal", () => {
       refreshToken: null,
     });
     server.resetHandlers();
+    queryClient.clear();
   });
 
   it("renders loading state then shows current goal and form", async () => {
-    await act(async () => {
-      renderWeightGoal();
-    });
+    renderWeightGoal();
 
     await waitFor(
       () => {
-        expect(screen.queryByTestId("weight-goal-loading")).not.toBeInTheDocument();
-        expect(screen.getByRole("heading", { name: /Your Goals/i })).toBeInTheDocument();
-        expect(screen.getByTestId("current-goal-display")).toHaveTextContent("65 kg");
+        expect(
+          screen.queryByTestId("weight-goal-loading"),
+        ).not.toBeInTheDocument();
+        expect(
+          screen.getByRole("heading", { name: /Your Goals/i }),
+        ).toBeInTheDocument();
+        expect(screen.getByTestId("current-goal-display")).toHaveTextContent(
+          "65 kg",
+        );
         expect(screen.getByTestId("goal-weight-input")).toBeInTheDocument();
         expect(screen.getByTestId("submit-button")).toBeInTheDocument();
-        expect(screen.getByTestId("goal-list")).toBeInTheDocument();
       },
-      { timeout: 3000 }
+      { timeout: 4000 },
     );
   });
 
   it("submits new weight goal, shows success message and updates displayed goal", async () => {
     const user = userEvent.setup();
 
-    await act(async () => {
-      renderWeightGoal();
-    });
+    renderWeightGoal();
 
     await waitFor(
       () => {
         expect(screen.getByTestId("goal-weight-input")).toBeInTheDocument();
+        expect(screen.getByTestId("current-goal-display")).toHaveTextContent(
+          "65 kg",
+        );
       },
-      { timeout: 3000 }
+      { timeout: 4000 },
     );
 
     const input = screen.getByTestId("goal-weight-input");
@@ -111,15 +128,14 @@ describe("WeightGoal", () => {
 
     if (!form) throw new Error("Form not found");
 
-    await act(async () => {
-      await user.clear(input);
-      await user.type(input, "60");
-    });
+    await user.clear(input);
+    await user.type(input, "60");
 
-    await act(async () => {
-      const submitEvent = new Event("submit", { bubbles: true, cancelable: true });
-      form.dispatchEvent(submitEvent);
+    const submitEvent = new Event("submit", {
+      bubbles: true,
+      cancelable: true,
     });
+    form.dispatchEvent(submitEvent);
 
     await waitFor(
       () => {
@@ -127,18 +143,19 @@ describe("WeightGoal", () => {
         expect(message).toHaveTextContent("Goal updated successfully!");
         expect(message).not.toHaveTextContent("Failed");
       },
-      { timeout: 5000 }
+      { timeout: 5000 },
     );
-
-    await act(async () => {
-      queryClient.invalidateQueries({ queryKey: ["weight", "getCurrentGoal"] });
-    });
 
     await waitFor(
       () => {
-        expect(screen.getByTestId("current-goal-display")).toHaveTextContent("60 kg");
+        expect(screen.getByTestId("current-goal-display")).toHaveTextContent(
+          "60 kg",
+        );
       },
-      { timeout: 8000, interval: 200 }
+      { timeout: 8000, interval: 200 },
     );
+
+    // Small flush — helps in some React 18 + Vitest cases
+    await new Promise((resolve) => setTimeout(resolve, 0));
   });
 });

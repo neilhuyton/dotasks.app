@@ -1,4 +1,4 @@
-// src/components/ConfirmResetPasswordForm.tsx
+// src/pages/ConfirmResetPasswordPage.tsx
 import { cn } from "@/lib/utils";
 import {
   Form,
@@ -10,20 +10,38 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { useConfirmResetPassword } from "../hooks/useConfirmResetPassword";
+import { useConfirmResetPasswordPage } from "../hooks/useConfirmResetPasswordPage";
 import { router } from "../router/router";
-import { Logo } from "./Logo";
-import { LoadingSpinner } from "./LoadingSpinner";
+import { Logo } from "../components/Logo";
+import { LoadingSpinner } from "../components/LoadingSpinner";
+import { useSearch } from "@tanstack/react-router";
 
-interface ConfirmResetPasswordFormProps {
-  token: string;
-}
+function ConfirmResetPasswordPage() {
+  const search = useSearch({ from: "/confirm-reset-password" });
+  const token = search.token ?? "";
 
-function ConfirmResetPasswordForm({ token }: ConfirmResetPasswordFormProps) {
-  const { form, message, isPending, handleSubmit } = useConfirmResetPassword(token);
+  const { form, message, isPending, handleSubmit } =
+    useConfirmResetPasswordPage(token);
+
+  if (!token) {
+    return (
+      <div className="min-h-dvh flex flex-col items-center justify-center p-4">
+        <Logo />
+        <div className="w-full max-w-md bg-background rounded-lg p-6 text-center mt-8">
+          <h1 className="text-2xl font-bold mb-4">Invalid or missing token</h1>
+          <p className="text-muted-foreground mb-6">
+            Please request a new password reset link.
+          </p>
+          <Button asChild>
+            <a href="/reset-password">Reset Password</a>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-[100dvh] flex flex-col items-center p-1 sm:p-2 lg:p-3">
+    <div className="min-h-dvh flex flex-col items-center p-1 sm:p-2 lg:p-3">
       <div className="pt-14">
         <Logo />
       </div>
@@ -41,7 +59,7 @@ function ConfirmResetPasswordForm({ token }: ConfirmResetPasswordFormProps) {
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit((data) =>
-              handleSubmit(data, () => router.navigate({ to: "/login" }))
+              handleSubmit(data, () => router.navigate({ to: "/login" })),
             )}
             role="form"
             data-testid="confirm-reset-password-form"
@@ -90,7 +108,7 @@ function ConfirmResetPasswordForm({ token }: ConfirmResetPasswordFormProps) {
                     "text-sm text-center",
                     message.toLowerCase().includes("failed")
                       ? "text-red-500"
-                      : "text-green-500"
+                      : "text-green-500",
                   )}
                 >
                   {message}
@@ -128,4 +146,4 @@ function ConfirmResetPasswordForm({ token }: ConfirmResetPasswordFormProps) {
   );
 }
 
-export default ConfirmResetPasswordForm;
+export default ConfirmResetPasswordPage;

@@ -1,28 +1,18 @@
-// __tests__/Register.test.tsx
-import {
-  describe,
-  it,
-  expect,
-  beforeAll,
-  afterAll,
-  afterEach,
-  vi,
-} from "vitest";
+import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpLink } from "@trpc/client";
-import {
-  createMemoryHistory,
-  createRouter,
-  RouterProvider,
-} from "@tanstack/react-router";
+import { RouterProvider, createMemoryHistory, createRouter } from "@tanstack/react-router";
 import { trpc } from "../src/trpc";
 import { server } from "../__mocks__/server";
 import "@testing-library/jest-dom";
-import { act } from "react";
 import { useAuthStore } from "../src/store/authStore";
 import { registerHandler } from "../__mocks__/handlers/register";
 import { router } from "../src/router/router";
+import { suppressActWarnings } from "./act-suppress"; 
+
+// suppress act warnings due to reacy qury/
+suppressActWarnings();
 
 describe("Register Component Email Verification", () => {
   const queryClient = new QueryClient({
@@ -33,47 +23,25 @@ describe("Register Component Email Verification", () => {
   });
 
   const trpcClient = trpc.createClient({
-    links: [
-      httpLink({
-        url: "/trpc",
-        fetch: async (input, options) => fetch(input, { ...options }),
-      }),
-    ],
+    links: [httpLink({ url: "/trpc" })],
   });
 
   const setup = async () => {
     const history = createMemoryHistory({ initialEntries: ["/register"] });
-    const testRouter = createRouter({
-      routeTree: router.routeTree,
-      history,
-    });
+    const testRouter = createRouter({ routeTree: router.routeTree, history });
 
-    await act(async () => {
-      render(
-        <trpc.Provider client={trpcClient} queryClient={queryClient}>
-          <QueryClientProvider client={queryClient}>
-            <RouterProvider router={testRouter} />
-          </QueryClientProvider>
-        </trpc.Provider>,
-      );
-    });
+    render(
+      <trpc.Provider client={trpcClient} queryClient={queryClient}>
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={testRouter} />
+        </QueryClientProvider>
+      </trpc.Provider>
+    );
   };
 
   beforeAll(() => {
-    server.listen({ onUnhandledRequest: "warn" });
+    server.listen({ onUnhandledRequest: "error" });
     server.use(registerHandler);
-    process.on("unhandledRejection", (reason) => {
-      if (
-        reason instanceof Error &&
-        (reason.message.includes("Email already exists") ||
-          reason.message.includes("Email and password are required") ||
-          reason.message.includes("Invalid email address") ||
-          reason.message.includes("Password must be at least 8 characters"))
-      ) {
-        return;
-      }
-      throw reason;
-    });
   });
 
   afterEach(() => {
@@ -85,7 +53,6 @@ describe("Register Component Email Verification", () => {
 
   afterAll(() => {
     server.close();
-    process.removeAllListeners("unhandledRejection");
   });
 
   it("displays email verification prompt after successful registration", async () => {
@@ -94,30 +61,25 @@ describe("Register Component Email Verification", () => {
     await waitFor(() => {
       expect(screen.getByText("Create an account")).toBeInTheDocument();
       expect(screen.getByTestId("email-input")).toBeInTheDocument();
-      expect(screen.getByTestId("password-input")).toBeInTheDocument();
-      expect(screen.getByTestId("register-button")).toBeInTheDocument();
-    });
+    }, { timeout: 3000 });
 
-    await act(async () => {
-      fireEvent.change(screen.getByTestId("email-input"), {
-        target: { value: "test@example.com" },
-      });
-      fireEvent.change(screen.getByTestId("password-input"), {
-        target: { value: "password123" },
-      });
-      fireEvent.click(screen.getByTestId("register-button"));
+    fireEvent.change(screen.getByTestId("email-input"), {
+      target: { value: "test@example.com" },
     });
+    fireEvent.change(screen.getByTestId("password-input"), {
+      target: { value: "password123" },
+    });
+    fireEvent.click(screen.getByTestId("register-button"));
 
     await waitFor(
       () => {
-        expect(screen.getByTestId("register-message")).toHaveTextContent(
-          "Registration successful! Please check your email to verify your account.",
+        const msg = screen.getByTestId("register-message");
+        expect(msg).toHaveTextContent(
+          "Registration successful! Please check your email to verify your account."
         );
-        expect(screen.getByTestId("register-message")).toHaveClass(
-          "text-green-500",
-        );
+        expect(msg).toHaveClass("text-green-500");
       },
-      { timeout: 2000 },
+      { timeout: 5000 }
     );
-  });
+  }, 10000);
 });

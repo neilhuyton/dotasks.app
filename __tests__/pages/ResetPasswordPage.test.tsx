@@ -11,12 +11,12 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpLink } from "@trpc/client";
-import { trpc } from "../src/trpc";
-import { server } from "../__mocks__/server";
+import { trpc } from "../../src/trpc";
+import { server } from "../../__mocks__/server";
 import "@testing-library/jest-dom";
 
-import ResetPasswordForm from "../src/components/ResetPasswordForm";
-import { resetPasswordRequestHandler } from "../__mocks__/handlers/resetPasswordRequest";
+import ResetPasswordForm from "../../src/pages/ResetPasswordPage";
+import { resetPasswordRequestHandler } from "../../__mocks__/handlers/resetPasswordRequest";
 
 vi.mock("../src/router/router", () => ({
   router: {
@@ -48,7 +48,7 @@ describe("ResetPasswordForm", () => {
         <QueryClientProvider client={queryClient}>
           <ResetPasswordForm />
         </QueryClientProvider>
-      </trpc.Provider>
+      </trpc.Provider>,
     );
   };
 
@@ -109,12 +109,12 @@ describe("ResetPasswordForm", () => {
         const messageEl = screen.getByTestId("reset-password-message");
         expect(messageEl).toBeInTheDocument();
         expect(messageEl).toHaveTextContent(
-          "If the email exists, a reset link has been sent."
+          "If the email exists, a reset link has been sent.",
         );
         expect(messageEl).toHaveClass("text-green-500");
         expect(emailInput).toHaveValue("");
       },
-      { timeout: 5000 }
+      { timeout: 5000 },
     );
   });
 

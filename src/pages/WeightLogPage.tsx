@@ -1,8 +1,8 @@
-// src/components/Weight.tsx
-import WeightForm from "./WeightForm";
-import WeightList from "./WeightList";
+// src/pages/WeightLogPage.tsx
+import WeightForm from "../components/WeightForm";
+import WeightList from "../components/WeightList";
 
-function Weight() {
+function WeightLogPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
       <h1
@@ -18,4 +18,4 @@ function Weight() {
   );
 }
 
-export default Weight;
+export default WeightLogPage;

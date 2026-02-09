@@ -1,10 +1,42 @@
-// __tests__/setupTests.ts
-import '@testing-library/jest-dom';
-import { vi, beforeAll, afterEach, afterAll } from 'vitest';
+// __tests__/setup.ts
+import { beforeAll, afterAll, afterEach, vi } from 'vitest'
 import { server } from '../__mocks__/server';
+import '@testing-library/jest-dom'
 import fetch, { Request } from 'node-fetch';
 
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;   
+// Optional: Suppress Recharts / other library warnings in tests
+vi.spyOn(console, 'warn').mockImplementation(() => {})
+vi.spyOn(console, 'error').mockImplementation(() => {})
+
+// MSW server lifecycle – applies to ALL tests
+beforeAll(() => {
+  server.listen({ onUnhandledRequest: 'warn' })
+})
+
+afterEach(() => {
+  server.resetHandlers()
+})
+
+afterAll(() => {
+  server.close()
+})
+
+// Global mocks that appear in almost every component test
+vi.mock('lucide-react', () => ({
+  Trash2: () => <div data-testid="trash-icon" />,
+  Loader2: () => <div data-testid="loading-spinner" />,
+  ChevronDownIcon: () => <div data-testid="chevron-down-icon" />,
+  ChevronUpIcon: () => <div data-testid="chevron-up-icon" />,
+  CheckIcon: () => <div data-testid="check-icon" />,
+  ScaleIcon: () => <div data-testid="scale-icon" />,
+  HomeIcon: () => <div data-testid="home-icon" />,
+  LineChartIcon: () => <div data-testid="line-chart-icon" />,
+  TargetIcon: () => <div data-testid="target-icon" />,
+  // Add any other frequently used icons here
+}))
+
+// If you ever add custom jest matchers or other global extensions, put them here
+
 
 // Polyfill fetch and Request globals
 Object.defineProperty(global, 'fetch', {
@@ -93,10 +125,3 @@ if (typeof window !== 'undefined') {
     Element.prototype.scrollIntoView = () => {};
   }
 }
-
-// MSW setup for server tests
-export const setupMSW = () => {
-  beforeAll(() => server.listen({ onUnhandledRequest: 'warn' }));
-  afterEach(() => server.resetHandlers());
-  afterAll(() => server.close());
-};

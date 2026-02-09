@@ -1,78 +1,87 @@
 // __mocks__/handlers/register.ts
-import { http, HttpResponse } from "msw";
-import { mockUsers } from "../mockUsers";
+import { TRPCError } from "@trpc/server";
+import { trpcMsw } from "../trpcMsw"; // same path as in your weight.ts
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import type { inferProcedureInput } from "@trpc/server";
-import type { AppRouter } from "../../server/trpc";
-import { invalidJsonResponse, badRequestResponse } from "./utils";
 
-interface TrpcRequestBody {
-  "0": inferProcedureInput<AppRouter["register"]>; // { email: string, password: string }
+// In-memory mock users (shared state)
+export let mockUsers: {
+  id: string;
+  email: string;
+  password: string; // hashed
+  verificationToken: string;
+  isEmailVerified: boolean;
+  resetPasswordToken: string | null;
+  refreshToken: string | null;
+  resetPasswordTokenExpiresAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}[] = [];
+
+export function resetMockUsers() {
+  mockUsers = [];
 }
 
-export const registerHandler = http.post(
-  "/trpc/register",
-  async ({ request }) => {
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return invalidJsonResponse('register');
-    }
+export const registerHandler = trpcMsw.register.mutation(({ input }) => {
+  const { email, password } = input;
 
-    if (!body || typeof body !== "object" || !("0" in body)) {
-      return badRequestResponse("Invalid request body", "register");
-    }
+  if (!email || !password) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Email and password are required",
+    });
+  }
 
-    const input = (body as TrpcRequestBody)["0"];
-    const { email, password } = input || {};
+  if (!email.includes("@")) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Invalid email address",
+    });
+  }
 
-    if (!email || !password) {
-      return badRequestResponse("Email and password are required", "register");
-    }
+  if (password.length < 8) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Password must be at least 8 characters",
+    });
+  }
 
-    if (!email.includes("@")) {
-      return badRequestResponse("Invalid email address", "register");
-    }
+  if (mockUsers.find((u) => u.email === email)) {
+    throw new TRPCError({
+      code: "CONFLICT",
+      message: "Email already exists",
+    });
+  }
 
-    if (password.length < 8) {
-      return badRequestResponse("Password must be at least 8 characters", "register");
-    }
+  const hashedPassword = bcrypt.hashSync(password, 10);
 
-    if (mockUsers.find((u) => u.email === email)) {
-      return badRequestResponse("Email already exists", "register");
-    }
+  const now = new Date();
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = {
-      id: crypto.randomUUID(),
-      email,
-      password: hashedPassword,
-      verificationToken: crypto.randomUUID(),
-      isEmailVerified: false,
-      resetPasswordToken: null,
-      resetPasswordTokenExpiresAt: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    mockUsers.push(newUser);
+  const newUser = {
+    id: crypto.randomUUID(),
+    email,
+    password: hashedPassword,
+    verificationToken: crypto.randomUUID(),
+    isEmailVerified: false,
+    resetPasswordToken: null,
+    refreshToken: crypto.randomUUID(), // or null if not issued on register
+    resetPasswordTokenExpiresAt: null,
+    createdAt: now,
+    updatedAt: now,
+  };
 
-    return HttpResponse.json(
-      [
-        {
-          id: 0,
-          result: {
-            data: {
-              id: newUser.id,
-              email: newUser.email,
-              message:
-                "Registration successful! Please check your email to verify your account.",
-            },
-          },
-        },
-      ],
-      { status: 200 },
-    );
-  },
-);
+  mockUsers.push(newUser);
+
+  // Return the shape your real register procedure returns
+  return {
+    user: {
+      id: newUser.id,
+      email: newUser.email,
+    },
+    accessToken: crypto.randomUUID(), // mock a JWT or token; adjust if you generate real one
+    refreshToken: newUser.refreshToken ?? crypto.randomUUID(),
+    message: "Registration successful! Please check your email to verify your account.",
+  };
+});
+
+export const registerHandlers = [registerHandler];

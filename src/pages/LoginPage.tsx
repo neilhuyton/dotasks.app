@@ -1,4 +1,4 @@
-// src/components/LoginForm.tsx
+// src/components/LoginPage.tsx
 import { cn } from "@/lib/utils";
 import {
   Form,
@@ -10,11 +10,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { useLogin } from "../hooks/useLogin";
+import { useLoginPage } from "../hooks/useLoginPage";
 import { useRouter } from "@tanstack/react-router";
 
-function LoginForm() {
-  const { form, message, isPending, handleSubmit } = useLogin();
+function LoginPage() {
+  const { form, message, isPending, handleSubmit } = useLoginPage();
   const router = useRouter();
 
   return (
@@ -151,4 +151,4 @@ function LoginForm() {
   );
 }
 
-export default LoginForm;
+export default LoginPage;

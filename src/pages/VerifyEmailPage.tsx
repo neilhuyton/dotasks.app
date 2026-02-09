@@ -1,16 +1,20 @@
-// src/components/VerifyEmail.tsx
+// src/pages/VerifyEmailPage.tsx
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
-import { Logo } from "./Logo";
+import { Logo } from "../components/Logo";
 import { cn } from "@/lib/utils";
-import { useVerifyEmail } from "../hooks/useVerifyEmail";
-import { LoadingSpinner } from "./LoadingSpinner";
+import { useVerifyEmailPage } from "../hooks/useVerifyEmailPage";
+import { LoadingSpinner } from "../components/LoadingSpinner";
+import { useSearch } from "@tanstack/react-router";
 
-function VerifyEmail() {
-  const { message, isVerifying, isSuccess } = useVerifyEmail();
+function VerifyEmailPage() {
+  const search = useSearch({ from: "/verify-email" });
+  const token = search.token ?? "";
+
+  const { message, isVerifying, isSuccess } = useVerifyEmailPage(token);
 
   return (
-    <div className="min-h-[100dvh] flex flex-col items-center p-1 sm:p-2 lg:p-3">
+    <div className="min-h-dvh flex flex-col items-center p-1 sm:p-2 lg:p-3">
       <div className="pt-14">
         <Logo />
       </div>
@@ -32,7 +36,7 @@ function VerifyEmail() {
             <p
               className={cn(
                 "text-sm text-center",
-                isSuccess ? "text-green-500" : "text-red-500"
+                isSuccess ? "text-green-500" : "text-red-500",
               )}
               data-testid="verify-message"
             >
@@ -54,4 +58,4 @@ function VerifyEmail() {
   );
 }
 
-export default VerifyEmail;
+export default VerifyEmailPage;

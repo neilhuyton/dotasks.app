@@ -36,7 +36,7 @@ interface UseLoginReturn {
   handleSubmit: (data: FormValues) => Promise<void>;
 }
 
-export const useLogin = (): UseLoginReturn => {
+export const useLoginPage = (): UseLoginReturn => {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { email: "", password: "" },

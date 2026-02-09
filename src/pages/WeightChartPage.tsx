@@ -1,4 +1,4 @@
-// src/components/WeightChart.tsx
+// src/components/WeightChartPage.tsx
 import {
   Select,
   SelectTrigger,
@@ -8,9 +8,9 @@ import {
 } from "@/components/ui/select";
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
-import { useWeightChart } from "../hooks/useWeightChart";
+import { useWeightChartPage } from "../hooks/useWeightChartPage";
 
-function WeightChart() {
+function WeightChartPage() {
   const {
     weights,
     isLoading,
@@ -23,13 +23,13 @@ function WeightChart() {
     trendPeriod,
     handleTrendPeriodChange,
     goalWeight,
-  } = useWeightChart("daily");
+  } = useWeightChartPage("daily");
 
   const latestWeight = weights?.length
     ? weights.reduce((latest, weight) =>
         new Date(weight.createdAt) > new Date(latest.createdAt)
           ? weight
-          : latest
+          : latest,
       )
     : null;
 
@@ -196,4 +196,4 @@ function WeightChart() {
   );
 }
 
-export default WeightChart;
+export default WeightChartPage;

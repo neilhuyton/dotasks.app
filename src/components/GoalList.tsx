@@ -1,4 +1,4 @@
-// src/components/GoalList.tsx (unchanged)
+// src/components/GoalList.tsx
 import { useGoalList } from "../hooks/useGoalList";
 import {
   Table,

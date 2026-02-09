@@ -1,4 +1,4 @@
-// src/hooks/useProfile.ts
+// src/hooks/useProfilePage.ts
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -42,7 +42,7 @@ interface UseProfileReturn {
   handleLogout: () => void;
 }
 
-export const useProfile = (): UseProfileReturn => {
+export const useProfilePage = (): UseProfileReturn => {
   const { logout } = useAuthStore();
   const router = useRouter();
 
@@ -84,7 +84,7 @@ export const useProfile = (): UseProfileReturn => {
         output: inferProcedureOutput<AppRouter["user"]["updateEmail"]>;
         transformer: false;
         errorShape: TRPCDefaultErrorShape;
-      }>
+      }>,
     ) => {
       setEmailMessage(error.message || "Failed to update email");
     },
@@ -105,7 +105,7 @@ export const useProfile = (): UseProfileReturn => {
         output: inferProcedureOutput<AppRouter["resetPassword"]["request"]>;
         transformer: false;
         errorShape: TRPCDefaultErrorShape;
-      }>
+      }>,
     ) => {
       setPasswordMessage(error.message || "Failed to send reset email");
     },

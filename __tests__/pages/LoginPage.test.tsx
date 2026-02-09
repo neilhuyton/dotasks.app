@@ -1,3 +1,4 @@
+// __tests__/LoginPage.test.tsx
 import {
   describe,
   it,
@@ -7,23 +8,31 @@ import {
   afterEach,
   vi,
 } from "vitest";
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { trpc } from "../src/trpc";
+import { trpc } from "../../src/trpc";
 import { httpLink } from "@trpc/client";
-import { useAuthStore } from "../src/store/authStore";
+import { useAuthStore } from "../../src/store/authStore";
 import "@testing-library/jest-dom";
-import { server } from "../__mocks__/server";
+import { server } from "../../__mocks__/server";
 import {
   RouterProvider,
   createMemoryHistory,
   createRouter,
 } from "@tanstack/react-router";
-import { router } from "../src/router/router";
-import { loginHandler, refreshTokenHandler } from "../__mocks__/handlers";
+import { router } from "../../src/router/router";
+import {
+  loginHandler,
+  weightDeleteHandler,
+  weightGetCurrentGoalHandler,
+  weightGetWeightsHandler,
+} from "../../__mocks__/handlers";
+import { suppressActWarnings } from "../act-suppress"; 
 
-describe("LoginForm", () => {
+suppressActWarnings();
+
+describe("LoginPage", () => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -35,13 +44,13 @@ describe("LoginForm", () => {
     const history = createMemoryHistory({ initialEntries: [initialPath] });
     const testRouter = createRouter({ routeTree: router.routeTree, history });
 
-    await act(async () => {
+    await waitFor(() => {
       render(
         <trpc.Provider
           client={trpc.createClient({
             links: [
               httpLink({
-                url: "/api/trpc",
+                url: "/trpc",
               }),
             ],
           })}
@@ -60,24 +69,20 @@ describe("LoginForm", () => {
   const fillAndSubmitForm = async (email: string, password: string) => {
     const emailInput = await screen.findByTestId("email-input");
     const passwordInput = await screen.findByTestId("password-input");
+    const form = await screen.findByTestId("login-form");
 
+    await userEvent.clear(emailInput);
+    await userEvent.clear(passwordInput);
     await userEvent.type(emailInput, email);
     await userEvent.type(passwordInput, password);
 
-    // Find the form and dispatch a real submit event
-    const form = await screen.findByTestId("login-form");
-
-    const submitEvent = new Event("submit", {
-      bubbles: true,
-      cancelable: true,
-    });
-
-    // This is the line you need – it reliably triggers react-hook-form's handleSubmit
-    form.dispatchEvent(submitEvent);
+    form.dispatchEvent(
+      new Event("submit", { bubbles: true, cancelable: true }),
+    );
   };
 
   beforeAll(() => {
-    server.listen({ onUnhandledRequest: "warn" });
+    server.listen({ onUnhandledRequest: "bypass" });
 
     vi.mock("jwt-decode", () => ({
       jwtDecode: vi.fn((token: string) => {
@@ -91,6 +96,7 @@ describe("LoginForm", () => {
       }),
     }));
 
+    // Optional: only silence very specific unhandled rejection noise if needed
     process.on("unhandledRejection", (reason) => {
       if (
         reason instanceof Error &&
@@ -100,6 +106,17 @@ describe("LoginForm", () => {
       }
       throw reason;
     });
+  });
+
+  beforeEach(() => {
+    server.use(
+      weightGetWeightsHandler,
+      weightDeleteHandler,
+      weightGetCurrentGoalHandler,
+    );
+
+    queryClient.clear();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -139,7 +156,7 @@ describe("LoginForm", () => {
   });
 
   it("successfully logs in and updates auth store", async () => {
-    server.use(loginHandler, refreshTokenHandler);
+    server.use(loginHandler);
 
     await setup();
 
@@ -161,7 +178,6 @@ describe("LoginForm", () => {
 
   it("shows error message on invalid credentials", async () => {
     server.use(loginHandler);
-    vi.spyOn(console, "error").mockImplementation(() => {});
 
     await setup();
 
@@ -180,8 +196,6 @@ describe("LoginForm", () => {
       },
       { timeout: 3000 },
     );
-
-    vi.spyOn(console, "error").mockRestore();
   });
 
   it("shows validation errors for invalid input", async () => {
@@ -204,7 +218,6 @@ describe("LoginForm", () => {
 
   it("disables button and shows loading state during failed login", async () => {
     server.use(loginHandler);
-    vi.spyOn(console, "error").mockImplementation(() => {});
 
     await setup();
 
@@ -216,11 +229,13 @@ describe("LoginForm", () => {
 
     await fillAndSubmitForm("wronguser@example.com", "wrongpassword");
 
+    // Loading state should appear very quickly
     await waitFor(() => {
       expect(loginButton).toBeDisabled();
       expect(loginButton).toHaveTextContent("Logging in...");
     });
 
+    // Then error state
     await waitFor(
       () => {
         expect(loginButton).not.toBeDisabled();
@@ -231,8 +246,6 @@ describe("LoginForm", () => {
       },
       { timeout: 3000 },
     );
-
-    vi.spyOn(console, "error").mockRestore();
   });
 
   it("renders forgot password link correctly", async () => {

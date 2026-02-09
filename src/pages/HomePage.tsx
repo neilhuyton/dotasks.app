@@ -1,8 +1,8 @@
 // src/components/Home.tsx
 import { ScaleIcon, TargetIcon, TrendingUpIcon, ClockIcon } from "lucide-react";
-import { DashboardCard } from "./DashboardCard";
-import { useHome } from "../hooks/useHome";
-import { LoadingSpinner } from "./LoadingSpinner";
+import { DashboardCard } from "../components/DashboardCard";
+import { useHomePage } from "../hooks/useHomePage";
+import { LoadingSpinner } from "../components/LoadingSpinner";
 
 function Home() {
   const {
@@ -13,7 +13,7 @@ function Home() {
     weightChange,
     isGoalAchieved,
     recentMeasurement,
-  } = useHome();
+  } = useHomePage();
 
   return (
     <div className="w-full max-w-md lg:max-w-full mx-auto bg-background rounded-lg p-4">

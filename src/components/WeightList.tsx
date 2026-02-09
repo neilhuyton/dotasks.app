@@ -1,3 +1,4 @@
+// src/components/WeightList.tsx
 import { useWeightList } from "../hooks/useWeightList";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,9 +51,6 @@ function WeightList() {
             <TableHead className="h-10 px-4 text-left font-semibold text-foreground bg-muted/50">
               Weight (kg)
             </TableHead>
-            {/* <TableHead className="h-10 px-4 text-left font-semibold text-foreground bg-muted/50">
-              Note
-            </TableHead> */}
             <TableHead className="h-10 px-4 text-left font-semibold text-foreground bg-muted/50">
               Date
             </TableHead>
@@ -68,15 +66,12 @@ function WeightList() {
                 key={weight.id}
                 className={cn(
                   "hover:bg-muted/50",
-                  index === weights.length - 1 && "rounded-b-lg"
+                  index === weights.length - 1 && "rounded-b-lg",
                 )}
               >
                 <TableCell className="p-4 text-foreground">
                   {weight.weightKg}
                 </TableCell>
-                {/* <TableCell className="p-4 text-foreground">
-                  {weight.note || "-"}
-                </TableCell> */}
                 <TableCell className="p-4 text-foreground">
                   {formatDate(weight.createdAt)}
                 </TableCell>
@@ -88,8 +83,9 @@ function WeightList() {
                     size="icon"
                     className="text-destructive hover:text-destructive/90 focus-visible:ring-2 focus-visible:ring-ring"
                     aria-label={`Delete weight measurement from ${formatDate(
-                      weight.createdAt
+                      weight.createdAt,
                     )}`}
+                    data-testid={`delete-weight-${weight.id}`} // ← added for reliable testing
                   >
                     <Trash2 className="h-4 w-4" data-lucide-name="trash-2" />
                   </Button>
@@ -99,7 +95,7 @@ function WeightList() {
           ) : (
             <TableRow className="hover:bg-muted/50 rounded-b-lg">
               <TableCell
-                colSpan={4}
+                colSpan={3} // updated from 4 → since note column is commented out
                 className="p-4 text-center text-muted-foreground"
               >
                 No weight measurements found

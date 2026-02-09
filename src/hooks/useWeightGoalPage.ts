@@ -1,4 +1,4 @@
-// src/hooks/useWeightGoal.ts
+// src/hooks/useWeightGoalPage.ts
 import { useState } from "react";
 import { trpc } from "../trpc";
 import { useAuthStore } from "../store/authStore";
@@ -13,7 +13,7 @@ type Goal = {
   reachedAt: Date | null;
 };
 
-export function useWeightGoal() {
+export function useWeightGoalPage() {
   const [goalWeight, setGoalWeight] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const { userId } = useAuthStore();

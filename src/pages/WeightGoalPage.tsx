@@ -1,13 +1,13 @@
-// src/components/WeightGoal.tsx
-import { useWeightGoal } from "../hooks/useWeightGoal";
+// src/pages/WeightGoalPage.tsx
+import { useWeightGoalPage } from "../hooks/useWeightGoalPage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import GoalList from "./GoalList";
+import GoalList from "../components/GoalList";
 import { cn } from "@/lib/utils";
-import { LoadingSpinner } from "./LoadingSpinner";
+import { LoadingSpinner } from "../components/LoadingSpinner";
 
-function WeightGoal() {
+function WeightGoalPage() {
   const {
     currentGoal,
     isLoading,
@@ -18,7 +18,7 @@ function WeightGoal() {
     isGoalAchieved,
     handleSubmit,
     handleGoalWeightChange,
-  } = useWeightGoal();
+  } = useWeightGoalPage();
 
   if (isLoading) {
     return (
@@ -89,7 +89,7 @@ function WeightGoal() {
             className="w-full h-10 font-semibold bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring"
             data-testid="submit-button"
           >
-            {isSettingGoal ? "Setting Goal..." : "Set Goal"}
+            {/* {isSettingGoal ? "Setting Goal..." : "Set Goal"} */}
           </Button>
         </form>
         {message && (
@@ -115,4 +115,4 @@ function WeightGoal() {
   );
 }
 
-export default WeightGoal;
+export default WeightGoalPage;

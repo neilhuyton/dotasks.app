@@ -1,4 +1,4 @@
-// src/components/Register.tsx
+// src/components/ResetPasswordPage.tsx
 import { cn } from "@/lib/utils";
 import {
   Form,
@@ -10,24 +10,23 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { useRegister } from "../hooks/useRegister";
-import { useRouter } from "@tanstack/react-router";
-import { Logo } from "./Logo";
-import { LoadingSpinner } from "./LoadingSpinner";
+import { useResetPasswordPage } from "../hooks/useResetPasswordPage";
+import { router } from "../router/router";
+import { Logo } from "../components/Logo";
+import { LoadingSpinner } from "../components/LoadingSpinner";
 
-interface RegisterProps {
+interface ResetPasswordFormProps {
   className?: string;
 }
 
-function Register({ className }: RegisterProps) {
-  const { form, message, isRegistering, handleRegister } = useRegister();
-  const router = useRouter();
+function ResetPasswordPage({ className }: ResetPasswordFormProps) {
+  const { form, message, isPending, handleSubmit } = useResetPasswordPage();
 
   return (
     <div
       className={cn(
         "min-h-[100dvh] flex flex-col items-center p-1 sm:p-2 lg:p-3",
-        className
+        className,
       )}
     >
       <div className="pt-14">
@@ -39,15 +38,18 @@ function Register({ className }: RegisterProps) {
           role="heading"
           aria-level={1}
         >
-          Create an account
+          Reset your password
         </h1>
         <p className="text-muted-foreground text-center mb-6">
-          Enter your details below to create an account
+          Enter your email to receive a password reset link
         </p>
         <Form {...form}>
           <form
-            onSubmit={form.handleSubmit(handleRegister)}
-            data-testid="register-form"
+            onSubmit={(e) => {
+              form.handleSubmit(handleSubmit)(e);
+            }}
+            role="form"
+            data-testid="reset-password-form"
             className="w-full"
           >
             <div className="flex flex-col gap-6">
@@ -66,8 +68,8 @@ function Register({ className }: RegisterProps) {
                           type="email"
                           placeholder="m@example.com"
                           required
+                          disabled={isPending}
                           data-testid="email-input"
-                          disabled={isRegistering}
                           tabIndex={1}
                           {...field}
                         />
@@ -77,46 +79,21 @@ function Register({ className }: RegisterProps) {
                   )}
                 />
               </div>
-              <div className="grid gap-3">
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <Label htmlFor="password" data-testid="password-label">
-                        Password
-                      </Label>
-                      <FormControl>
-                        <Input
-                          id="password"
-                          type="password"
-                          placeholder="Enter your password"
-                          required
-                          data-testid="password-input"
-                          disabled={isRegistering}
-                          tabIndex={2}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              {isRegistering && (
+              {isPending && (
                 <div className="flex justify-center py-4">
-                  <LoadingSpinner size="md" testId="register-loading" />
+                  <LoadingSpinner size="md" testId="reset-password-loading" />
                 </div>
               )}
               {message && (
                 <p
-                  data-testid="register-message"
+                  role="alert"
                   className={cn(
                     "text-sm text-center",
                     message.includes("failed")
                       ? "text-red-500"
-                      : "text-green-500"
+                      : "text-green-500",
                   )}
+                  data-testid="reset-password-message"
                 >
                   {message}
                 </p>
@@ -124,14 +101,13 @@ function Register({ className }: RegisterProps) {
               <Button
                 type="submit"
                 className="w-full mt-4"
-                data-testid="register-button"
-                disabled={isRegistering}
-                tabIndex={3}
+                disabled={isPending}
+                data-testid="submit-button"
+                tabIndex={2}
               >
-                {isRegistering ? "Registering..." : "Register"}
+                {isPending ? "Sending..." : "Send Reset Link"}
               </Button>
               <div className="mt-4 text-center text-sm">
-                Already have an account?{" "}
                 <a
                   href="#"
                   role="link"
@@ -140,10 +116,10 @@ function Register({ className }: RegisterProps) {
                     router.navigate({ to: "/login" });
                   }}
                   className="underline underline-offset-4"
-                  data-testid="login-link"
-                  tabIndex={4}
+                  data-testid="back-to-login-link"
+                  tabIndex={3}
                 >
-                  Login
+                  Back to login
                 </a>
               </div>
             </div>
@@ -154,4 +130,4 @@ function Register({ className }: RegisterProps) {
   );
 }
 
-export default Register;
+export default ResetPasswordPage;

@@ -1,3 +1,4 @@
+// src/schemas.ts
 import { z } from "zod";
 
 export const verifyEmailSearchSchema = z.object({
