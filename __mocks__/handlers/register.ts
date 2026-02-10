@@ -1,10 +1,9 @@
 // __mocks__/handlers/register.ts
 import { TRPCError } from "@trpc/server";
-import { trpcMsw } from "../trpcMsw"; // same path as in your weight.ts
+import { trpcMsw } from "../trpcMsw";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
-// In-memory mock users (shared state)
 export let mockUsers: {
   id: string;
   email: string;
@@ -22,8 +21,18 @@ export function resetMockUsers() {
   mockUsers = [];
 }
 
+interface RegisterInput {
+  email: string;
+  password: string;
+}
+
 export const registerHandler = trpcMsw.register.mutation(({ input }) => {
-  const { email, password } = input;
+  const rawInput = '0' in input ? input['0'] : input;
+
+  const typedInput = rawInput as RegisterInput | undefined;
+
+  const email = typedInput?.email ?? '';
+  const password = typedInput?.password ?? '';
 
   if (!email || !password) {
     throw new TRPCError({
@@ -64,7 +73,7 @@ export const registerHandler = trpcMsw.register.mutation(({ input }) => {
     verificationToken: crypto.randomUUID(),
     isEmailVerified: false,
     resetPasswordToken: null,
-    refreshToken: crypto.randomUUID(), // or null if not issued on register
+    refreshToken: crypto.randomUUID(),
     resetPasswordTokenExpiresAt: null,
     createdAt: now,
     updatedAt: now,
@@ -72,14 +81,13 @@ export const registerHandler = trpcMsw.register.mutation(({ input }) => {
 
   mockUsers.push(newUser);
 
-  // Return the shape your real register procedure returns
   return {
     user: {
       id: newUser.id,
       email: newUser.email,
     },
-    accessToken: crypto.randomUUID(), // mock a JWT or token; adjust if you generate real one
-    refreshToken: newUser.refreshToken ?? crypto.randomUUID(),
+    accessToken: crypto.randomUUID(),
+    refreshToken: newUser.refreshToken,
     message: "Registration successful! Please check your email to verify your account.",
   };
 });

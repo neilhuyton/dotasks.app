@@ -1,112 +1,105 @@
 // src/client.ts
-import { QueryClient } from "@tanstack/react-query";
-import { httpLink } from "@trpc/client";
-import { redirect } from "@tanstack/react-router";
-import { trpc } from "./trpc";
+import { createTRPCClient, httpBatchLink, TRPCClientError } from "@trpc/client";
+import { tokenRefreshLink } from "trpc-token-refresh-link";
+import type { AppRouter } from "../server/trpc";
+import { vanillaTrpc } from "./trpc-vanilla";
 import { useAuthStore } from "./store/authStore";
+import { queryClient } from "./queryClient";
+import { router } from "./router/router";
 
-// Define tRPC response shape
-type TRPCResponse = {
-  error?: {
-    message: string;
-    data?: { code: string };
-  };
-}[];
+let activeRefreshPromise: Promise<void> | null = null;
 
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { retry: false },
-    mutations: { retry: false },
-  },
-});
-
-export const trpcClient = trpc.createClient({
+export const trpcClient = createTRPCClient<AppRouter>({
   links: [
-    httpLink({
-      url: "/trpc",
+    tokenRefreshLink({
+      tokenRefreshNeeded: () => {
+        const { token, refreshToken } = useAuthStore.getState();
+        if (!token || !refreshToken) return false;
 
-      fetch: async (url, options) => {
-        const { token, refreshToken, userId, login, logout } =
-          useAuthStore.getState();
+        const now = Date.now();
 
-        const headers: Record<string, string> = {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        };
+        try {
+          const [, payloadBase64] = token.split(".");
+          const payload = JSON.parse(
+            atob(payloadBase64.replace(/-/g, "+").replace(/_/g, "/")),
+          );
+          const exp = payload.exp * 1000;
 
-        // Body handling for single requests (httpLink)
-        let body = options?.body;
+          return exp - now < 60_000; // refresh if <60s left
+        } catch {
+          return false;
+        }
+      },
 
-        // Light safety check in case of unexpected format
-        if (typeof body === "string") {
-          try {
-            const parsed = JSON.parse(body);
-            if (parsed && typeof parsed === "object" && "0" in parsed) {
-              body = JSON.stringify(parsed["0"]);
-            }
-          } catch {
-            // ignore parse errors
-          }
+      fetchAccessToken: async (): Promise<void> => {
+        const state = useAuthStore.getState();
+        const { refreshToken, userId } = state;
+
+        if (!refreshToken) {
+          throw new Error("No refresh token available");
         }
 
-        const fetchOptions = {
-          ...options,
-          method: "POST",
-          headers,
-          body,
-          signal: options?.signal,
-        };
+        if (!userId) {
+          throw new Error("No userId available");
+        }
 
-        let response = await fetch(url, fetchOptions);
-        let responseData: TRPCResponse = await response.json();
+        if (activeRefreshPromise) {
+          await activeRefreshPromise;
+          return;
+        }
 
-        // Check for unauthorized in response
-        const isUnauthorized =
-          Array.isArray(responseData) &&
-          responseData.some(
-            (item) =>
-              item.error &&
-              (item.error.data?.code === "UNAUTHORIZED" ||
-                item.error.message?.includes("Unauthorized") ||
-                item.error.message?.includes("expired"))
-          );
-
-        if (isUnauthorized && refreshToken && userId) {
+        activeRefreshPromise = (async () => {
           try {
-            const refreshResponse = await trpcClient.refreshToken.refresh.mutate({
+            const result = await vanillaTrpc.refreshToken.refresh.mutate({
               refreshToken,
             });
 
-            // Use the actual fields from your response shape
-            const newAccessToken = refreshResponse.accessToken;
+            if (!result.accessToken) {
+              throw new Error("Server did not return accessToken");
+            }
 
-            // Update store
-            login(userId, newAccessToken, refreshResponse.refreshToken);
+            const newRefresh = result.refreshToken;
 
-            // Retry with new access token
-            const newHeaders = {
-              ...headers,
-              Authorization: `Bearer ${newAccessToken}`,
-            };
+            state.login(userId, result.accessToken, newRefresh ?? refreshToken);
+          } catch (err: unknown) {
+            const trpcErr = err instanceof TRPCClientError ? err : null;
 
-            response = await fetch(url, { ...fetchOptions, headers: newHeaders });
-            responseData = await response.json();
-          } catch {
-            logout();
-            throw redirect({ to: "/login" });
+            const code = trpcErr?.data?.code ?? "UNKNOWN";
+            const message = trpcErr?.message ?? "Unknown refresh error";
+
+            console.error("[Refresh FAILED]", {
+              code,
+              message,
+              fullError: err,
+            });
+
+            if (code === "UNAUTHORIZED") {
+              console.warn(
+                "[Refresh] Refresh token invalid/expired → logging out",
+              );
+              state.logout();
+              queryClient.clear();
+              queryClient.cancelQueries();
+              await router.invalidate();
+              router.navigate({ to: "/login", replace: true });
+            }
+
+            throw err;
+          } finally {
+            activeRefreshPromise = null;
           }
-        }
+        })();
 
-        // Final logout check if still unauthorized
-        if (isUnauthorized) {
-          logout();
-          throw redirect({ to: "/login" });
-        }
+        await activeRefreshPromise;
+      },
+    }),
 
-        return new Response(JSON.stringify(responseData), {
-          status: response.status,
-          headers: response.headers,
-        });
+    httpBatchLink({
+      url: "/trpc",
+
+      headers: () => {
+        const { token } = useAuthStore.getState();
+        return token ? { Authorization: `Bearer ${token}` } : {};
       },
     }),
   ],

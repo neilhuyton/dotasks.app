@@ -1,9 +1,9 @@
+// __mocks__/handlers/auth.ts (revert to this)
 import { trpcMsw } from "../trpcMsw";
 import { mockUsers, type MockUser } from "../mockUsers";
 import bcrypt from "bcryptjs";
 import { TRPCError } from "@trpc/server";
 
-// Simulate realistic network latency
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 interface LoginInput {
@@ -18,10 +18,8 @@ interface RefreshInput {
 export const loginHandler = trpcMsw.login.mutation(async ({ input }) => {
   await delay(50);
 
-  // Handle tRPC's batched/wrapped input shape: { "0": { email, password } }
   const rawInput = '0' in input ? input['0'] : input;
 
-  // Safely extract with fallback
   const email = (rawInput as LoginInput | undefined)?.email ?? '';
   const password = (rawInput as LoginInput | undefined)?.password ?? '';
 
@@ -60,10 +58,9 @@ export const loginHandler = trpcMsw.login.mutation(async ({ input }) => {
   };
 });
 
-export const refreshTokenHandler = trpcMsw.refresh.mutation(async ({ input }) => {
+export const refreshTokenHandler = trpcMsw.refreshToken.refresh.mutation(async ({ input }) => {
   await delay(30);
 
-  // Handle possible wrapped shape (though usually not batched for refresh)
   const rawInput = '0' in input ? input['0'] : input;
 
   const refreshToken = (rawInput as RefreshInput | undefined)?.refreshToken ?? '';
@@ -85,7 +82,6 @@ export const refreshTokenHandler = trpcMsw.refresh.mutation(async ({ input }) =>
 
   const newAccessToken = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.refreshed.${user.id}.signature`;
 
-  // Mock rotation with a new valid-looking UUID
   const newRefreshToken = "550e8400-e29b-41d4-a716-446655440001" as `${string}-${string}-${string}-${string}-${string}`;
 
   return {

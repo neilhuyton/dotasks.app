@@ -28,6 +28,7 @@ export function useVerifyEmailPage(token: string) {
     }
 
     verifyMutation.mutate({ token });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   return { message, isVerifying, isSuccess };

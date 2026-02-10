@@ -1,4 +1,4 @@
-// __tests__/LoginPage.test.tsx
+// __tests__/pages/LoginPage.test.tsx
 import {
   describe,
   it,
@@ -29,6 +29,8 @@ import {
   weightGetWeightsHandler,
 } from "../../__mocks__/handlers";
 import { suppressActWarnings } from "../act-suppress"; 
+import { trpcMsw } from "../../__mocks__/trpcMsw";
+import { TRPCError } from "@trpc/server";
 
 suppressActWarnings();
 
@@ -96,7 +98,6 @@ describe("LoginPage", () => {
       }),
     }));
 
-    // Optional: only silence very specific unhandled rejection noise if needed
     process.on("unhandledRejection", (reason) => {
       if (
         reason instanceof Error &&
@@ -177,7 +178,19 @@ describe("LoginPage", () => {
   });
 
   it("shows error message on invalid credentials", async () => {
-    server.use(loginHandler);
+    // Force failure for this test only
+    server.use(
+      trpcMsw.login.mutation(async () => {
+        await new Promise((r) => setTimeout(r, 50));
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Invalid email or password",
+        });
+      }),
+      weightGetWeightsHandler,
+      weightDeleteHandler,
+      weightGetCurrentGoalHandler,
+    );
 
     await setup();
 
@@ -208,7 +221,7 @@ describe("LoginPage", () => {
 
     await userEvent.type(emailInput, "invalid-email");
     await userEvent.type(passwordInput, "short");
-    await userEvent.tab(); // trigger blur/validation
+    await userEvent.tab();
 
     await waitFor(() => {
       expect(screen.getByText(/valid email address/i)).toBeInTheDocument();
@@ -217,7 +230,18 @@ describe("LoginPage", () => {
   });
 
   it("disables button and shows loading state during failed login", async () => {
-    server.use(loginHandler);
+    server.use(
+      trpcMsw.login.mutation(async () => {
+        await new Promise((r) => setTimeout(r, 50));
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Invalid email or password",
+        });
+      }),
+      weightGetWeightsHandler,
+      weightDeleteHandler,
+      weightGetCurrentGoalHandler,
+    );
 
     await setup();
 
@@ -229,13 +253,11 @@ describe("LoginPage", () => {
 
     await fillAndSubmitForm("wronguser@example.com", "wrongpassword");
 
-    // Loading state should appear very quickly
     await waitFor(() => {
       expect(loginButton).toBeDisabled();
       expect(loginButton).toHaveTextContent("Logging in...");
     });
 
-    // Then error state
     await waitFor(
       () => {
         expect(loginButton).not.toBeDisabled();

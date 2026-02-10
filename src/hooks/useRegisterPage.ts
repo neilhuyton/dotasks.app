@@ -1,4 +1,3 @@
-// src/hooks/useRegisterPage.ts
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,10 +14,12 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 interface RegisterResponse {
-  id: string;
-  email: string;
-  token: string;
-  refreshToken: string; // Add refreshToken
+  user: {
+    id: string;
+    email: string;
+  };
+  accessToken: string;
+  refreshToken: string;
   message: string;
 }
 
@@ -43,7 +44,7 @@ export const useRegisterPage = (): UseRegisterReturn => {
   const registerMutation = trpc.register.useMutation({
     onSuccess: (data: RegisterResponse) => {
       setMessage(data.message);
-      login(data.id, data.token, data.refreshToken); // Store refreshToken
+      login(data.user.id, data.accessToken, data.refreshToken);
       setTimeout(() => {
         form.reset();
         router.navigate({ to: '/login' });

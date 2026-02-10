@@ -81,7 +81,7 @@ export const registerRouter = router({
       const accessToken = jwt.sign(
         { userId: user.id, email: user.email },
         process.env.JWT_SECRET,
-        { expiresIn: '15m' }, // shorter-lived is safer (common 2025–2026 practice)
+        { expiresIn: '15m' },
       );
 
       // Return payload (client will store tokens appropriately)

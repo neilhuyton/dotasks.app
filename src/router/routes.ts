@@ -24,20 +24,34 @@ interface DecodedToken {
   exp: number;
 }
 
-const checkAuth = () => {
-  const { isLoggedIn, token } = useAuthStore.getState();
-  if (!isLoggedIn || !token) {
-    throw redirect({ to: "/login" });
+// Async auth check – ONLY validates, does NOT refresh
+// Refresh is handled automatically by trpc-token-refresh-link before any protected request
+const checkAuth = async () => {
+  const { isLoggedIn, token, refreshToken, userId, logout } = useAuthStore.getState();
+
+  if (!isLoggedIn || !token || !refreshToken || !userId) {
+    logout();
+    throw redirect({ to: "/login", replace: true });
   }
+
   try {
     const decoded = jwtDecode<DecodedToken>(token);
     const now = Math.floor(Date.now() / 1000);
-    if (decoded.exp < now) {
-      return false; // Let trpcClient handle refresh
+    const secondsLeft = decoded.exp - now;
+
+    // If expired or almost expired, let trpc link handle refresh on next real call
+    // We allow a small buffer so page can still load
+    if (secondsLeft < -30) {  // already expired more than 30s
+      console.warn("[checkAuth] Token significantly expired — deferring to tRPC refresh link");
+      // Do NOT logout here — link will attempt refresh and handle failure
     }
-    return true;
-  } catch {
-    throw redirect({ to: "/login" });
+
+    // Token looks ok — proceed
+    return;
+  } catch (err) {
+    console.warn("[checkAuth] Token decode failed", err);
+    // Invalid token format — let tRPC link try refresh if possible
+    // If refresh fails, link will trigger logout anyway
   }
 };
 
@@ -45,10 +59,8 @@ export const homeRoute = (rootRoute: RootRoute) =>
   createRoute({
     getParentRoute: () => rootRoute,
     path: "/",
-    beforeLoad: () => {
-      if (!checkAuth()) {
-        return; // Allow trpcClient to attempt refresh
-      }
+    beforeLoad: async () => {
+      await checkAuth();
     },
     component: Home,
   });
@@ -82,42 +94,6 @@ export const confirmResetPasswordRoute = (rootRoute: RootRoute) =>
     component: ConfirmResetPasswordPage,
   });
 
-export const weightRoute = (rootRoute: RootRoute) =>
-  createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/weight",
-    beforeLoad: () => {
-      if (!checkAuth()) {
-        return; // Allow trpcClient to attempt refresh
-      }
-    },
-    component: WeightLogPage,
-  });
-
-export const weightChartRoute = (rootRoute: RootRoute) =>
-  createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/stats",
-    beforeLoad: () => {
-      if (!checkAuth()) {
-        return; // Allow trpcClient to attempt refresh
-      }
-    },
-    component: WeightChartPage,
-  });
-
-export const weightGoalRoute = (rootRoute: RootRoute) =>
-  createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/goals",
-    beforeLoad: () => {
-      if (!checkAuth()) {
-        return; // Allow trpcClient to attempt refresh
-      }
-    },
-    component: WeightGoalPage,
-  });
-
 export const verifyEmailRoute = (rootRoute: RootRoute) =>
   createRoute({
     getParentRoute: () => rootRoute,
@@ -126,14 +102,42 @@ export const verifyEmailRoute = (rootRoute: RootRoute) =>
     component: VerifyEmailPage,
   });
 
+export const weightRoute = (rootRoute: RootRoute) =>
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/weight",
+    beforeLoad: async () => {
+      await checkAuth();
+    },
+    component: WeightLogPage,
+  });
+
+export const weightChartRoute = (rootRoute: RootRoute) =>
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/stats",
+    beforeLoad: async () => {
+      await checkAuth();
+    },
+    component: WeightChartPage,
+  });
+
+export const weightGoalRoute = (rootRoute: RootRoute) =>
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/goals",
+    beforeLoad: async () => {
+      await checkAuth();
+    },
+    component: WeightGoalPage,
+  });
+
 export const profileRoute = (rootRoute: RootRoute) =>
   createRoute({
     getParentRoute: () => rootRoute,
     path: "/profile",
-    beforeLoad: () => {
-      if (!checkAuth()) {
-        return; // Allow trpcClient to attempt refresh
-      }
+    beforeLoad: async () => {
+      await checkAuth();
     },
     component: ProfilePage,
   });

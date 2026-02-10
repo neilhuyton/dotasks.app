@@ -54,7 +54,7 @@ export const refreshTokenRouter = router({
       const newAccessToken = jwt.sign(
         { userId: user.id, email: user.email },
         process.env.JWT_SECRET,
-        { expiresIn: '15m' }, // 2026 best practice: 5–15 min access tokens
+        { expiresIn: '15m' },
       );
 
       // 4. Rotate refresh token: generate new one & hash it

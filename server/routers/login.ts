@@ -7,7 +7,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'node:crypto';
 
 export const loginRouter = router({
-  login: publicProcedure  // public endpoint — no auth required
+  login: publicProcedure
     .input(
       z.object({
         email: z
@@ -24,7 +24,7 @@ export const loginRouter = router({
     .mutation(async ({ input, ctx }) => {
       const { email, password } = input;
 
-      // 1. Find user (case-sensitive email lookup — Prisma handles it)
+      // 1. Find user
       const user = await ctx.prisma.user.findUnique({
         where: { email },
         select: {
@@ -70,25 +70,28 @@ export const loginRouter = router({
       const accessToken = jwt.sign(
         { userId: user.id, email: user.email },
         process.env.JWT_SECRET,
-        { expiresIn: '15m' }, // modern best practice: 5–15 min for access tokens
+        { expiresIn: '15m' },
       );
 
-      // 5. Generate new refresh token & store it (plain for now; see notes)
+      // 5. Generate new refresh token & STORE HASHED VERSION
       const refreshToken = crypto.randomUUID();
+      const hashedRefresh = crypto
+        .createHash('sha256')
+        .update(refreshToken)
+        .digest('hex');
 
       await ctx.prisma.user.update({
         where: { id: user.id },
-        data: { refreshToken },
+        data: { refreshToken: hashedRefresh },  // ← FIXED: store hash, not plain
       });
 
-      // Return minimal safe payload
       return {
         user: {
           id: user.id,
           email: user.email,
         },
         accessToken,
-        refreshToken,
+        refreshToken,           // client gets plain UUID (correct)
         message: 'Login successful',
       };
     }),
