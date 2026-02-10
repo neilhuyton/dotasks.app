@@ -16,7 +16,7 @@ export default defineConfig({
     strictPort: false,
   },
   test: {
-    // silent: false,
+    silent: false,
     environment: "jsdom",
     setupFiles: ["./__tests__/setupTests.ts"],
     env: {
@@ -35,8 +35,8 @@ export default defineConfig({
         },
       },
     },
-    include: ["__tests__/**/*.{test,spec}.{ts,tsx}"], // Only include __tests__ directory
-    exclude: ["e2e/**/*", "node_modules", "dist", ".idea", ".git", ".cache"], // Explicitly exclude e2e
+    include: ["__tests__/**/*.{test,spec}.{ts,tsx}"],
+    exclude: ["e2e/**/*", "node_modules", "dist", ".idea", ".git", ".cache"],
   },
   define: {
     "import.meta.env.VITE_TRPC_URL": JSON.stringify(process.env.VITE_TRPC_URL),

@@ -24,5 +24,4 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },
-  // Removed globalSetup to avoid MSW setupWorker error
 });

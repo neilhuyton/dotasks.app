@@ -2,7 +2,7 @@
 import { createRouter, createRootRoute } from "@tanstack/react-router";
 import Root from "../components/Root";
 import { trpcClient } from "../client";
-import { queryClient } from "../queryClient"; // adjust path if needed
+import { queryClient } from "../queryClient";
 
 import {
   homeRoute,
@@ -17,7 +17,6 @@ import {
   profileRoute,
 } from "./routes";
 
-// 1. Root route
 const rootRoute = createRootRoute<unknown>({
   component: () => <Root queryClient={queryClient} trpcClient={trpcClient} />,
   errorComponent: (props) => (
@@ -28,7 +27,6 @@ const rootRoute = createRootRoute<unknown>({
   ),
 });
 
-// 2. Build the route tree — call each factory with the correct parent
 export const routeTree = rootRoute.addChildren([
   homeRoute(rootRoute),
   registerRoute(rootRoute),
@@ -42,10 +40,8 @@ export const routeTree = rootRoute.addChildren([
   profileRoute(rootRoute),
 ]);
 
-// 3. Create the router
 export const router = createRouter({ routeTree });
 
-// 4. Register for type safety — must come after router creation
 declare module "@tanstack/react-router" {
   interface Register {
     router: typeof router;

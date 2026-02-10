@@ -7,7 +7,8 @@ export default defineConfig({
   migrations: {
     path: 'prisma/migrations',
   },
-  datasource: {
-    url: process.env.DATABASE_URL || 'postgresql://dummy:dummy@localhost:5432/dummy?schema=public',
-  },
+  // TOD: migrate this over - fix issues with github actions
+  // datasource: {
+  //   url: process.env.DATABASE_URL || 'postgresql://dummy:dummy@localhost:5432/dummy?schema=public',
+  // },
 });

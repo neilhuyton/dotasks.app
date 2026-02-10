@@ -9,7 +9,7 @@ export const refreshTokenRouter = router({
   refresh: publicProcedure
     .input(
       z.object({
-        refreshToken: z.string().uuid({ message: 'Invalid refresh token format' }),
+        refreshToken: z.uuid({ message: 'Invalid refresh token format' }),
       }),
     )
     .mutation(async ({ input, ctx }) => {

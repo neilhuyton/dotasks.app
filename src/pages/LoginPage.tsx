@@ -18,8 +18,7 @@ function LoginPage() {
   const router = useRouter();
 
   return (
-    <div className="min-h-[100dvh] flex flex-col items-center p-1 sm:p-2 lg:p-3">
-      {/* Form with adjusted top margin */}
+    <div className="min-h-dvh flex flex-col items-center p-1 sm:p-2 lg:p-3">
       <div className="w-full max-w-md bg-background rounded-lg p-4 flex flex-col items-center mt-16 sm:mt-20">
         <h1
           className="text-2xl font-bold text-center mb-4"

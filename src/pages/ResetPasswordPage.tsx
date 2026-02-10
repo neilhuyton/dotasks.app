@@ -25,7 +25,7 @@ function ResetPasswordPage({ className }: ResetPasswordFormProps) {
   return (
     <div
       className={cn(
-        "min-h-[100dvh] flex flex-col items-center p-1 sm:p-2 lg:p-3",
+        "min-h-dvh flex flex-col items-center p-1 sm:p-2 lg:p-3",
         className,
       )}
     >

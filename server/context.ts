@@ -17,8 +17,6 @@ export type Context = {
   prisma: PrismaClient;
   userId?: string;
   email?: string;
-  // Optional: add more when needed (roles, session id, etc.)
-  // isAdmin?: boolean;
 };
 
 export async function createContext({ req }: { req: IncomingMessage }): Promise<Context> {
@@ -49,8 +47,6 @@ export async function createContext({ req }: { req: IncomingMessage }): Promise<
         email = decoded.email;
       }
     } catch (err) {
-      // Very common in production: expired / malformed / wrong secret
-      // Just swallow → let protected procedures handle it
       console.debug('Invalid JWT', (err as Error).message);
     }
   }

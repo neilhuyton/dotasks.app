@@ -64,6 +64,7 @@ describe("WeightList", () => {
   });
 
   beforeEach(() => {
+     vi.spyOn(window, "confirm").mockReturnValue(true);
     server.use(weightGetWeightsHandler, weightDeleteHandler);
     queryClient.clear();
     vi.clearAllMocks();
