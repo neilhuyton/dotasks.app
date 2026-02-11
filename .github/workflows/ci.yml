@@ -5,11 +5,13 @@ on:
     branches:
       - main
       - develop
+      - staging
       - "feat/**" # Match feat branches (e.g., feat/login, feat/ui)
   pull_request:
     branches:
       - main
       - develop
+      - staging
 
 jobs:
   lint:
