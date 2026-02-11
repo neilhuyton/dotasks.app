@@ -9,7 +9,18 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: false,
-      staleTime: 0,
+      staleTime: 10000,                // Data considered fresh for 10 seconds → reduces unnecessary refetches on focus
+      gcTime: 5 * 60 * 1000,           // 5 minutes cache time (helps keep data around between tab switches)
+
+      // === Global polling settings applied to ALL queries ===
+      refetchInterval: 15000,          // Poll every 15 seconds → main mechanism for multi-device sync
+      refetchOnWindowFocus: true,      // Refetch when user returns to the tab/window (very effective)
+      refetchOnReconnect: true,        // Refetch when network reconnects (useful on mobile)
+      // refetchIntervalInBackground: false,  // ← Default value = false → recommended
+                                           // (do not poll when tab is in background → saves Netlify invocations & battery)
+      
+      // You can still override these per-query when needed, example:
+      // trpc.something.useQuery(..., { refetchInterval: false }) to disable for specific queries
     },
     mutations: {
       retry: false,
