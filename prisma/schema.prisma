@@ -1,4 +1,5 @@
 // prisma/schema.prisma
+
 generator client {
   provider      = "prisma-client-js"
   output        = "../node_modules/.prisma/client"
@@ -18,12 +19,32 @@ model User {
   isEmailVerified             Boolean             @default(false)
   resetPasswordToken          String?
   resetPasswordTokenExpiresAt DateTime?
-  refreshToken                String?
   createdAt                   DateTime            @default(now())
   updatedAt                   DateTime            @updatedAt
+
   goals                       Goal[]
   weights                     WeightMeasurement[]
+  refreshTokens               RefreshToken[]      // ← new relation
 
+  @@index([createdAt])
+}
+
+model RefreshToken {
+  id           String    @id @default(uuid())
+  hashedToken  String    @unique
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime  @default(now())
+  lastUsedAt   DateTime? @updatedAt
+  expiresAt    DateTime?           // optional – e.g. 90 days
+
+  // future extensions
+  // deviceInfo   String?   // "iPhone 16, Safari iOS 18"
+  // ipAddress    String?
+  // userAgent    String?
+
+  @@index([userId])
   @@index([createdAt])
 }
 

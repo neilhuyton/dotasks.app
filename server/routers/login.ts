@@ -11,7 +11,6 @@ export const loginRouter = router({
     .input(
       z.object({
         email: z
-          .string()
           .email({ message: 'Invalid email address' })
           .trim()
           .toLowerCase(),
@@ -24,7 +23,6 @@ export const loginRouter = router({
     .mutation(async ({ input, ctx }) => {
       const { email, password } = input;
 
-      // 1. Find user
       const user = await ctx.prisma.user.findUnique({
         where: { email },
         select: {
@@ -42,7 +40,6 @@ export const loginRouter = router({
         });
       }
 
-      // 2. Check email verification
       if (!user.isEmailVerified) {
         throw new TRPCError({
           code: 'FORBIDDEN',
@@ -50,7 +47,6 @@ export const loginRouter = router({
         });
       }
 
-      // 3. Verify password
       const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid) {
         throw new TRPCError({
@@ -59,7 +55,6 @@ export const loginRouter = router({
         });
       }
 
-      // 4. Generate short-lived access token (JWT)
       if (!process.env.JWT_SECRET) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -73,16 +68,20 @@ export const loginRouter = router({
         { expiresIn: '15m' },
       );
 
-      // 5. Generate new refresh token & STORE HASHED VERSION
+      // Create new refresh token record (does NOT delete others)
       const refreshToken = crypto.randomUUID();
       const hashedRefresh = crypto
         .createHash('sha256')
         .update(refreshToken)
         .digest('hex');
 
-      await ctx.prisma.user.update({
-        where: { id: user.id },
-        data: { refreshToken: hashedRefresh },  // ← FIXED: store hash, not plain
+      await ctx.prisma.refreshToken.create({
+        data: {
+          hashedToken: hashedRefresh,
+          userId: user.id,
+          // Optional: expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days
+          // deviceInfo: ctx.req.headers['user-agent'] || 'unknown',
+        },
       });
 
       return {
@@ -91,7 +90,7 @@ export const loginRouter = router({
           email: user.email,
         },
         accessToken,
-        refreshToken,           // client gets plain UUID (correct)
+        refreshToken,
         message: 'Login successful',
       };
     }),

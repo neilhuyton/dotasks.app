@@ -1,5 +1,4 @@
 // src/queryClient.ts
-
 import { QueryClient, QueryCache, MutationCache } from "@tanstack/react-query";
 import { TRPCClientError } from "@trpc/client";
 import type { AppRouter } from "../server/trpc";
@@ -34,7 +33,6 @@ export const queryClient = new QueryClient({
 
 // Shared helper function to avoid duplication
 function handleTRPCAuthError(error: unknown): void {
-  // Use the base (non-generic) class for instanceof check
   if (!(error instanceof TRPCClientError)) {
     return;
   }
@@ -50,16 +48,32 @@ function handleTRPCAuthError(error: unknown): void {
     err.message.toLowerCase().includes("invalid token") ||
     err.message.toLowerCase().includes("jwt");
 
-  if (isUnauthorized) {
-    useAuthStore.getState().logout();
-    queryClient.clear();
-    queryClient.cancelQueries();
+  if (!isUnauthorized) {
+    return;
+  }
 
-    // Prevent redirect loop if already on login
-    if (router.state.location.pathname !== "/login") {
-      router.invalidate().finally(() => {
-        router.navigate({ to: "/login", replace: true });
-      });
-    }
+  const { refreshToken } = useAuthStore.getState();
+
+  // If we still have a refresh token → let the authRefreshLink try to recover
+  // We only force logout here if there's literally no refresh token left
+  if (refreshToken) {
+    console.debug(
+      "[QueryCache] Caught 401/UNAUTHORIZED but refresh token exists → letting authRefreshLink handle it"
+    );
+    return;
+  }
+
+  // No refresh token → this is a real unauthenticated state → logout
+  console.warn("[QueryCache] No refresh token available → forcing logout");
+
+  useAuthStore.getState().logout();
+  queryClient.clear();
+  queryClient.cancelQueries();
+
+  // Prevent redirect loop if already on login
+  if (router.state.location.pathname !== "/login") {
+    router.invalidate().finally(() => {
+      router.navigate({ to: "/login", replace: true });
+    });
   }
 }

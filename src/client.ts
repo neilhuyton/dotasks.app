@@ -57,14 +57,14 @@ function handleAuthError(
   if (!refreshToken || !userId) {
     console.warn('[TRPC Auth] Missing refresh token or userId → logout');
     performLogout();
-    observer.error?.(originalErr); // ← added ?.
+    observer.error?.(originalErr);
     return;
   }
 
   if (activeRefreshPromise) {
     activeRefreshPromise
       .then(() => retryOriginalOp(next, op, observer))
-      .catch(() => observer.error?.(originalErr)); // ← added ?.
+      .catch(() => observer.error?.(originalErr));
     return;
   }
 
@@ -76,7 +76,7 @@ function handleAuthError(
 
       console.log('[TRPC Auth] Refresh succeeded');
 
-      state.login(userId, result.accessToken, result.refreshToken);
+      useAuthStore.getState().login(userId, result.accessToken, result.refreshToken);
 
       retryOriginalOp(next, op, observer);
     } catch (refreshErr: unknown) {
@@ -109,7 +109,7 @@ function handleAuthError(
         performLogout();
       }
 
-      observer.error?.(clientError); // ← added ?.
+      observer.error?.(clientError);
     } finally {
       activeRefreshPromise = null;
     }
@@ -149,8 +149,8 @@ export const trpcClient = createTRPCClient<AppRouter>({
     httpBatchLink({
       url: '/trpc',
       headers() {
-        const { token } = useAuthStore.getState();
-        return token ? { Authorization: `Bearer ${token}` } : {};
+        const { accessToken } = useAuthStore.getState();
+        return accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
       },
     }),
   ],

@@ -1,10 +1,11 @@
+// src/hooks/useRegisterPage.ts
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { trpc } from '../trpc';
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
-import { useRouter } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';  // ← prefer useNavigate over useRouter
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
@@ -39,16 +40,17 @@ export const useRegisterPage = (): UseRegisterReturn => {
 
   const [message, setMessage] = useState<string | null>(null);
   const { login } = useAuthStore();
-  const router = useRouter();
+  const navigate = useNavigate();
 
   const registerMutation = trpc.register.useMutation({
     onSuccess: (data: RegisterResponse) => {
-      setMessage(data.message);
+      setMessage(data.message || 'Registration successful! Redirecting...');
       login(data.user.id, data.accessToken, data.refreshToken);
+
       setTimeout(() => {
         form.reset();
-        router.navigate({ to: '/login' });
-      }, 3000);
+        navigate({ to: '/weight' });  // ← changed: go to dashboard instead of login
+      }, 2500);
     },
     onError: (error) => {
       const errorMessage = error.message || 'Failed to register';

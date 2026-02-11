@@ -125,7 +125,7 @@ describe("LoginPage", () => {
     useAuthStore.setState({
       isLoggedIn: false,
       userId: null,
-      token: null,
+      accessToken: null,
       refreshToken: null,
     });
     queryClient.clear();
@@ -170,7 +170,7 @@ describe("LoginPage", () => {
         const state = useAuthStore.getState();
         expect(state.isLoggedIn).toBe(true);
         expect(state.userId).toBe("test-user-1");
-        expect(state.token).toBeTruthy();
+        expect(state.accessToken).toBeTruthy();
         expect(state.refreshToken).toBeTruthy();
       },
       { timeout: 4000 },

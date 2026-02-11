@@ -24,35 +24,29 @@ interface DecodedToken {
   exp: number;
 }
 
-// Async auth check – ONLY validates, does NOT refresh
-// Refresh is handled automatically by trpc-token-refresh-link before any protected request
 const checkAuth = async () => {
-  const { isLoggedIn, token, refreshToken, userId, logout } = useAuthStore.getState();
+  const { isLoggedIn, refreshToken, accessToken, logout } = useAuthStore.getState();
 
-  if (!isLoggedIn || !token || !refreshToken || !userId) {
+  if (!isLoggedIn || !refreshToken) {
+    console.debug("[checkAuth] No valid session → redirect to login");
     logout();
     throw redirect({ to: "/login", replace: true });
   }
 
-  try {
-    const decoded = jwtDecode<DecodedToken>(token);
-    const now = Math.floor(Date.now() / 1000);
-    const secondsLeft = decoded.exp - now;
-
-    // If expired or almost expired, let trpc link handle refresh on next real call
-    // We allow a small buffer so page can still load
-    if (secondsLeft < -30) {  // already expired more than 30s
-      console.warn("[checkAuth] Token significantly expired — deferring to tRPC refresh link");
-      // Do NOT logout here — link will attempt refresh and handle failure
+  // Optional debug / early warning (do NOT logout here)
+  if (accessToken) {
+    try {
+      const decoded = jwtDecode<DecodedToken>(accessToken);
+      const now = Math.floor(Date.now() / 1000);
+      if (decoded.exp < now - 30) {
+        console.debug("[checkAuth] Access token already expired → refresh link should handle");
+      }
+    } catch (err) {
+      console.debug("[checkAuth] Invalid token format → refresh link will handle", err);
     }
-
-    // Token looks ok — proceed
-    return;
-  } catch (err) {
-    console.warn("[checkAuth] Token decode failed", err);
-    // Invalid token format — let tRPC link try refresh if possible
-    // If refresh fails, link will trigger logout anyway
   }
+
+  // Session looks alive (via refresh token) → proceed
 };
 
 export const homeRoute = (rootRoute: RootRoute) =>

@@ -1,3 +1,4 @@
+// __mocks__/store/authStore.ts
 import { vi, type Mock } from 'vitest';
 import jwt from 'jsonwebtoken';
 

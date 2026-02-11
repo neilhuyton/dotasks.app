@@ -4,36 +4,58 @@ import { create } from 'zustand';
 export interface AuthState {
   isLoggedIn: boolean;
   userId: string | null;
-  token: string | null;
-  refreshToken: string | null;
-  login: (userId: string, token: string, refreshToken: string) => void;
+  accessToken: string | null;     // short-lived JWT — in memory only
+  refreshToken: string | null;    // long-lived, rotated — persisted
+  login: (userId: string, accessToken: string, refreshToken: string) => void;
+  setAccessToken: (accessToken: string) => void;
   logout: () => void;
 }
 
-const initializeState = () => {
-  const storedToken = localStorage.getItem('token');
-  const storedUserId = localStorage.getItem('userId');
-  const storedRefreshToken = localStorage.getItem('refreshToken');
+const STORAGE_KEYS = {
+  userId: 'userId',
+  refreshToken: 'refreshToken',
+} as const;
+
+const initializeState = (): Omit<AuthState, 'login' | 'setAccessToken' | 'logout'> => {
+  const storedUserId = localStorage.getItem(STORAGE_KEYS.userId);
+  const storedRefreshToken = localStorage.getItem(STORAGE_KEYS.refreshToken);
+
   return {
-    isLoggedIn: !!storedToken && !!storedUserId,
+    isLoggedIn: !!storedRefreshToken,
     userId: storedUserId || null,
-    token: storedToken || null,
+    accessToken: null,              // never restore from storage
     refreshToken: storedRefreshToken || null,
   };
 };
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>()((set) => ({
   ...initializeState(),
-  login: (userId: string, token: string, refreshToken: string) => {
-    set({ isLoggedIn: true, userId, token, refreshToken });
-    localStorage.setItem('userId', userId);
-    localStorage.setItem('token', token);
-    localStorage.setItem('refreshToken', refreshToken);
+
+  login: (userId: string, accessToken: string, refreshToken: string) => {
+    set({
+      isLoggedIn: true,
+      userId,
+      accessToken,
+      refreshToken,
+    });
+
+    localStorage.setItem(STORAGE_KEYS.userId, userId);
+    localStorage.setItem(STORAGE_KEYS.refreshToken, refreshToken);
   },
+
+  setAccessToken: (accessToken: string) => {
+    set({ accessToken });
+  },
+
   logout: () => {
-    set({ isLoggedIn: false, userId: null, token: null, refreshToken: null });
-    localStorage.removeItem('userId');
-    localStorage.removeItem('token');
-    localStorage.removeItem('refreshToken');
+    set({
+      isLoggedIn: false,
+      userId: null,
+      accessToken: null,
+      refreshToken: null,
+    });
+
+    localStorage.removeItem(STORAGE_KEYS.userId);
+    localStorage.removeItem(STORAGE_KEYS.refreshToken);
   },
 }));
