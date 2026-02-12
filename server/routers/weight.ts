@@ -216,6 +216,7 @@ export const weightRouter = router({
         id: true,
         goalWeightKg: true,
         goalSetAt: true,
+        reachedAt: true,
       },
     });
 

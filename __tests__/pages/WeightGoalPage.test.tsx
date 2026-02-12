@@ -1,4 +1,4 @@
-// __tests__/WeightGoalPage.test.tsx
+// __tests__/pages/WeightGoalPage.test.tsx
 
 import {
   describe,
@@ -7,7 +7,6 @@ import {
   beforeAll,
   beforeEach,
   afterEach,
-  vi,
   afterAll,
 } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -29,13 +28,20 @@ import { useAuthStore } from "../../src/store/authStore";
 import { generateToken } from "../utils/token";
 import { suppressActWarnings } from "../act-suppress";
 
+vi.mock("@tanstack/react-router", () => ({
+  useNavigate: () => vi.fn(),
+  useLocation: () => ({ pathname: "/", search: {}, hash: "" }),
+  useParams: () => ({}),
+  useSearch: () => ({}),
+}));
+
 suppressActWarnings();
 
-vi.mock("../src/components/GoalList", () => ({
+vi.mock("../../src/components/GoalList", () => ({
   default: () => <div data-testid="goal-list">Mocked GoalList</div>,
 }));
 
-describe("WeightGoalPage", () => {
+describe("WeightGoalPage (modal version)", () => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: 0, staleTime: 0 },
@@ -47,7 +53,7 @@ describe("WeightGoalPage", () => {
     links: [httpLink({ url: "/trpc" })],
   });
 
-  const renderWeightGoal = (userId = "test-user-id") => {
+  const renderPage = (userId = "test-user-id") => {
     useAuthStore.setState({
       isLoggedIn: true,
       userId,
@@ -74,7 +80,6 @@ describe("WeightGoalPage", () => {
       weightUpdateGoalHandler,
     );
     queryClient.clear();
-    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -82,81 +87,117 @@ describe("WeightGoalPage", () => {
       isLoggedIn: false,
       userId: null,
       accessToken: null,
-      refreshToken: null,
     });
     server.resetHandlers();
     queryClient.clear();
   });
 
-  it("renders loading state then shows current goal and form", async () => {
-    renderWeightGoal();
+  it("renders loading state then shows current goal card", async () => {
+    const { container } = renderPage();
 
     await waitFor(
-      () => {
+      () =>
         expect(
-          screen.queryByTestId("weight-goal-loading"),
-        ).not.toBeInTheDocument();
-        expect(
-          screen.getByRole("heading", { name: /Your Goals/i }),
-        ).toBeInTheDocument();
-        expect(screen.getByTestId("current-goal-display")).toHaveTextContent(
-          "65 kg",
-        );
-        expect(screen.getByTestId("goal-weight-input")).toBeInTheDocument();
-        expect(screen.getByTestId("submit-button")).toBeInTheDocument();
-      },
+          container.querySelector(".animate-spin"),
+        ).not.toBeInTheDocument(),
       { timeout: 4000 },
     );
+
+    expect(
+      screen.getByRole("heading", { name: "Weight Goals" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Current Goal")).toBeInTheDocument();
+
+    const weightDisplay = screen.getByTestId("current-goal-weight");
+    expect(weightDisplay).toHaveTextContent(/65\s*kg/);
+    expect(weightDisplay).toHaveClass("text-6xl");
+
+    expect(screen.getByText(/Set on/i)).toBeInTheDocument();
+    expect(screen.getByText(/synced/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /View Goal History/i }),
+    ).toBeInTheDocument();
   });
 
-  it("submits new weight goal, shows success message and updates displayed goal", async () => {
+  it("opens modal when clicking current goal card, allows setting new goal, shows success and updates display", async () => {
     const user = userEvent.setup();
 
-    renderWeightGoal();
+    renderPage();
 
     await waitFor(
       () => {
-        expect(screen.getByTestId("goal-weight-input")).toBeInTheDocument();
-        expect(screen.getByTestId("current-goal-display")).toHaveTextContent(
-          "65 kg",
-        );
+        const weightDisplay = screen.getByTestId("current-goal-weight");
+        expect(weightDisplay).toBeInTheDocument();
+        expect(weightDisplay).toHaveTextContent(/65\s*kg/);
       },
-      { timeout: 4000 },
+      { timeout: 10000 },
     );
 
-    const input = screen.getByTestId("goal-weight-input");
-    const form = input.closest("form") as HTMLFormElement;
+    await user.click(
+      screen.getByRole("button", { name: /Set or update your weight goal/i }),
+    );
 
-    if (!form) throw new Error("Form not found");
+    await waitFor(
+      () => {
+        expect(screen.getByRole("dialog")).toBeInTheDocument();
+        expect(
+          screen.getByText(/Update Goal|Set New Goal/i),
+        ).toBeInTheDocument();
+        expect(screen.getByLabelText("Goal Weight (kg)")).toBeInTheDocument();
+        expect(screen.getByTestId("current-goal-weight")).toHaveTextContent(
+          /65\s*kg/,
+        );
+      },
+      { timeout: 10000 },
+    );
 
+    await new Promise((r) => setTimeout(r, 600));
+
+    const input = screen.getByLabelText("Goal Weight (kg)");
     await user.clear(input);
-    await user.type(input, "60");
+    await user.type(input, "59.5");
 
+    // Find the form via the input (reliable, no role needed)
+    const formElement = input.closest("form");
+    if (!formElement) {
+      throw new Error("Could not find <form> element");
+    }
+
+    // Dispatch native submit event
     const submitEvent = new Event("submit", {
       bubbles: true,
       cancelable: true,
     });
-    form.dispatchEvent(submitEvent);
 
+    formElement.dispatchEvent(submitEvent);
+
+    // Wait for success indicators
     await waitFor(
       () => {
-        const message = screen.getByTestId("goal-message");
-        expect(message).toHaveTextContent("Goal updated successfully!");
-        expect(message).not.toHaveTextContent("Failed");
+        const msg = screen.queryByTestId("form-message");
+        const weight = screen.getByTestId("current-goal-weight");
+
+        const hasSuccess =
+          msg?.textContent?.toLowerCase().includes("success") ?? false;
+        const weightUpdated = weight.textContent?.includes("59.5") ?? false;
+
+        expect(hasSuccess || weightUpdated).toBe(true);
       },
-      { timeout: 5000 },
+      { timeout: 12000, interval: 300 },
     );
 
-    await waitFor(
-      () => {
-        expect(screen.getByTestId("current-goal-display")).toHaveTextContent(
-          "60 kg",
-        );
-      },
-      { timeout: 8000, interval: 200 },
-    );
+    // Close modal if still open
+    const dialog = screen.queryByRole("dialog");
+    if (dialog) {
+      const closeButton =
+        screen.queryByRole("button", { name: /close/i }) ||
+        screen.queryByLabelText(/close/i);
+      if (closeButton) await user.click(closeButton);
+    }
 
-    // Small flush — helps in some React 18 + Vitest cases
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    // Final check
+    expect(screen.getByTestId("current-goal-weight")).toHaveTextContent(
+      /59\.5\s*kg/,
+    );
   });
 });

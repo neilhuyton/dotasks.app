@@ -70,7 +70,7 @@ function WeightLogPage() {
             <p className="text-sm text-muted-foreground">
               {formatDate(latestWeight.createdAt)}
               {isFromCache && " • cached"}
-              {isServerLoaded && !isFromCache && " • synced"}
+              {isServerLoaded && " • synced"}
             </p>
           </div>
         ) : (

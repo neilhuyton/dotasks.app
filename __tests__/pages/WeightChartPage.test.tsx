@@ -8,7 +8,7 @@ import { trpc } from "../../src/trpc";
 import { httpLink } from "@trpc/client";
 import { server } from "../../__mocks__/server";
 import "@testing-library/jest-dom";
-import { TRPCError } from "@trpc/server";
+// import { TRPCError } from "@trpc/server";
 
 
 import {
@@ -17,7 +17,7 @@ import {
 } from "../../__mocks__/handlers/weight";
 import { useAuthStore } from "../../src/store/authStore";
 import { generateToken } from "../utils/token";
-import { trpcMsw } from "../../__mocks__/trpcMsw";
+// import { trpcMsw } from "../../__mocks__/trpcMsw";
 import WeightChartPage from "@/pages/WeightChartPage";
 
 describe("WeightChartPage", () => {
