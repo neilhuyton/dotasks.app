@@ -1,5 +1,6 @@
 // src/components/WeightChartPage.tsx
 
+import { TrendingUp, TrendingDown } from "lucide-react";
 import {
   Select,
   SelectTrigger,
@@ -7,32 +8,54 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
+import { format } from "date-fns";
 import { useWeightChartPage } from "../hooks/useWeightChartPage";
 
 function WeightChartPage() {
   const {
-    weights,
     isLoading,
     isWeightsError,
-    isGoalError,
     error,
     chartData,
-    chartConfig,
-    barColor,
     trendPeriod,
     handleTrendPeriodChange,
     goalWeight,
   } = useWeightChartPage("daily");
 
-  const latestWeight = weights?.length
-    ? weights.reduce((latest, weight) =>
-        new Date(weight.createdAt) > new Date(latest.createdAt)
-          ? weight
-          : latest,
-      )
-    : null;
+  // Simple trend: last vs first point
+  const trend = chartData.length >= 2
+    ? chartData[chartData.length - 1].weight - chartData[0].weight
+    : 0;
+
+  const trendLabel = trend > 0
+    ? `Up ${Math.abs(trend).toFixed(1)} kg`
+    : trend < 0
+      ? `Down ${Math.abs(trend).toFixed(1)} kg`
+      : "Stable";
+
+  const TrendIcon = trend > 0 ? TrendingUp : TrendingDown;
+
+  const chartConfig = {
+    weight: {
+      label: "Weight (kg)",
+      color: "hsl(var(--chart-1))", // Customize via theme or use e.g. "hsl(221.2 83.2% 53.3%)"
+    },
+  } satisfies ChartConfig;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
@@ -40,159 +63,136 @@ function WeightChartPage() {
         className="text-2xl font-bold text-foreground text-center"
         role="heading"
         aria-level={1}
-        data-slot="card-title"
       >
         Your Stats
       </h1>
-      {latestWeight && !isWeightsError && !isLoading && (
-        <div
-          className="mx-auto max-w-4xl rounded-lg border border-border bg-card p-6 shadow-sm"
-          data-testid="latest-weight-card"
-        >
-          <h2 className="text-lg font-semibold text-foreground">
-            Latest Weight
-          </h2>
-          <p className="text-2xl font-bold text-foreground">
-            {latestWeight.weightKg} kg
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Recorded on{" "}
-            {new Date(latestWeight.createdAt).toLocaleDateString("en-GB")}
-          </p>
-        </div>
-      )}
-      {goalWeight && !isGoalError && !isLoading && (
-        <div
-          className="mx-auto max-w-4xl rounded-lg border border-border bg-card p-6 shadow-sm"
-          data-testid="goal-weight-card"
-        >
-          <h2 className="text-lg font-semibold text-foreground">Goal Weight</h2>
-          <p className="text-2xl font-bold text-foreground">{goalWeight} kg</p>
-          <p className="text-sm text-muted-foreground">
-            Set on{" "}
-            {new Date("2023-10-01T00:00:00Z").toLocaleDateString("en-GB")}
-          </p>
-        </div>
-      )}
-      <div className="mx-auto max-w-4xl rounded-lg border border-border bg-card p-6 shadow-sm">
-        <div className="flex items-start justify-between mb-6">
-          <Select onValueChange={handleTrendPeriodChange} value={trendPeriod}>
-            <SelectTrigger
-              data-testid="unit-select"
-              aria-label="Select trend period"
-              className="w-[120px] h-9 text-sm border-border bg-background text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <SelectValue>
-                {trendPeriod.charAt(0).toUpperCase() + trendPeriod.slice(1)}
-              </SelectValue>
+
+      {/* Latest & Goal cards */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {goalWeight && !isLoading && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Goal Weight</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">
+                {goalWeight}
+                <span className="text-xl font-normal text-muted-foreground ml-2">
+                  kg
+                </span>
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {/* Replace with actual goalSetAt if exposed in hook */}
+                Set on 01 Oct 2023
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Main Chart Card */}
+      <Card className="overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <div>
+            <CardTitle>Weight Trend</CardTitle>
+            <CardDescription>
+              {trendPeriod.charAt(0).toUpperCase() + trendPeriod.slice(1)} view
+            </CardDescription>
+          </div>
+
+          <Select value={trendPeriod} onValueChange={handleTrendPeriodChange}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
             </SelectTrigger>
-            <SelectContent data-testid="select-content">
-              <SelectItem data-testid="select-option-daily" value="daily">
-                Daily
-              </SelectItem>
-              <SelectItem data-testid="select-option-weekly" value="weekly">
-                Weekly
-              </SelectItem>
-              <SelectItem data-testid="select-option-monthly" value="monthly">
-                Monthly
-              </SelectItem>
+            <SelectContent>
+              <SelectItem value="daily">Daily</SelectItem>
+              <SelectItem value="weekly">Weekly</SelectItem>
+              <SelectItem value="monthly">Monthly</SelectItem>
             </SelectContent>
           </Select>
-        </div>
-        {isLoading ? (
-          <div className="flex justify-center py-6">
+        </CardHeader>
+
+        <CardContent className="p-0 pb-4">
+          {isLoading ? (
             <div className="h-[400px] flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+              <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-primary" />
             </div>
-          </div>
-        ) : isWeightsError ? (
-          <p
-            data-testid="error"
-            className="text-center text-sm font-medium text-destructive"
-            role="alert"
-          >
-            Error: {error?.message || "Failed to fetch weights"}
-          </p>
-        ) : !weights?.length ? (
-          <p
-            data-testid="no-data"
-            className="text-center text-sm font-medium text-muted-foreground"
-            role="alert"
-          >
-            No weight measurements found
-          </p>
-        ) : (
-          <div className="h-[400px] w-full">
-            <ChartContainer
-              config={chartConfig}
-              id="weight-chart"
-              className="h-full w-full"
-              data-testid="chart-mock"
-            >
-              <BarChart
+          ) : isWeightsError ? (
+            <div className="h-[400px] flex items-center justify-center text-destructive text-center px-6">
+              {error?.message || "Failed to load weight data"}
+            </div>
+          ) : chartData.length === 0 ? (
+            <div className="h-[400px] flex items-center justify-center text-muted-foreground">
+              No weight measurements recorded yet
+            </div>
+          ) : (
+            <ChartContainer config={chartConfig} className="h-[400px] w-full">
+              <LineChart
+                accessibilityLayer
                 data={chartData}
-                margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
+                margin={{ top: 20, right: 20, left: 12, bottom: 20 }}
               >
-                <CartesianGrid stroke="hsl(var(--border))" />
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+
                 <XAxis
                   dataKey="date"
                   tickLine={false}
-                  tickMargin={10}
                   axisLine={false}
-                  tickFormatter={(value) =>
-                    value
-                      ? new Date(value).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: trendPeriod === "daily" ? "numeric" : undefined,
-                          year:
-                            trendPeriod === "monthly" ? "numeric" : undefined,
-                        })
-                      : ""
-                  }
-                  stroke="hsl(var(--foreground))"
+                  tickMargin={8}
+                  tickFormatter={(value: string) => {
+                    if (!value) return "";
+                    const d = new Date(value);
+                    if (trendPeriod === "daily") return format(d, "d MMM");
+                    if (trendPeriod === "weekly") return format(d, "dd MMM");
+                    return format(d, "MMM yyyy");
+                  }}
                 />
+
                 <YAxis
-                  dataKey="weight"
                   tickLine={false}
-                  tickMargin={10}
                   axisLine={false}
+                  tickMargin={8}
                   tickFormatter={(value) => `${value} kg`}
-                  stroke="hsl(var(--foreground))"
                 />
-                <Tooltip
+
+                <ChartTooltip
+                  cursor={false}
                   content={
                     <ChartTooltipContent
-                      indicator="dot"
-                      formatter={(value, name, props) => [
-                        `${value} kg${
-                          props.payload.note ? ` (${props.payload.note})` : ""
-                        }`,
+                      indicator="line"
+                      labelFormatter={(value: string) => format(new Date(value), "PPP")}
+                      // Fixed formatter – safe conversion + type assertion
+                      formatter={(value) => [
+                        `${Number(value).toFixed(1)} kg`,
                         "Weight",
                       ]}
                     />
                   }
                 />
-                <Bar
+
+                <Line
+                  type="linear"
                   dataKey="weight"
-                  fill={barColor}
-                  fillOpacity={0.8}
-                  radius={4}
-                  data-testid="bar-mock"
+                  stroke="blue"
+                  strokeWidth={2.5}
+                  dot={{ r: 4, strokeWidth: 2 }}
+                  activeDot={{ r: 6 }}
+                  isAnimationActive={true}
                 />
-              </BarChart>
+              </LineChart>
             </ChartContainer>
-            <ul style={{ display: "none" }}>
-              {weights.map((weight) => (
-                <li key={weight.id} data-testid="weight-data-point">
-                  {weight.weightKg} kg -{" "}
-                  {new Date(weight.createdAt).toLocaleDateString("en-GB")}{" "}
-                  {weight.note && `(${weight.note})`}
-                </li>
-              ))}
-            </ul>
+          )}
+        </CardContent>
+
+        <CardFooter className="flex-col items-start gap-2 text-sm border-t pt-4">
+          <div className="flex gap-2 font-medium leading-none">
+            {trendLabel} <TrendIcon className="h-4 w-4" />
           </div>
-        )}
-      </div>
+          <div className="leading-none text-muted-foreground">
+            Showing weight trend over time ({trendPeriod} aggregation)
+          </div>
+        </CardFooter>
+      </Card>
     </div>
   );
 }
