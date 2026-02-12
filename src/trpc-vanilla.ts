@@ -1,4 +1,5 @@
 // src/trpc-vanilla.ts
+
 import { createTRPCProxyClient, httpLink } from "@trpc/client";
 import type { AppRouter } from "../server/trpc"; // ← adjust to your actual AppRouter location
 

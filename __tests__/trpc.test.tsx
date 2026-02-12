@@ -1,4 +1,5 @@
 // __tests__/trpc.test.tsx
+
 import { describe, it, expect, vi } from "vitest";
 
 // Create a mock function for createTRPCReact

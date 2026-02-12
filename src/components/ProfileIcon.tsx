@@ -1,4 +1,5 @@
 // src/components/ProfileIcon.tsx
+
 import { Link } from "@tanstack/react-router";
 import { UserIcon } from "lucide-react";
 

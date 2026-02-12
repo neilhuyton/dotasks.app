@@ -5,7 +5,7 @@ export const loginTestUser = (userId = "test-user-id") => {
   useAuthStore.setState({
     isLoggedIn: true,
     userId,
-    token: generateToken(userId),
+    accessToken: generateToken(userId),
     refreshToken: "valid-refresh-token",
   });
 };
@@ -14,7 +14,7 @@ export const logoutTestUser = () => {
   useAuthStore.setState({
     isLoggedIn: false,
     userId: null,
-    token: null,
+    accessToken: null,
     refreshToken: null,
   });
 };

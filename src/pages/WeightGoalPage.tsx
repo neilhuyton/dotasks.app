@@ -1,4 +1,5 @@
 // src/pages/WeightGoalPage.tsx
+
 import { useWeightGoalPage } from "../hooks/useWeightGoalPage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

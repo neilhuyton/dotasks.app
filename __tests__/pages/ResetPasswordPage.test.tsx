@@ -1,3 +1,5 @@
+// __tests__/pages/ResetPasswordPage.test.tsx
+
 import {
   describe,
   it,

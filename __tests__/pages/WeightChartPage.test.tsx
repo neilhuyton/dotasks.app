@@ -1,4 +1,5 @@
 // __tests__/WeightChartPage.test.tsx
+
 import {
   describe,
   it,
@@ -53,7 +54,7 @@ describe("WeightChartPage", () => {
     useAuthStore.setState({
       isLoggedIn: true,
       userId,
-      token: generateToken(userId),
+      accessToken: generateToken(userId),
       refreshToken: "valid-refresh-token",
     });
 
@@ -82,7 +83,7 @@ describe("WeightChartPage", () => {
     useAuthStore.setState({
       isLoggedIn: false,
       userId: null,
-      token: null,
+      accessToken: null,
       refreshToken: null,
     });
   });

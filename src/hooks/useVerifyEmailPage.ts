@@ -1,4 +1,5 @@
 // src/hooks/useVerifyEmailPage.ts
+
 import { useEffect, useState } from "react";
 import { trpc } from "../trpc";
 

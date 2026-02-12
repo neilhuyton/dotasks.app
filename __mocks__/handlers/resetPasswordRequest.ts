@@ -1,4 +1,5 @@
 // __mocks__/handlers/resetPasswordRequest.ts
+
 import { http, HttpResponse } from 'msw';
 
 export const resetPasswordRequestHandler = http.post(

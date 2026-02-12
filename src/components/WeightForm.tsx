@@ -1,4 +1,5 @@
 // src/components/WeightForm.tsx
+
 import { useWeightForm } from "../hooks/useWeightForm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

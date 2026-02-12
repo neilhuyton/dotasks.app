@@ -1,4 +1,5 @@
 // __tests__/utils/token.ts
+
 import jwt from "jsonwebtoken";
 
 export const generateToken = (userId: string) => {

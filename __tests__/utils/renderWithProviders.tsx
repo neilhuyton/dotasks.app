@@ -1,3 +1,5 @@
+// __tests__/utils/renderWithProviders.tsx
+
 import { render, type RenderOptions } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpc } from "../../src/trpc";

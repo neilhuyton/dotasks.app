@@ -1,4 +1,5 @@
 // __tests__/WeightGoalPage.test.tsx
+
 import {
   describe,
   it,
@@ -50,7 +51,7 @@ describe("WeightGoalPage", () => {
     useAuthStore.setState({
       isLoggedIn: true,
       userId,
-      token: generateToken(userId),
+      accessToken: generateToken(userId),
     });
 
     return render(
@@ -80,7 +81,7 @@ describe("WeightGoalPage", () => {
     useAuthStore.setState({
       isLoggedIn: false,
       userId: null,
-      token: null,
+      accessToken: null,
       refreshToken: null,
     });
     server.resetHandlers();

@@ -1,4 +1,5 @@
 // __tests__/GoalList.test.tsx
+
 import {
   describe,
   it,
@@ -44,7 +45,7 @@ describe("GoalList", () => {
     useAuthStore.setState({
       isLoggedIn: true,
       userId,
-      token: generateToken(userId),
+      accessToken: generateToken(userId),
       refreshToken: "valid-refresh-token",
     });
 
@@ -75,7 +76,7 @@ describe("GoalList", () => {
     useAuthStore.setState({
       isLoggedIn: false,
       userId: null,
-      token: null,
+      accessToken: null,
       refreshToken: null,
     });
   });

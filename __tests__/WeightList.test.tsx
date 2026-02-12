@@ -1,4 +1,5 @@
 // __tests__/WeightList.test.tsx
+
 import {
   describe,
   it,
@@ -46,7 +47,7 @@ describe("WeightList", () => {
     useAuthStore.setState({
       isLoggedIn: true,
       userId,
-      token: generateToken(userId),
+      accessToken: generateToken(userId),
       refreshToken: "valid-refresh-token",
     });
 
@@ -76,7 +77,7 @@ describe("WeightList", () => {
     useAuthStore.setState({
       isLoggedIn: false,
       userId: null,
-      token: null,
+      accessToken: null,
       refreshToken: null,
     });
     resetWeights();

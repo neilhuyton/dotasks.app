@@ -1,4 +1,5 @@
 // src/router/router.tsx
+
 import { createRouter, createRootRoute } from "@tanstack/react-router";
 import Root from "../components/Root";
 import { trpcClient } from "../client";

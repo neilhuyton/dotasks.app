@@ -1,4 +1,5 @@
 // src/pages/WeightLogPage.tsx
+
 import WeightForm from "../components/WeightForm";
 import WeightList from "../components/WeightList";
 

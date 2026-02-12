@@ -1,4 +1,5 @@
 // src/components/WeightChartPage.tsx
+
 import {
   Select,
   SelectTrigger,

@@ -1,4 +1,5 @@
 // src/router/routes.ts
+
 import { createRoute, redirect, type RootRoute } from "@tanstack/react-router";
 import Home from "../pages/HomePage";
 import WeightLogPage from "../pages/WeightLogPage";

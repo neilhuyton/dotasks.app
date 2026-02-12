@@ -1,4 +1,5 @@
 // test/setup/act-suppress.ts
+
 // Reusable suppression of React act(...) warnings in tests
 // Safe & targeted – only silences the specific harmless warning pattern
 

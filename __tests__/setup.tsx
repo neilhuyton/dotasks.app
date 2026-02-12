@@ -1,4 +1,5 @@
 // __tests__/setup.ts
+
 import { beforeAll, afterAll, afterEach, vi } from 'vitest'
 import { server } from '../__mocks__/server';
 import '@testing-library/jest-dom'

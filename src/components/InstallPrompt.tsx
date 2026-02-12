@@ -1,4 +1,5 @@
 // src/components/InstallPrompt.tsx
+
 import { useInstallPrompt } from "../hooks/useInstallPrompt";
 
 export function InstallPrompt({

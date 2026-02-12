@@ -1,4 +1,5 @@
 // __mocks__/handlers/verifyEmail.ts
+
 import { trpcMsw } from '../trpcMsw'; // adjust import path if needed
 import { TRPCError } from '@trpc/server';
 import { mockUsers, type MockUser } from '../mockUsers';

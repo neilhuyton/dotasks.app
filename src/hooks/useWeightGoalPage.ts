@@ -1,4 +1,5 @@
 // src/hooks/useWeightGoalPage.ts
+
 import { useState } from "react";
 import { trpc } from "../trpc";
 import { useAuthStore } from "../store/authStore";

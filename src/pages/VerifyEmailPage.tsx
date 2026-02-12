@@ -1,4 +1,5 @@
 // src/pages/VerifyEmailPage.tsx
+
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { Logo } from "../components/Logo";

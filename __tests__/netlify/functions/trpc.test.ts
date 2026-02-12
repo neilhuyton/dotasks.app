@@ -1,8 +1,9 @@
+// __tests__/netlify/functions/trpc.test.ts
+
 import { describe, it, expect, beforeAll, afterEach, afterAll } from "vitest";
 import { http, HttpResponse } from "msw";
 import { server } from "../../../__mocks__/server";
 
-// Define the shape we expect from tRPC client → server
 interface TrpcRequestBody {
   json: {
     path: string;
@@ -20,7 +21,6 @@ interface TrpcErrorResponse {
   error: {
     message: string;
     code: string;
-    // you can add data?: unknown; if your errors include it
   };
 }
 

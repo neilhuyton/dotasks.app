@@ -1,4 +1,5 @@
 // src/hooks/useWeightChartPage.ts
+
 import { useMemo, useState } from "react";
 import { trpc } from "../trpc";
 import { startOfWeek, startOfMonth, format } from "date-fns";

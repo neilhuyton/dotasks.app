@@ -1,4 +1,5 @@
 // __mocks__/handlers/weightsData.ts
+
 export let weights = [
   {
     id: "1",

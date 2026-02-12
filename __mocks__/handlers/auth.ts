@@ -1,4 +1,5 @@
-// __mocks__/handlers/auth.ts (revert to this)
+// __mocks__/handlers/auth.ts
+
 import { trpcMsw } from "../trpcMsw";
 import { mockUsers, type MockUser } from "../mockUsers";
 import bcrypt from "bcryptjs";

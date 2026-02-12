@@ -1,4 +1,5 @@
 // src/components/ThemeProvider.tsx
+
 import { ThemeProvider as NextThemeProvider } from "next-themes";
 import type { ReactNode } from "react";
 import type { ThemeProviderProps as NextThemeProviderProps } from "next-themes";

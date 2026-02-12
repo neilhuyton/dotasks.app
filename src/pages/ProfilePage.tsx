@@ -1,4 +1,5 @@
 // src/components/Profile.tsx
+
 import { Link } from "@tanstack/react-router";
 import { MailIcon, LockIcon, LogOutIcon } from "lucide-react";
 import { useProfilePage } from "../hooks/useProfilePage";

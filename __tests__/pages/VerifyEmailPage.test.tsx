@@ -1,4 +1,5 @@
 // __tests__/VerifyEmailPage.test.tsx
+
 import {
   describe,
   it,
@@ -81,7 +82,7 @@ describe("VerifyEmailPage", () => {
     useAuthStore.setState({
       isLoggedIn: false,
       userId: null,
-      token: null,
+      accessToken: null,
       refreshToken: null,
     });
   });

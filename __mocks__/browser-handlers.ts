@@ -1,4 +1,5 @@
 // __mocks__/browser-handlers.ts
+
 // import { http, HttpResponse } from 'msw';
 
 export const handlers = [

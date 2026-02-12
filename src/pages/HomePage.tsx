@@ -1,4 +1,5 @@
 // src/components/Home.tsx
+
 import { ScaleIcon, TargetIcon, TrendingUpIcon, ClockIcon } from "lucide-react";
 import { DashboardCard } from "../components/DashboardCard";
 import { useHomePage } from "../hooks/useHomePage";

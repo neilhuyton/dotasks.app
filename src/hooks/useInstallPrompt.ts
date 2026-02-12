@@ -1,4 +1,5 @@
 // src/hooks/useInstallPrompt.ts
+
 import { useEffect, useState } from "react";
 
 // Define custom BeforeInstallPromptEvent interface

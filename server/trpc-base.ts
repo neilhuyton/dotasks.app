@@ -1,4 +1,5 @@
 // server/trpc-base.ts
+
 import { initTRPC, TRPCError } from '@trpc/server';
 import type { Context } from './context';
 
@@ -14,7 +15,7 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
   return next({
     ctx: {
       ...ctx,
-      userId: ctx.userId,           // now TS knows userId: string inside protected procedures
+      userId: ctx.userId,
     },
   });
 });
