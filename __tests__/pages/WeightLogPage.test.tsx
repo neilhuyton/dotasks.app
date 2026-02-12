@@ -43,13 +43,24 @@ describe("WeightLogPage", () => {
       </trpc.Provider>
     );
 
+  // Helper to create consistent mock values matching the full hook return type
+  const createLatestWeightMock = (
+    overrides: Partial<ReturnType<typeof useLatestWeightHook.useLatestWeight>> = {}
+  ) => ({
+    latestWeight: null,
+    isFromCache: false,
+    isServerLoaded: true,
+    isLoading: false,
+    isFetching: false,
+    error: null,
+    ...overrides,
+  });
+
   beforeEach(() => {
-    // Reset mock before each test
-    vi.spyOn(useLatestWeightHook, "useLatestWeight").mockReturnValue({
-      latestWeight: null,
-      isFromCache: false,
-      isServerLoaded: true,
-    });
+    // Default: no latest weight
+    vi.spyOn(useLatestWeightHook, "useLatestWeight").mockReturnValue(
+      createLatestWeightMock()
+    );
   });
 
   it("renders the page title correctly", () => {
@@ -113,37 +124,45 @@ describe("WeightLogPage", () => {
   });
 
   it("shows weight value and date when latestWeight exists", () => {
-    // Mock with existing weight
-    vi.spyOn(useLatestWeightHook, "useLatestWeight").mockReturnValue({
-      latestWeight: {
-        weightKg: 78.5,
-        createdAt: "2025-02-10T08:30:00.000Z",
-        source: "server",
-      },
-      isFromCache: false,
-      isServerLoaded: true,
-    });
+    vi.spyOn(useLatestWeightHook, "useLatestWeight").mockReturnValue(
+      createLatestWeightMock({
+        latestWeight: {
+          weightKg: 78.5,
+          createdAt: "2025-02-10T08:30:00.000Z",
+          source: "server",
+        },
+        isFromCache: false,
+        isServerLoaded: true,
+        isLoading: false,
+        isFetching: false,
+        error: null,
+      })
+    );
 
     renderWeightLogPage();
 
     expect(screen.getByText("78.5")).toBeInTheDocument();
     expect(screen.getByText("kg")).toBeInTheDocument();
-    expect(screen.getByText(/synced$/)).toBeInTheDocument(); // adjust based on your formatDate output
+    expect(screen.getByText(/synced$/)).toBeInTheDocument(); // adjust regex if needed
   });
 
   it("changes modal title to 'Update Weight' when there is existing weight", async () => {
     const user = userEvent.setup();
 
-    // Mock with existing weight
-    vi.spyOn(useLatestWeightHook, "useLatestWeight").mockReturnValue({
-      latestWeight: {
-        weightKg: 78.5,
-        createdAt: "2025-02-10T08:30:00.000Z",
-        source: "server",
-      },
-      isFromCache: false,
-      isServerLoaded: true,
-    });
+    vi.spyOn(useLatestWeightHook, "useLatestWeight").mockReturnValue(
+      createLatestWeightMock({
+        latestWeight: {
+          weightKg: 78.5,
+          createdAt: "2025-02-10T08:30:00.000Z",
+          source: "server",
+        },
+        isFromCache: false,
+        isServerLoaded: true,
+        isLoading: false,
+        isFetching: false,
+        error: null,
+      })
+    );
 
     renderWeightLogPage();
 

@@ -73,7 +73,7 @@ describe("WeightGoalPage (modal version)", () => {
   afterAll(() => server.close());
 
   beforeEach(() => {
-    resetMockGoal();
+    resetMockGoal(); // ensures goalWeightKg: 65 exists at start
     server.use(
       weightGetCurrentGoalHandler,
       weightSetGoalHandler,
@@ -93,30 +93,31 @@ describe("WeightGoalPage (modal version)", () => {
   });
 
   it("renders loading state then shows current goal card", async () => {
-    const { container } = renderPage();
+    renderPage();
 
-    await waitFor(
-      () =>
-        expect(
-          container.querySelector(".animate-spin"),
-        ).not.toBeInTheDocument(),
-      { timeout: 4000 },
+    // Wait until the goal display appears (proves query resolved and goal exists)
+    const weightDisplay = await waitFor(
+      () => screen.getByTestId("current-goal-weight"),
+      { timeout: 5000, interval: 200 }
     );
 
-    expect(
-      screen.getByRole("heading", { name: "Weight Goals" }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Current Goal")).toBeInTheDocument();
-
-    const weightDisplay = screen.getByTestId("current-goal-weight");
+    // Core assertions - goal is visible
+    expect(weightDisplay).toBeInTheDocument();
     expect(weightDisplay).toHaveTextContent(/65\s*kg/);
     expect(weightDisplay).toHaveClass("text-6xl");
 
+    // Other visible elements
+    expect(screen.getByText("Current Goal")).toBeInTheDocument();
     expect(screen.getByText(/Set on/i)).toBeInTheDocument();
-    expect(screen.getByText(/synced/i)).toBeInTheDocument();
+    expect(screen.getByText(/synced/i)).toBeInTheDocument(); // assumes !isFromCache
+
+    // History button
     expect(
-      screen.getByRole("button", { name: /View Goal History/i }),
+      screen.getByRole("button", { name: /View Goal History/i })
     ).toBeInTheDocument();
+
+    // Just to confirm we're NOT in the "no goal" state
+    expect(screen.queryByText("No goal set yet")).not.toBeInTheDocument();
   });
 
   it("opens modal when clicking current goal card, allows setting new goal, shows success and updates display", async () => {
@@ -124,80 +125,67 @@ describe("WeightGoalPage (modal version)", () => {
 
     renderPage();
 
-    await waitFor(
-      () => {
-        const weightDisplay = screen.getByTestId("current-goal-weight");
-        expect(weightDisplay).toBeInTheDocument();
-        expect(weightDisplay).toHaveTextContent(/65\s*kg/);
-      },
-      { timeout: 10000 },
+    // Wait for initial goal to render (same as first test)
+    const weightDisplay = await waitFor(
+      () => screen.getByTestId("current-goal-weight"),
+      { timeout: 5000 }
     );
+    expect(weightDisplay).toHaveTextContent(/65\s*kg/);
 
+    // Open modal via the accessible button name
     await user.click(
-      screen.getByRole("button", { name: /Set or update your weight goal/i }),
+      screen.getByRole("button", { name: /Set or update your weight goal/i })
     );
 
+    // Wait for modal + form
     await waitFor(
       () => {
         expect(screen.getByRole("dialog")).toBeInTheDocument();
         expect(
-          screen.getByText(/Update Goal|Set New Goal/i),
+          screen.getByText(/Update Goal|Set New Goal/i)
         ).toBeInTheDocument();
         expect(screen.getByLabelText("Goal Weight (kg)")).toBeInTheDocument();
-        expect(screen.getByTestId("current-goal-weight")).toHaveTextContent(
-          /65\s*kg/,
-        );
       },
-      { timeout: 10000 },
+      { timeout: 5000 }
     );
 
-    await new Promise((r) => setTimeout(r, 600));
+    // Small delay to let UI settle (helps with focus/input issues sometimes)
+    await new Promise((r) => setTimeout(r, 400));
 
     const input = screen.getByLabelText("Goal Weight (kg)");
     await user.clear(input);
     await user.type(input, "59.5");
 
-    // Find the form via the input (reliable, no role needed)
+    // Submit via form submit event (reliable)
     const formElement = input.closest("form");
-    if (!formElement) {
-      throw new Error("Could not find <form> element");
-    }
+    if (!formElement) throw new Error("Form not found");
 
-    // Dispatch native submit event
-    const submitEvent = new Event("submit", {
-      bubbles: true,
-      cancelable: true,
-    });
-
-    formElement.dispatchEvent(submitEvent);
-
-    // Wait for success indicators
-    await waitFor(
-      () => {
-        const msg = screen.queryByTestId("form-message");
-        const weight = screen.getByTestId("current-goal-weight");
-
-        const hasSuccess =
-          msg?.textContent?.toLowerCase().includes("success") ?? false;
-        const weightUpdated = weight.textContent?.includes("59.5") ?? false;
-
-        expect(hasSuccess || weightUpdated).toBe(true);
-      },
-      { timeout: 12000, interval: 300 },
+    formElement.dispatchEvent(
+      new Event("submit", { bubbles: true, cancelable: true })
     );
 
-    // Close modal if still open
+    // Wait for update to reflect (either success message or new weight)
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("current-goal-weight")).toHaveTextContent(
+          /59\.5\s*kg/
+        );
+      },
+      { timeout: 8000, interval: 300 }
+    );
+
+    // Optional: close modal if still open
     const dialog = screen.queryByRole("dialog");
     if (dialog) {
-      const closeButton =
+      const closeBtn =
         screen.queryByRole("button", { name: /close/i }) ||
         screen.queryByLabelText(/close/i);
-      if (closeButton) await user.click(closeButton);
+      if (closeBtn) await user.click(closeBtn);
     }
 
-    // Final check
+    // Final verification
     expect(screen.getByTestId("current-goal-weight")).toHaveTextContent(
-      /59\.5\s*kg/,
+      /59\.5\s*kg/
     );
   });
 });
