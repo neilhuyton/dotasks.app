@@ -17,21 +17,13 @@ import {
 import { cn } from "@/lib/utils";
 
 export default function WeightGoalPage() {
-  const { currentGoal, isLoading, isFromCache, isServerLoaded } =
+  const { currentGoal, isFromCache, isServerLoaded } =
     useCurrentGoal();
 
   const [goalModalOpen, setGoalModalOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
 
   const openGoalModal = () => setGoalModalOpen(true);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="animate-spin h-8 w-8 border-4 border-primary rounded-full border-t-transparent" />
-      </div>
-    );
-  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-8 px-4 py-8">
