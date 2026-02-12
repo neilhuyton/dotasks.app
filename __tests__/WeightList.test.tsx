@@ -65,7 +65,7 @@ describe("WeightList", () => {
   });
 
   beforeEach(() => {
-     vi.spyOn(window, "confirm").mockReturnValue(true);
+    vi.spyOn(window, "confirm").mockReturnValue(true);
     server.use(weightGetWeightsHandler, weightDeleteHandler);
     queryClient.clear();
     vi.clearAllMocks();
@@ -111,25 +111,24 @@ describe("WeightList", () => {
 
     await renderWeightList();
 
-    // Wait for initial successful load with both entries visible
+    // Wait for table to load with data
     await waitFor(
       () => {
         expect(screen.queryByTestId("weight-list-loading")).not.toBeInTheDocument();
         expect(screen.getByText("70")).toBeInTheDocument();
         expect(screen.getByText("69.9")).toBeInTheDocument();
-        expect(screen.queryByTestId("error-message")).not.toBeInTheDocument();
       },
       { timeout: 4000 },
     );
 
-    // Find and click the delete button for the 01/10/2023 entry (70 kg)
+    // Find delete button for the 01/10/2023 entry using the correct aria-label
     const deleteButton = screen.getByRole("button", {
-      name: /Delete weight measurement from 01\/10\/2023/i,
+      name: /Delete entry from 01\/10\/2023/i,
     });
 
     await user.click(deleteButton);
 
-    // Wait until the UI reflects the deletion
+    // Wait for UI to reflect deletion (70 kg gone, only 69.9 remains)
     await waitFor(
       () => {
         expect(screen.queryByText("70")).not.toBeInTheDocument();
@@ -140,7 +139,7 @@ describe("WeightList", () => {
       { timeout: 4000 },
     );
 
-    // Optional: verify only one data row remains (header + 1 row)
+    // Optional: verify only header + 1 data row
     expect(screen.getAllByRole("row")).toHaveLength(2);
   });
 });

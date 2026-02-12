@@ -1,9 +1,9 @@
 // server/routers/weight.ts
 
-import { protectedProcedure, router } from '../trpc-base';
-import { z } from 'zod';
-import { TRPCError } from '@trpc/server';
-import { Prisma } from '@prisma/client';
+import { protectedProcedure, router } from "../trpc-base";
+import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+import { Prisma } from "@prisma/client";
 
 export const weightRouter = router({
   create: protectedProcedure
@@ -11,8 +11,8 @@ export const weightRouter = router({
       z.object({
         weightKg: z
           .number()
-          .positive({ message: 'Weight must be a positive number' })
-          .max(500, { message: 'Weight cannot exceed 500 kg' }),
+          .positive({ message: "Weight must be a positive number" })
+          .max(500, { message: "Weight cannot exceed 500 kg" }),
         note: z.string().max(500).optional(),
       }),
     )
@@ -32,7 +32,7 @@ export const weightRouter = router({
           userId: ctx.userId,
           reachedAt: null,
         },
-        orderBy: { goalSetAt: 'desc' },
+        orderBy: { goalSetAt: "desc" },
       });
 
       if (currentGoal && input.weightKg <= currentGoal.goalWeightKg) {
@@ -45,10 +45,52 @@ export const weightRouter = router({
       return weight;
     }),
 
+  update: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        weightKg: z.number().positive().max(500),
+        note: z.string().max(500).optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const updated = await ctx.prisma.weightMeasurement.update({
+          where: {
+            id: input.id,
+            userId: ctx.userId,
+          },
+          data: {
+            weightKg: input.weightKg,
+            note: input.note,
+          },
+        });
+
+        // Optional: re-check goal if weight changed significantly
+        // (you can copy logic from create if desired)
+
+        return updated;
+      } catch (err) {
+        if (
+          err instanceof Prisma.PrismaClientKnownRequestError &&
+          err.code === "P2025"
+        ) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Weight entry not found or not owned by you",
+          });
+        }
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update weight",
+        });
+      }
+    }),
+
   getWeights: protectedProcedure.query(async ({ ctx }) => {
     return ctx.prisma.weightMeasurement.findMany({
       where: { userId: ctx.userId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       select: {
         id: true,
         weightKg: true,
@@ -61,7 +103,7 @@ export const weightRouter = router({
   delete: protectedProcedure
     .input(
       z.object({
-        weightId: z.string().uuid({ message: 'Invalid weight ID' }),
+        weightId: z.string().uuid({ message: "Invalid weight ID" }),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -75,15 +117,18 @@ export const weightRouter = router({
 
         return { success: true, deletedId: input.weightId };
       } catch (err) {
-        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+        if (
+          err instanceof Prisma.PrismaClientKnownRequestError &&
+          err.code === "P2025"
+        ) {
           throw new TRPCError({
-            code: 'NOT_FOUND',
-            message: 'Weight measurement not found or not owned by you',
+            code: "NOT_FOUND",
+            message: "Weight measurement not found or not owned by you",
           });
         }
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to delete weight measurement',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to delete weight measurement",
         });
       }
     }),
@@ -93,7 +138,7 @@ export const weightRouter = router({
       z.object({
         goalWeightKg: z
           .number()
-          .positive({ message: 'Goal weight must be a positive number' })
+          .positive({ message: "Goal weight must be a positive number" })
           .max(500),
       }),
     )
@@ -107,8 +152,9 @@ export const weightRouter = router({
 
       if (activeGoal) {
         throw new TRPCError({
-          code: 'CONFLICT',
-          message: 'You already have an active goal. Reach it, abandon it, or edit it before setting a new one.',
+          code: "CONFLICT",
+          message:
+            "You already have an active goal. Reach it, abandon it, or edit it before setting a new one.",
         });
       }
 
@@ -124,10 +170,10 @@ export const weightRouter = router({
   updateGoal: protectedProcedure
     .input(
       z.object({
-        goalId: z.string().uuid({ message: 'Invalid goal ID' }),
+        goalId: z.string().uuid({ message: "Invalid goal ID" }),
         goalWeightKg: z
           .number()
-          .positive({ message: 'Goal weight must be a positive number' })
+          .positive({ message: "Goal weight must be a positive number" })
           .max(500),
       }),
     )
@@ -142,15 +188,19 @@ export const weightRouter = router({
           data: { goalWeightKg: input.goalWeightKg },
         });
       } catch (err) {
-        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+        if (
+          err instanceof Prisma.PrismaClientKnownRequestError &&
+          err.code === "P2025"
+        ) {
           throw new TRPCError({
-            code: 'NOT_FOUND',
-            message: 'Goal not found, does not belong to you, or is already reached',
+            code: "NOT_FOUND",
+            message:
+              "Goal not found, does not belong to you, or is already reached",
           });
         }
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to update goal',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update goal",
         });
       }
     }),
@@ -161,7 +211,7 @@ export const weightRouter = router({
         userId: ctx.userId,
         reachedAt: null,
       },
-      orderBy: { goalSetAt: 'desc' },
+      orderBy: { goalSetAt: "desc" },
       select: {
         id: true,
         goalWeightKg: true,
@@ -175,7 +225,7 @@ export const weightRouter = router({
   getGoals: protectedProcedure.query(async ({ ctx }) => {
     return ctx.prisma.goal.findMany({
       where: { userId: ctx.userId },
-      orderBy: { goalSetAt: 'desc' },
+      orderBy: { goalSetAt: "desc" },
       select: {
         id: true,
         goalWeightKg: true,

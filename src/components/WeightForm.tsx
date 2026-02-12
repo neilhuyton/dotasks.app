@@ -1,5 +1,6 @@
 // src/components/WeightForm.tsx
 
+import { useEffect } from "react";
 import { useWeightForm } from "../hooks/useWeightForm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,21 +10,41 @@ import Confetti from "react-confetti";
 import { createPortal } from "react-dom";
 import { LoadingSpinner } from "./LoadingSpinner";
 
-function WeightForm() {
+interface WeightFormProps {
+  isInModal?: boolean;
+  onSuccessClose?: () => void;
+}
+
+function WeightForm({ isInModal = false, onSuccessClose }: WeightFormProps) {
   const {
     weight,
-    // note,
+    note,
     message,
     isSubmitting,
     showConfetti,
     fadeOut,
     handleSubmit,
     handleWeightChange,
-    // handleNoteChange,
+    handleNoteChange,
   } = useWeightForm();
+
+  // Auto-close modal after success message is shown (small delay for visibility)
+  useEffect(() => {
+    if (
+      isInModal &&
+      message?.toLowerCase().includes("success") &&
+      !isSubmitting
+    ) {
+      const timer = setTimeout(() => {
+        onSuccessClose?.();
+      }, 1200);
+      return () => clearTimeout(timer);
+    }
+  }, [message, isSubmitting, isInModal, onSuccessClose]);
 
   return (
     <>
+      {/* Confetti explosion when goal reached */}
       {showConfetti &&
         createPortal(
           <Confetti
@@ -31,27 +52,32 @@ function WeightForm() {
             height={window.innerHeight}
             numberOfPieces={200}
             recycle={false}
-            data-testid="confetti"
             className={cn(
-              "fixed inset-0 z-[1000]",
+              "fixed inset-0 z-[1000] pointer-events-none",
               fadeOut ? "opacity-0" : "opacity-100",
               "transition-opacity duration-1000 ease-out"
             )}
           />,
           document.body
         )}
-      <div className="mx-auto max-w-4xl lg:max-w-4xl rounded-lg border border-border bg-card p-6 shadow-sm">
+
+      <div
+        className={cn(
+          "mx-auto rounded-lg border border-border bg-card p-6 shadow-sm",
+          isInModal && "border-none shadow-none p-0 bg-transparent"
+        )}
+      >
         <form
           onSubmit={handleSubmit}
           className="space-y-6"
           data-testid="weight-form"
         >
           <div className="space-y-4">
+            {/* Weight input */}
             <div className="space-y-2">
               <Label
                 htmlFor="weight"
                 className="text-sm font-medium text-foreground"
-                data-testid="weight-label"
               >
                 Weight (kg)
               </Label>
@@ -65,35 +91,38 @@ function WeightForm() {
                 min="0"
                 step="0.1"
                 disabled={isSubmitting}
-                data-testid="weight-input"
-                aria-describedby="weight-error"
-                className="h-10 rounded-md border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                autoFocus={isInModal} // helpful in modal
+                className="h-10"
               />
             </div>
-            {/* <div className="space-y-2">
+
+            {/* Note input – optional */}
+            <div className="space-y-2">
               <Label
                 htmlFor="note"
                 className="text-sm font-medium text-foreground"
-                data-testid="note-label"
               >
-                Optional Note
+                Note (optional)
               </Label>
               <Input
                 id="note"
                 type="text"
                 value={note}
                 onChange={handleNoteChange}
-                placeholder="Optional note"
+                placeholder="e.g. morning fasting, after workout, new scale..."
                 disabled={isSubmitting}
-                data-testid="note-input"
-                className="h-10 rounded-md border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                className="h-10"
               />
-            </div> */}
+            </div>
+
+            {/* Loading spinner during submission */}
             {isSubmitting && (
-              <div className="flex justify-center">
-                <LoadingSpinner size="md" testId="weight-form-submitting" />
+              <div className="flex justify-center py-2">
+                <LoadingSpinner size="md" />
               </div>
             )}
+
+            {/* Success / error message */}
             {message && (
               <p
                 className={cn(
@@ -102,20 +131,19 @@ function WeightForm() {
                     ? "text-success"
                     : "text-destructive"
                 )}
-                id="weight-error"
-                data-testid="weight-message"
                 role="alert"
               >
                 {message}
               </p>
             )}
+
+            {/* Submit button */}
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="w-full h-10 font-semibold bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring"
-              data-testid="submit-button"
+              className="w-full h-10 font-semibold"
             >
-              {isSubmitting ? "Submitting..." : "Submit Weight"}
+              {isSubmitting ? "Saving..." : "Save Measurement"}
             </Button>
           </div>
         </form>

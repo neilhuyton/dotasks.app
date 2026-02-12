@@ -1,13 +1,15 @@
 // __tests__/pages/WeightLogPage.test.tsx
 
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { trpc } from "@/trpc"; // adjust path if needed
+import { trpc } from "@/trpc"; // adjust path if necessary
 import { httpLink } from "@trpc/client";
 import WeightLogPage from "@/pages/WeightLogPage";
+import * as useLatestWeightHook from "@/hooks/useLatestWeight";
 
-// Mock the child components so we only test composition + layout here
+// Mock child components
 vi.mock("@/components/WeightForm", () => ({
   default: () => <div data-testid="weight-form">Mock Weight Form</div>,
 }));
@@ -41,31 +43,118 @@ describe("WeightLogPage", () => {
       </trpc.Provider>
     );
 
+  beforeEach(() => {
+    // Reset mock before each test
+    vi.spyOn(useLatestWeightHook, "useLatestWeight").mockReturnValue({
+      latestWeight: null,
+      isFromCache: false,
+      isServerLoaded: true,
+    });
+  });
+
   it("renders the page title correctly", () => {
     renderWeightLogPage();
 
     const heading = screen.getByRole("heading", { level: 1 });
     expect(heading).toBeInTheDocument();
-    expect(heading).toHaveTextContent("Your Weight");
-    expect(heading).toHaveClass("text-2xl font-bold text-foreground text-center");
+    expect(heading).toHaveTextContent("Weight Tracker");
+    expect(heading).toHaveClass("text-3xl font-bold tracking-tight text-center");
   });
 
-  it("renders WeightForm and WeightList components", () => {
+  it("renders the current weight card with correct structure and accessibility", () => {
     renderWeightLogPage();
 
-    const formEl = screen.getByTestId("weight-form");
-    expect(formEl).toBeInTheDocument();
-    expect(formEl).toHaveTextContent("Mock Weight Form");
+    const card = screen.getByRole("button", {
+      name: /record or update your current weight/i,
+    });
+    expect(card).toBeInTheDocument();
+    expect(card).toHaveClass("rounded-xl border bg-card/60 backdrop-blur-sm p-6");
+    expect(card).toHaveClass("cursor-pointer");
 
-    const listEl = screen.getByTestId("weight-list");
-    expect(listEl).toBeInTheDocument();
-    expect(listEl).toHaveTextContent("Mock Weight List");
+    expect(screen.getByText("Current Weight")).toBeInTheDocument();
+
+    // Empty state when no weight
+    expect(screen.getByText("No weight recorded yet")).toBeInTheDocument();
+    expect(
+      screen.getByText("Tap anywhere here to add your current weight")
+    ).toBeInTheDocument();
   });
 
-  it("applies correct container classes", () => {
+  it("renders the 'View History' button", () => {
     renderWeightLogPage();
 
-    const container = screen.getByText("Your Weight").closest("div");
-    expect(container).toHaveClass("mx-auto max-w-4xl space-y-6 px-4 py-6");
+    const viewHistoryBtn = screen.getByRole("button", { name: "View History" });
+    expect(viewHistoryBtn).toBeInTheDocument();
+    expect(viewHistoryBtn).toHaveClass("min-w-[220px]");
+  });
+
+  it("does not render WeightForm or WeightList directly on initial load", () => {
+    renderWeightLogPage();
+
+    expect(screen.queryByTestId("weight-form")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("weight-list")).not.toBeInTheDocument();
+  });
+
+  it("opens entry modal when current weight card is clicked", async () => {
+    const user = userEvent.setup();
+    renderWeightLogPage();
+
+    const card = screen.getByRole("button", {
+      name: /record or update your current weight/i,
+    });
+
+    await user.click(card);
+
+    expect(
+      await screen.findByRole("heading", { name: "Record Weight" })
+    ).toBeInTheDocument();
+
+    expect(screen.getByTestId("weight-form")).toBeInTheDocument();
+  });
+
+  it("shows weight value and date when latestWeight exists", () => {
+    // Mock with existing weight
+    vi.spyOn(useLatestWeightHook, "useLatestWeight").mockReturnValue({
+      latestWeight: {
+        weightKg: 78.5,
+        createdAt: "2025-02-10T08:30:00.000Z",
+        source: "server",
+      },
+      isFromCache: false,
+      isServerLoaded: true,
+    });
+
+    renderWeightLogPage();
+
+    expect(screen.getByText("78.5")).toBeInTheDocument();
+    expect(screen.getByText("kg")).toBeInTheDocument();
+    expect(screen.getByText(/synced$/)).toBeInTheDocument(); // adjust based on your formatDate output
+  });
+
+  it("changes modal title to 'Update Weight' when there is existing weight", async () => {
+    const user = userEvent.setup();
+
+    // Mock with existing weight
+    vi.spyOn(useLatestWeightHook, "useLatestWeight").mockReturnValue({
+      latestWeight: {
+        weightKg: 78.5,
+        createdAt: "2025-02-10T08:30:00.000Z",
+        source: "server",
+      },
+      isFromCache: false,
+      isServerLoaded: true,
+    });
+
+    renderWeightLogPage();
+
+    const card = screen.getByRole("button", {
+      name: /record or update your current weight/i,
+    });
+
+    await user.click(card);
+
+    expect(
+      await screen.findByRole("heading", { name: "Update Weight" })
+    ).toBeInTheDocument();
   });
 });
