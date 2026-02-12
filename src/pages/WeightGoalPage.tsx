@@ -1,11 +1,11 @@
 // src/pages/WeightGoalPage.tsx
 
-import { useState } from "react";
-import GoalForm from "../components/GoalForm"; // ← new component
+import { useState, useRef, useEffect } from "react";
+import GoalForm from "../components/GoalForm";
 import GoalList from "../components/GoalList";
-import { useCurrentGoal } from "../hooks/useCurrentGoal"; // ← new/reusable hook
+import { useCurrentGoal } from "../hooks/useCurrentGoal";
 import { formatDate } from "../utils/date";
-import { Pencil } from "lucide-react";
+import { Pencil, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,15 +15,89 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { trpc } from "../trpc";
 
 export default function WeightGoalPage() {
-  const { currentGoal, isFromCache, isServerLoaded } =
-    useCurrentGoal();
+  const { currentGoal, isFromCache, isServerLoaded } = useCurrentGoal();
 
   const [goalModalOpen, setGoalModalOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
 
-  const openGoalModal = () => setGoalModalOpen(true);
+  // Inline edit state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState<string>(
+    currentGoal?.goalWeightKg.toString() ?? ""
+  );
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Sync editValue when currentGoal changes externally
+  useEffect(() => {
+    if (currentGoal) {
+      setEditValue(currentGoal.goalWeightKg.toString());
+    }
+  }, [currentGoal]);
+
+  // Focus and select input when entering edit mode
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const updateGoalMutation = trpc.weight.updateGoal.useMutation({
+    onSuccess: () => {
+      setIsEditing(false);
+    },
+    onError: () => {
+      // Optionally revert editValue here if you want
+      // For now we just stop editing (user can try again)
+      setIsEditing(false);
+    },
+  });
+
+  const handleSaveEdit = () => {
+    if (!currentGoal) return;
+
+    const newWeight = parseFloat(editValue);
+    if (isNaN(newWeight) || newWeight <= 0) {
+      // Invalid → cancel silently or revert
+      setEditValue(currentGoal.goalWeightKg.toString());
+      setIsEditing(false);
+      return;
+    }
+
+    if (newWeight === currentGoal.goalWeightKg) {
+      setIsEditing(false); // no change
+      return;
+    }
+
+    updateGoalMutation.mutate({
+      goalId: currentGoal.id, // assuming your CurrentGoalDisplay has .id from the query
+      goalWeightKg: newWeight,
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditValue(currentGoal?.goalWeightKg.toString() ?? "");
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSaveEdit();
+    } else if (e.key === "Escape") {
+      handleCancelEdit();
+    }
+  };
+
+  const openGoalModal = () => {
+    if (isEditing) {
+      handleSaveEdit();
+    }
+    setGoalModalOpen(true);
+  };
 
   return (
     <div className="mx-auto max-w-3xl space-y-8 px-4 py-8">
@@ -31,11 +105,8 @@ export default function WeightGoalPage() {
         Weight Goals
       </h1>
 
-      {/* ========================================= */}
       {/* Clickable Current Goal Card */}
-      {/* ========================================= */}
       <div
-        onClick={openGoalModal}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {
@@ -50,6 +121,7 @@ export default function WeightGoalPage() {
           "cursor-pointer transition-all hover:border-primary/50 hover:shadow-md",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           "active:scale-[0.98]",
+          isEditing && "ring-2 ring-primary ring-offset-2"
         )}
       >
         <div className="flex items-center justify-between mb-4">
@@ -63,15 +135,74 @@ export default function WeightGoalPage() {
 
         {currentGoal ? (
           <div className="text-center space-y-2">
+            {/* Inline editable weight area */}
             <div
-              className="text-6xl font-bold tracking-tight"
-              data-testid="current-goal-weight" // ← add this
+              className="inline-flex items-baseline justify-center gap-2"
+              onClick={(e) => {
+                e.stopPropagation(); // prevent opening modal when clicking to edit
+                if (!isEditing) setIsEditing(true);
+              }}
             >
-              {currentGoal.goalWeightKg}
-              <span className="text-4xl font-normal text-muted-foreground ml-3">
-                kg
-              </span>
+              {isEditing ? (
+                <>
+                  <input
+                    ref={inputRef}
+                    type="number"
+                    step="0.1"
+                    min="20"
+                    max="300"
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onBlur={handleSaveEdit}
+                    className={cn(
+                      "w-32 text-6xl font-bold tracking-tight text-center bg-transparent border-b-2 border-primary focus:outline-none focus:border-primary/80",
+                      updateGoalMutation.isPending && "opacity-70 animate-pulse"
+                    )}
+                    disabled={updateGoalMutation.isPending}
+                  />
+                  <span className="text-4xl font-normal text-muted-foreground">kg</span>
+
+                  {/* Quick save/cancel buttons */}
+                  <div className="flex gap-1 ml-2">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSaveEdit();
+                      }}
+                      disabled={updateGoalMutation.isPending}
+                    >
+                      <Check className="h-5 w-5 text-green-600" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCancelEdit();
+                      }}
+                    >
+                      <X className="h-5 w-5 text-red-600" />
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div
+                    className="text-6xl font-bold tracking-tight cursor-text hover:text-primary transition-colors"
+                    data-testid="current-goal-weight"
+                  >
+                    {currentGoal.goalWeightKg}
+                  </div>
+                  <span className="text-4xl font-normal text-muted-foreground">
+                    kg
+                  </span>
+                </>
+              )}
             </div>
+
             <p className="text-sm text-muted-foreground">
               Set on {formatDate(currentGoal.goalSetAt)}
               {currentGoal.reachedAt && (
@@ -79,6 +210,7 @@ export default function WeightGoalPage() {
               )}
               {isFromCache && " • cached"}
               {isServerLoaded && !isFromCache && " • synced"}
+              {updateGoalMutation.isPending && " • saving..."}
             </p>
           </div>
         ) : (
@@ -103,9 +235,7 @@ export default function WeightGoalPage() {
         </Button>
       </div>
 
-      {/* ========================================= */}
       {/* Set/Update Goal Modal */}
-      {/* ========================================= */}
       <Dialog open={goalModalOpen} onOpenChange={setGoalModalOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
@@ -123,9 +253,7 @@ export default function WeightGoalPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ========================================= */}
       {/* Goal History Modal */}
-      {/* ========================================= */}
       <Dialog open={historyModalOpen} onOpenChange={setHistoryModalOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 gap-0">
           <DialogHeader className="px-6 pt-6 pb-4 border-b">
