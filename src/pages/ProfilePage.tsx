@@ -13,7 +13,6 @@ import { cn } from "@/lib/utils";
 import { X, Mail, Lock, LogOut } from "lucide-react";
 import { useProfilePage } from "@/hooks/useProfilePage";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
-import { Link } from "@tanstack/react-router";
 import { VisuallyHidden } from "radix-ui";
 
 export default function ProfilePage() {
