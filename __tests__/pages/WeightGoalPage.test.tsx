@@ -92,100 +92,93 @@ describe("WeightGoalPage (modal version)", () => {
     queryClient.clear();
   });
 
-  it("renders loading state then shows current goal card", async () => {
+  it("renders current goal card", async () => {
     renderPage();
 
-    // Wait until the goal display appears (proves query resolved and goal exists)
     const weightDisplay = await waitFor(
       () => screen.getByTestId("current-goal-weight"),
-      { timeout: 5000, interval: 200 }
+      { timeout: 5000, interval: 200 },
     );
 
-    // Core assertions - goal is visible
     expect(weightDisplay).toBeInTheDocument();
-    expect(weightDisplay).toHaveTextContent(/65/);
+    expect(weightDisplay).toHaveTextContent("65"); // or /65/
     expect(weightDisplay).toHaveClass("text-6xl");
 
-    // Other visible elements
     expect(screen.getByText("Current Goal")).toBeInTheDocument();
     expect(screen.getByText(/Set on/i)).toBeInTheDocument();
-    expect(screen.getByText(/synced/i)).toBeInTheDocument(); // assumes !isFromCache
 
-    // History button
+    // ── Updated / more flexible assertions ────────────────────────────────
+    // Now that we prefer local cache, status can be " • local" or " • synced"
+    // We just want to confirm *some* status suffix is present
+    const statusElement = screen.getByText(/Set on/i);
+    const statusText = statusElement.textContent || "";
+
+    expect(statusText).toMatch(/Set on/);
+    expect(statusText).toMatch(/01\/10\/2023/); // or whatever mock date is
+    expect(statusText).toMatch(/(• local|• cached|• synced)/); // any valid suffix
+
+    // History button still there
     expect(
-      screen.getByRole("button", { name: /View Goal History/i })
+      screen.getByRole("button", { name: /View Goal History/i }),
     ).toBeInTheDocument();
 
-    // Just to confirm we're NOT in the "no goal" state
     expect(screen.queryByText("No goal set yet")).not.toBeInTheDocument();
   });
 
-  it.skip("opens modal when clicking current goal card, allows setting new goal, shows success and updates display", async () => {
+  it("allows inline editing of current goal and updates display on save", async () => {
     const user = userEvent.setup();
-
     renderPage();
 
-    // Wait for initial goal to render (same as first test)
-    const weightDisplay = await waitFor(
+    // 1. Initial state
+    const initialWeightEl = await waitFor(
       () => screen.getByTestId("current-goal-weight"),
-      { timeout: 5000 }
+      { timeout: 5000 },
     );
-    expect(weightDisplay).toHaveTextContent(/65\s*/);
+    expect(initialWeightEl).toHaveTextContent("65");
 
-    // Open modal via the accessible button name
-    await user.click(
-      screen.getByRole("button", { name: /Set or update your weight goal/i })
-    );
+    // 2. Enter edit mode by clicking the weight display
+    await user.click(initialWeightEl);
 
-    // Wait for modal + form
-    await waitFor(
-      () => {
-        expect(screen.getByRole("dialog")).toBeInTheDocument();
-        expect(
-          screen.getByText(/Update Goal|Set New Goal/i)
-        ).toBeInTheDocument();
-        expect(screen.getByLabelText("Goal Weight (kg)")).toBeInTheDocument();
-      },
-      { timeout: 5000 }
-    );
+    // 3. Wait for input to appear and have correct initial value
+    const input = await waitFor(() => screen.getByDisplayValue("65"), {
+      timeout: 3000,
+    });
 
-    // Small delay to let UI settle (helps with focus/input issues sometimes)
-    await new Promise((r) => setTimeout(r, 400));
-
-    const input = screen.getByLabelText("Goal Weight (kg)");
+    // 4. Change value and save
     await user.clear(input);
     await user.type(input, "59.5");
+    await user.keyboard("[Enter]");
 
-    // Submit via form submit event (reliable)
-    const formElement = input.closest("form");
-    if (!formElement) throw new Error("Form not found");
-
-    formElement.dispatchEvent(
-      new Event("submit", { bubbles: true, cancelable: true })
-    );
-
-    // Wait for update to reflect (either success message or new weight)
+    // 5. Wait for display to update to new value (optimistic or final)
     await waitFor(
       () => {
         expect(screen.getByTestId("current-goal-weight")).toHaveTextContent(
-          /59\.5\s*kg/
+          "59.5",
         );
       },
-      { timeout: 8000, interval: 300 }
+      { timeout: 5000 },
     );
 
-    // Optional: close modal if still open
-    const dialog = screen.queryByRole("dialog");
-    if (dialog) {
-      const closeBtn =
-        screen.queryByRole("button", { name: /close/i }) ||
-        screen.queryByLabelText(/close/i);
-      if (closeBtn) await user.click(closeBtn);
-    }
-
-    // Final verification
-    expect(screen.getByTestId("current-goal-weight")).toHaveTextContent(
-      /59\.5\s*kg/
+    // 6. Editing mode should be gone
+    await waitFor(
+      () => {
+        expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+      },
+      { timeout: 3000 },
     );
+
+    // 7. Status should be final (not "Saving...")
+    const statusEl = await waitFor(() => screen.getByText(/Set on/i), {
+      timeout: 5000,
+    });
+
+    const statusText = statusEl.textContent || "";
+    expect(statusText).not.toContain("Saving new goal...");
+    expect(statusText).toMatch(/Set on/);
+    expect(statusText).toMatch(/13\/02\/2026/); // current mock date
+    expect(statusText).toMatch(/• local/); // expected in this setup
+
+    // Optional bonus: confirm no error state or revert
+    expect(screen.queryByText(/error/i)).not.toBeInTheDocument();
   });
 });
