@@ -1,3 +1,5 @@
+// src/pages/WeightChartPage.tsx
+
 import { TrendingUp, TrendingDown } from "lucide-react";
 import {
   Select,

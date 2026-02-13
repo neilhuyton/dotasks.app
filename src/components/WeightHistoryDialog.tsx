@@ -1,3 +1,5 @@
+// src/components/WeightHistoryDialog.tsx
+
 import {
   Dialog,
   DialogContent,
@@ -48,9 +50,6 @@ export default function WeightHistoryDialog({
                 <X className="h-[1.2rem] w-[1.2rem]" />
               </Button>
             </DialogClose>
-
-            {/* Hidden for accessibility */}
-            <h1 className="sr-only">Weight History</h1>
 
             <div className="mx-auto max-w-3xl">
               <DialogTitle className="text-3xl font-bold tracking-tight text-center">
