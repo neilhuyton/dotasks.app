@@ -101,21 +101,18 @@ describe("WeightGoalPage (modal version)", () => {
     );
 
     expect(weightDisplay).toBeInTheDocument();
-    expect(weightDisplay).toHaveTextContent("65"); // or /65/
+    expect(weightDisplay).toHaveTextContent("65");
     expect(weightDisplay).toHaveClass("text-6xl");
 
     expect(screen.getByText("Current Goal")).toBeInTheDocument();
     expect(screen.getByText(/Set on/i)).toBeInTheDocument();
 
-    // ── Updated / more flexible assertions ────────────────────────────────
-    // Now that we prefer local cache, status can be " • local" or " • synced"
-    // We just want to confirm *some* status suffix is present
     const statusElement = screen.getByText(/Set on/i);
     const statusText = statusElement.textContent || "";
 
     expect(statusText).toMatch(/Set on/);
-    expect(statusText).toMatch(/01\/10\/2023/); // or whatever mock date is
-    expect(statusText).toMatch(/(• local|• cached|• synced)/); // any valid suffix
+    expect(statusText).toMatch(/01\/10\/2023/);
+    expect(statusText).toMatch(/(• local|• cached|• synced)/);
 
     // History button still there
     expect(
@@ -175,8 +172,8 @@ describe("WeightGoalPage (modal version)", () => {
     const statusText = statusEl.textContent || "";
     expect(statusText).not.toContain("Saving new goal...");
     expect(statusText).toMatch(/Set on/);
-    expect(statusText).toMatch(/13\/02\/2026/); // current mock date
-    expect(statusText).toMatch(/• local/); // expected in this setup
+    expect(statusText).toMatch(/13\/02\/2026/);
+    expect(statusText).toMatch(/• local/);
 
     // Optional bonus: confirm no error state or revert
     expect(screen.queryByText(/error/i)).not.toBeInTheDocument();

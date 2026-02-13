@@ -1,9 +1,9 @@
-// src/components/CurrentGoalCard.tsx
+// src/components/CurrentWeightCard.tsx
 
-import { useWeightGoalEditor } from "../hooks/useWeightGoalEditor";
+import { useLatestWeightEditor } from "../hooks/useLatestWeightEditor";
 import EditableNumberCard from "./EditableNumberCard";
 
-export default function CurrentGoalCard() {
+export default function CurrentWeightCard() {
   const {
     isEditing,
     isPending,
@@ -16,13 +16,14 @@ export default function CurrentGoalCard() {
     saveEdit,
     setEditValue,
     handleKeyDown,
-  } = useWeightGoalEditor();
+    // hasWeight,  ← removed (unused)
+  } = useLatestWeightEditor();
 
   return (
     <EditableNumberCard
-      title="Current Goal"
-      ariaLabel="Edit your weight goal"
-      value={displayedWeight}
+      title="Current Weight"
+      ariaLabel="Record or update your current weight"
+      value={displayedWeight ?? null}           // safe fallback to null
       unit="kg"
       statusText={statusText}
       isEditing={isEditing}
@@ -34,9 +35,9 @@ export default function CurrentGoalCard() {
       onChange={setEditValue}
       onKeyDown={handleKeyDown}
       inputRef={inputRef}
-      noValueMessage="No goal set yet"
-      noValueSubMessage="Tap here to set your target weight"
-      dataTestId="current-goal-weight"
+      noValueMessage="No weight recorded yet"
+      noValueSubMessage="Tap here to add your current weight"
+      dataTestId="current-weight-display"
     />
   );
 }
