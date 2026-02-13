@@ -36,7 +36,7 @@ export default function WeightHistoryDialog({
       >
         <div className="flex h-full flex-col">
           {/* Header – pushed further down */}
-          <header className="relative px-4 sm:px-6 pt- pb-6 shrink-0">
+          <header className="relative px-4 sm:px-6 pt-22 pb-6 shrink-0">
             {/* Custom close button – top-left (position adjusted slightly if needed) */}
             <DialogClose asChild>
               <Button
