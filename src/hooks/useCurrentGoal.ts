@@ -10,6 +10,7 @@ import {
 } from "../utils/goalCache";
 
 interface CurrentGoalDisplay {
+  id: string;                        // ← added
   goalWeightKg: number;
   goalSetAt: string;
   reachedAt: string | null;
@@ -21,7 +22,7 @@ export function useCurrentGoal() {
 
   const query = trpc.weight.getCurrentGoal.useQuery(undefined, {
     enabled: !!userId,
-    staleTime: 1000 * 30,     // 30 seconds – goals change less often than weights
+    staleTime: 1000 * 30,     // 30 seconds
     gcTime: 1000 * 60 * 10,   // 10 minutes
   });
 
@@ -29,7 +30,7 @@ export function useCurrentGoal() {
 
   const [display, setDisplay] = useState<CurrentGoalDisplay | null>(null);
 
-  // 1. Fast path: show cached goal immediately on mount
+  // 1. Fast path: show cached goal immediately
   useEffect(() => {
     const cached = getCachedCurrentGoal();
     if (cached) {
@@ -38,28 +39,31 @@ export function useCurrentGoal() {
         source: "cache",
       });
     }
-  }, []); // only once
+  }, []);
 
-  // 2. When we get fresh server data → update display + cache
+  // 2. Update with server data when available
   useEffect(() => {
     if (!isSuccess || !data) return;
 
     if (!data) {
-      // No current goal exists on server
       setDisplay(null);
       clearCurrentGoalCache();
       return;
     }
 
-    setDisplay({
+    const goalData = {
+      id: data.id,                           // ← added
       goalWeightKg: data.goalWeightKg,
       goalSetAt: data.goalSetAt,
       reachedAt: data.reachedAt,
-      source: "server",
-    });
+      source: "server" as const,
+    };
 
-    // Keep cache in sync
+    setDisplay(goalData);
+
+    // Cache without the source field (source is only for runtime)
     saveCurrentGoal({
+      id: data.id,
       goalWeightKg: data.goalWeightKg,
       goalSetAt: data.goalSetAt,
       reachedAt: data.reachedAt,
@@ -74,7 +78,6 @@ export function useCurrentGoal() {
     isLoading: query.isLoading,
     isFromCache,
     isServerLoaded,
-    // Optional – useful for more detailed status messages
     isFetching: query.isFetching,
     error: query.error,
   };

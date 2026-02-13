@@ -1,8 +1,9 @@
-// src/utils/goalCache.ts   (new file – symmetric to weightCache)
+// src/utils/goalCache.ts
 
 const GOAL_CACHE_KEY = "latest_goal_cache";
 
 interface CachedGoal {
+  id: string;
   goalWeightKg: number;
   goalSetAt: string;
   reachedAt: string | null;
@@ -12,7 +13,7 @@ export function saveCurrentGoal(goal: CachedGoal) {
   try {
     localStorage.setItem(GOAL_CACHE_KEY, JSON.stringify(goal));
   } catch {
-     // Non-critical: ignore localStorage errors (quota, private mode, etc.)
+    // Non-critical: ignore localStorage errors (quota, private mode, etc.)
   }
 }
 
