@@ -1,7 +1,7 @@
 // src/components/CurrentWeightCard.tsx
 
-import { useLatestWeightEditor } from "../hooks/useLatestWeightEditor";
-import EditableNumberCard from "./EditableNumberCard";
+import { useLatestWeightEditor } from "@/hooks/useLatestWeightEditor";
+import EditableNumberCard from "@/components/EditableNumberCard";
 
 export default function CurrentWeightCard() {
   const {
@@ -23,7 +23,7 @@ export default function CurrentWeightCard() {
     <EditableNumberCard
       title="Current Weight"
       ariaLabel="Record or update your current weight"
-      value={displayedWeight ?? null}           // safe fallback to null
+      value={displayedWeight ?? null} // safe fallback to null
       unit="kg"
       statusText={statusText}
       isEditing={isEditing}

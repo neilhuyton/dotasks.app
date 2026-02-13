@@ -1,8 +1,8 @@
 import { formatDate } from "@/utils/date";
-import { trpc } from "../trpc";
-import { useLatestWeight } from "./useLatestWeight";
+import { trpc } from "@/trpc";
+import { useLatestWeight } from "@/hooks/useLatestWeight";
 import { useState, useRef, useEffect } from "react";
-import { saveLatestWeight } from "../utils/weightCache";
+import { saveLatestWeight } from "@/utils/weightCache";
 
 export function useLatestWeightEditor() {
   const { latestWeight, isFromCache, isServerLoaded } = useLatestWeight();

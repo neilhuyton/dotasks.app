@@ -1,7 +1,7 @@
 // src/hooks/useGoalForm.ts
 import { useState } from "react";
-import { trpc } from "../trpc";
-import { useAuthStore } from "../store/authStore";
+import { trpc } from "@/trpc";
+import { useAuthStore } from "@/store/authStore";
 import { useNavigate } from "@tanstack/react-router";
 
 export function useGoalForm() {

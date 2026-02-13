@@ -1,9 +1,9 @@
 // src/components/Home.tsx
 
 import { ScaleIcon, TargetIcon, TrendingUpIcon, ClockIcon } from "lucide-react";
-import { DashboardCard } from "../components/DashboardCard";
-import { useHomePage } from "../hooks/useHomePage";
-import { LoadingSpinner } from "../components/LoadingSpinner";
+import { DashboardCard } from "@/components/DashboardCard";
+import { useHomePage } from "@/hooks/useHomePage";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 function Home() {
   const {

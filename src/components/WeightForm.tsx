@@ -1,14 +1,14 @@
 // src/components/WeightForm.tsx
 
 import { useEffect } from "react";
-import { useWeightForm } from "../hooks/useWeightForm";
+import { useWeightForm } from "@/hooks/useWeightForm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import Confetti from "react-confetti";
 import { createPortal } from "react-dom";
-import { LoadingSpinner } from "./LoadingSpinner";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 interface WeightFormProps {
   isInModal?: boolean;
@@ -55,16 +55,16 @@ function WeightForm({ isInModal = false, onSuccessClose }: WeightFormProps) {
             className={cn(
               "fixed inset-0 z-[1000] pointer-events-none",
               fadeOut ? "opacity-0" : "opacity-100",
-              "transition-opacity duration-1000 ease-out"
+              "transition-opacity duration-1000 ease-out",
             )}
           />,
-          document.body
+          document.body,
         )}
 
       <div
         className={cn(
           "mx-auto rounded-lg border border-border bg-card p-6 shadow-sm",
-          isInModal && "border-none shadow-none p-0 bg-transparent"
+          isInModal && "border-none shadow-none p-0 bg-transparent",
         )}
       >
         <form
@@ -129,7 +129,7 @@ function WeightForm({ isInModal = false, onSuccessClose }: WeightFormProps) {
                   "text-center text-sm font-medium",
                   message.toLowerCase().includes("success")
                     ? "text-success"
-                    : "text-destructive"
+                    : "text-destructive",
                 )}
                 role="alert"
               >

@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { trpc } from "../trpc";
+import { trpc } from "@/trpc";
 import { useEffect, useState } from "react";
 import { type TRPCClientErrorLike } from "@trpc/client";
 import type {
@@ -11,7 +11,7 @@ import type {
   inferProcedureInput,
   TRPCDefaultErrorShape,
 } from "@trpc/server";
-import type { AppRouter } from "../../server/trpc";
+import type { AppRouter } from "@/../server/trpc";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "@tanstack/react-router";
 

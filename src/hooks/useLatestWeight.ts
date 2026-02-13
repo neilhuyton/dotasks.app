@@ -1,8 +1,8 @@
 // src/hooks/useLatestWeight.ts
 
 import { useState, useEffect } from "react";
-import { trpc } from "../trpc";
-import { getCachedLatestWeight, saveLatestWeight } from "../utils/weightCache"; // assuming you also export saveLatestWeight
+import { trpc } from "@/trpc";
+import { getCachedLatestWeight, saveLatestWeight } from "@/utils/weightCache"; // assuming you also export saveLatestWeight
 
 interface LatestWeightDisplay {
   weightKg: number;
@@ -44,7 +44,8 @@ export function useLatestWeight() {
     }
 
     const sorted = [...weights].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
     const latest = sorted[0];
 
@@ -66,7 +67,8 @@ export function useLatestWeight() {
 
   const isFromCache = display?.source === "cache";
   // isServerLoaded = we have confirmed server data at least once and are not in initial loading
-  const isServerLoaded = isSuccess && !isLoading && display?.source === "server";
+  const isServerLoaded =
+    isSuccess && !isLoading && display?.source === "server";
 
   return {
     latestWeight: display,

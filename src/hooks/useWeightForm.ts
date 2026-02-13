@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { trpc } from "../trpc";
-import { useAuthStore } from "../store/authStore";
-import { saveLatestWeight } from "../utils/weightCache";
+import { trpc } from "@/trpc";
+import { useAuthStore } from "@/store/authStore";
+import { saveLatestWeight } from "@/utils/weightCache";
 
 // Define Goal type to match weightRouter.ts and Prisma schema
 type Goal = {

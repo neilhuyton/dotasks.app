@@ -1,6 +1,6 @@
 // src/components/WeightList.tsx
 
-import { useWeightList } from "../hooks/useWeightList";
+import { useWeightList } from "@/hooks/useWeightList";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -45,9 +45,13 @@ function WeightList() {
       <Table>
         <TableHeader>
           <TableRow className="border-b hover:bg-transparent">
-            <TableHead className="pl-0 font-medium w-1/4">Weight (kg)</TableHead>
+            <TableHead className="pl-0 font-medium w-1/4">
+              Weight (kg)
+            </TableHead>
             <TableHead className="font-medium">Date</TableHead>
-            <TableHead className="text-right font-medium pr-0 w-16">Action</TableHead>
+            <TableHead className="text-right font-medium pr-0 w-16">
+              Action
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

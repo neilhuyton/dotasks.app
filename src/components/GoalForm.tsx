@@ -1,11 +1,11 @@
 // src/components/GoalForm.tsx
 import { useEffect } from "react";
-import { useGoalForm } from "../hooks/useGoalForm"; // ← you'll create this
+import { useGoalForm } from "@/hooks/useGoalForm"; // ← you'll create this
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { LoadingSpinner } from "./LoadingSpinner";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 interface GoalFormProps {
   isInModal?: boolean;

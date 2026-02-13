@@ -1,12 +1,12 @@
 // src/hooks/useWeightList.ts
 
 import { trpc } from "../trpc";
-import { formatDate } from "../utils/date";
+import { formatDate } from "@/utils/date";
 import {
   getCachedLatestWeight,
   saveLatestWeight,
   clearLatestWeightCache,
-} from "../utils/weightCache";
+} from "@/utils/weightCache";
 
 export function useWeightList() {
   const utils = trpc.useUtils();
@@ -65,14 +65,10 @@ export function useWeightList() {
     },
 
     onSuccess: (_, variables) => {
-      // 1. Optimistic list already updated in onMutate
-      // 2. Force immediate refetch
       refetch();
 
-      // 3. Also mark stale for background consistency
       utils.weight.getWeights.invalidate();
 
-      // 4. Update local cache based on current optimistic view
       const currentData = utils.weight.getWeights.getData();
       if (currentData) {
         const remaining = currentData.filter(w => w.id !== variables.weightId);

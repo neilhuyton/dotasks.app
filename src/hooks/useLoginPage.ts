@@ -3,10 +3,10 @@
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { trpc } from "../trpc";
-import { useAuthStore } from "../store/authStore";
+import { trpc } from "@/trpc";
+import { useAuthStore } from "@/store/authStore";
 import { useEffect, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";  // ← change here
+import { useNavigate } from "@tanstack/react-router"; // ← change here
 import type { TRPCClientErrorLike } from "@trpc/client";
 import type { AppRouter } from "server/trpc";
 
@@ -17,7 +17,7 @@ interface LoginResponse {
     email: string;
   };
   accessToken: string;
-  refreshToken: string;  // or `${string}-${string}-...` if you want the literal
+  refreshToken: string; // or `${string}-${string}-...` if you want the literal
   message: string;
 }
 

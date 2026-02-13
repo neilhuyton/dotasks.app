@@ -1,7 +1,7 @@
 // src/hooks/useHomePage.ts
 
-import { useAuthStore } from "../store/authStore";
-import { trpc } from "../trpc";
+import { useAuthStore } from "@/store/authStore";
+import { trpc } from "@/trpc";
 
 type Goal = {
   id: string;
@@ -46,7 +46,7 @@ export const useHomePage = () => {
     goalsData?.length > 0
       ? goalsData.sort(
           (a, b) =>
-            new Date(b.goalSetAt).getTime() - new Date(a.goalSetAt).getTime()
+            new Date(b.goalSetAt).getTime() - new Date(a.goalSetAt).getTime(),
         )[0]
       : goalData;
 
@@ -73,7 +73,7 @@ export const useHomePage = () => {
     ? {
         value: `${weightsData[0].weightKg.toFixed(1)} kg`,
         description: `${weightsData[0].note || "No note"} - ${new Date(
-          weightsData[0].createdAt
+          weightsData[0].createdAt,
         ).toLocaleDateString("en-US")}`,
       }
     : { value: null, description: "No measurements" };

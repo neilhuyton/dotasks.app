@@ -1,7 +1,7 @@
 // src/components/CurrentGoalCard.tsx
 
-import { useWeightGoalEditor } from "../hooks/useWeightGoalEditor";
-import EditableNumberCard from "./EditableNumberCard";
+import { useWeightGoalEditor } from "@/hooks/useWeightGoalEditor";
+import EditableNumberCard from "@/components/EditableNumberCard";
 
 export default function CurrentGoalCard() {
   const {

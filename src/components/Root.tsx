@@ -2,15 +2,15 @@
 
 import { useLocation, Outlet } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { trpc } from "../trpc";
-import { useAuthStore } from "../store/authStore";
+import { trpc } from "@/trpc";
+import { useAuthStore } from "@/store/authStore";
 import { ThemeProvider } from "./ThemeProvider";
-import Navigation from "./Navigation";
-import ProfileIcon from "./ProfileIcon";
-import { ThemeToggle } from "./ThemeToggle";
-import { InstallPrompt } from "./InstallPrompt";
+import Navigation from "@/components/Navigation";
+import ProfileIcon from "@/components/ProfileIcon";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { InstallPrompt } from "@/components/InstallPrompt";
 import type { TRPCClient } from "@trpc/client";
-import type { AppRouter } from "../../server/trpc";
+import type { AppRouter } from "@/../server/trpc";
 
 const publicRoutes = [
   "/login",

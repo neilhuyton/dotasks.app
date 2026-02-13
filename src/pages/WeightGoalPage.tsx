@@ -1,8 +1,8 @@
 // src/pages/WeightGoalPage.tsx
 
 import { useState } from "react";
-import CurrentGoalCard from "../components/CurrentGoalCard";
-import GoalHistoryDialog from "../components/GoalHistoryDialog";
+import CurrentGoalCard from "@/components/CurrentGoalCard";
+import GoalHistoryDialog from "@/components/GoalHistoryDialog";
 import { Button } from "@/components/ui/button";
 
 export default function WeightGoalPage() {

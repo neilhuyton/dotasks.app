@@ -1,6 +1,6 @@
 // server/routers/weight.ts
 
-import { protectedProcedure, router } from "../trpc-base";
+import { protectedProcedure, router } from "@/../server/trpc-base";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { Prisma } from "@prisma/client";

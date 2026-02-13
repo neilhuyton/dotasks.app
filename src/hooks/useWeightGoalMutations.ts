@@ -1,11 +1,11 @@
 // src/hooks/useWeightGoalMutations.ts
 
 import { useState } from "react";
-import { trpc } from "../trpc";
-import { formatDate } from "../utils/date";
-import type { WeightGoal } from "./useWeightGoalForm";
+import { trpc } from "@/trpc";
+import { formatDate } from "@/utils/date";
+import type { WeightGoal } from "@/hooks/useWeightGoalForm";
 
-import { getCachedCurrentGoal, saveCurrentGoal } from "../utils/goalCache";
+import { getCachedCurrentGoal, saveCurrentGoal } from "@/utils/goalCache";
 
 interface UseWeightGoalMutationsProps {
   currentGoal: WeightGoal | null;
@@ -44,7 +44,11 @@ export function useWeightGoalMutations({
   };
 
   // Shared error handler
-  const handleError = (_err: unknown, _vars: unknown, context?: OptimisticContext) => {
+  const handleError = (
+    _err: unknown,
+    _vars: unknown,
+    context?: OptimisticContext,
+  ) => {
     setOptimisticWeight(null);
     if (context?.previousGoals) {
       utils.weight.getGoals.setData(undefined, context.previousGoals);
@@ -60,7 +64,9 @@ export function useWeightGoalMutations({
       if (previousGoals && currentGoal) {
         utils.weight.getGoals.setData(
           undefined,
-          previousGoals.map(g => (g.id === goalId ? { ...g, goalWeightKg } : g)),
+          previousGoals.map((g) =>
+            g.id === goalId ? { ...g, goalWeightKg } : g,
+          ),
         );
       }
 
@@ -118,7 +124,8 @@ export function useWeightGoalMutations({
     if (!base) return "Just saved locally";
 
     const parts: string[] = [`Set on ${formatDate(base.goalSetAt)}`];
-    if (base.reachedAt) parts.push(` • Reached on ${formatDate(base.reachedAt)}`);
+    if (base.reachedAt)
+      parts.push(` • Reached on ${formatDate(base.reachedAt)}`);
 
     if (source === "local") parts.push(" • local");
     else if (isFromCache) parts.push(" • cached");

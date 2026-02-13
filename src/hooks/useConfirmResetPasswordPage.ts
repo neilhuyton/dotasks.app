@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { trpc } from "../trpc";
+import { trpc } from "@/trpc";
 import { useState, useEffect } from "react";
 
 const formSchema = z.object({

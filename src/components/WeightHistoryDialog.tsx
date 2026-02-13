@@ -7,7 +7,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import WeightList from "./WeightList";
+import WeightList from "@/components/WeightList";
 
 interface WeightHistoryDialogProps {
   open: boolean;

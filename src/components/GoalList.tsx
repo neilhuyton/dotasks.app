@@ -1,6 +1,6 @@
 // src/components/GoalList.tsx
 
-import { useGoalList } from "../hooks/useGoalList";
+import { useGoalList } from "@/hooks/useGoalList";
 import {
   Table,
   TableBody,
@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { LoadingSpinner } from "./LoadingSpinner";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 function GoalList() {
   const { goals, isLoading, isError, error, formatDate } = useGoalList();
@@ -55,7 +55,7 @@ function GoalList() {
                 key={goal.id}
                 className={cn(
                   "hover:bg-muted/50",
-                  index === goals.length - 1 && "rounded-b-lg"
+                  index === goals.length - 1 && "rounded-b-lg",
                 )}
               >
                 <TableCell>{goal.goalWeightKg.toFixed(1)}</TableCell>

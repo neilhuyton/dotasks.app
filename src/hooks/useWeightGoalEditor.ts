@@ -1,9 +1,9 @@
 // src/hooks/useWeightGoalEditor.ts
 
-import { trpc } from "../trpc";
-import { useCurrentGoal } from "./useCurrentGoal";
-import { useWeightGoalForm } from "./useWeightGoalForm";
-import { useWeightGoalMutations } from "./useWeightGoalMutations";
+import { trpc } from "@/trpc";
+import { useCurrentGoal } from "@/hooks/useCurrentGoal";
+import { useWeightGoalForm } from "@/hooks/useWeightGoalForm";
+import { useWeightGoalMutations } from "@/hooks/useWeightGoalMutations";
 
 export function useWeightGoalEditor() {
   const { currentGoal, isFromCache, isServerLoaded } = useCurrentGoal();
@@ -27,7 +27,8 @@ export function useWeightGoalEditor() {
     // Exit edit mode immediately – new value is shown via optimistic update
     form.setIsEditing(false);
 
-    let hasActiveGoal = !!currentGoal && currentGoal.reachedAt === null && !!currentGoal.id;
+    let hasActiveGoal =
+      !!currentGoal && currentGoal.reachedAt === null && !!currentGoal.id;
     let goalIdToUpdate = currentGoal?.id;
 
     // Optional fresh check (recommended for safety)
@@ -40,7 +41,9 @@ export function useWeightGoalEditor() {
     }
 
     if (hasActiveGoal && goalIdToUpdate) {
-      console.log(`[SAVE] Updating active goal: ${goalIdToUpdate} → ${newWeight} kg`);
+      console.log(
+        `[SAVE] Updating active goal: ${goalIdToUpdate} → ${newWeight} kg`,
+      );
       mutations.updateGoal.mutate({
         goalId: goalIdToUpdate,
         goalWeightKg: newWeight,

@@ -1,6 +1,6 @@
 // src/components/EditWeightModal.tsx
 
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -15,8 +15,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Pencil } from "lucide-react";
-import { trpc } from "../trpc";
-import { saveLatestWeight } from "../utils/weightCache";
+import { trpc } from "@/trpc";
+import { saveLatestWeight } from "@/utils/weightCache";
 import { cn } from "@/lib/utils";
 
 interface EditWeightModalProps {
@@ -102,7 +102,9 @@ export function EditWeightModal({
                 setError(null);
               }}
               autoFocus
-              className={cn(error && "border-destructive focus-visible:ring-destructive")}
+              className={cn(
+                error && "border-destructive focus-visible:ring-destructive",
+              )}
             />
           </div>
 
@@ -116,7 +118,8 @@ export function EditWeightModal({
               rows={3}
             />
             <p className="text-xs text-muted-foreground">
-              Previous note is not carried over — add new context only if relevant.
+              Previous note is not carried over — add new context only if
+              relevant.
             </p>
           </div>
 

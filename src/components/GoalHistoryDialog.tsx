@@ -8,7 +8,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import GoalList from "./GoalList";
+import GoalList from "@/components/GoalList";
 
 interface GoalHistoryDialogProps {
   open: boolean;

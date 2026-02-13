@@ -2,10 +2,10 @@
 
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
-import { Logo } from "../components/Logo";
+import { Logo } from "@/components/Logo";
 import { cn } from "@/lib/utils";
-import { useVerifyEmailPage } from "../hooks/useVerifyEmailPage";
-import { LoadingSpinner } from "../components/LoadingSpinner";
+import { useVerifyEmailPage } from "@/hooks/useVerifyEmailPage";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useSearch } from "@tanstack/react-router";
 
 function VerifyEmailPage() {

@@ -2,8 +2,8 @@
 
 import { Link } from "@tanstack/react-router";
 import { MailIcon, LockIcon, LogOutIcon } from "lucide-react";
-import { useProfilePage } from "../hooks/useProfilePage";
-import { LoadingSpinner } from "../components/LoadingSpinner";
+import { useProfilePage } from "@/hooks/useProfilePage";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 function ProfilePage() {
   const {

@@ -11,10 +11,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { useRegisterPage } from "../hooks/useRegisterPage";
+import { useRegisterPage } from "@/hooks/useRegisterPage";
 import { useRouter } from "@tanstack/react-router";
-import { Logo } from "../components/Logo";
-import { LoadingSpinner } from "../components/LoadingSpinner";
+import { Logo } from "@/components/Logo";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 interface RegisterPageProps {
   className?: string;

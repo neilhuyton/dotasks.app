@@ -11,10 +11,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { useConfirmResetPasswordPage } from "../hooks/useConfirmResetPasswordPage";
-import { router } from "../router/router";
-import { Logo } from "../components/Logo";
-import { LoadingSpinner } from "../components/LoadingSpinner";
+import { useConfirmResetPasswordPage } from "@/hooks/useConfirmResetPasswordPage";
+import { router } from "@/router/router";
+import { Logo } from "@/components/Logo";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useSearch } from "@tanstack/react-router";
 
 function ConfirmResetPasswordPage() {

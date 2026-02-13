@@ -11,7 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { useLoginPage } from "../hooks/useLoginPage";
+import { useLoginPage } from "@/hooks/useLoginPage";
 import { useRouter } from "@tanstack/react-router";
 
 function LoginPage() {
@@ -112,7 +112,7 @@ function LoginPage() {
                     "text-sm text-center",
                     message.includes("failed")
                       ? "text-red-500"
-                      : "text-green-500"
+                      : "text-green-500",
                   )}
                 >
                   {message}

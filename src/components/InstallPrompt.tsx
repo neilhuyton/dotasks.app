@@ -1,6 +1,6 @@
 // src/components/InstallPrompt.tsx
 
-import { useInstallPrompt } from "../hooks/useInstallPrompt";
+import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 
 export function InstallPrompt({
   isLoggedIn,

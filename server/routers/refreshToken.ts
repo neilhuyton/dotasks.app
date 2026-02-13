@@ -1,6 +1,6 @@
 // server/routers/refreshToken.ts
 
-import { publicProcedure, router } from "../trpc-base";
+import { publicProcedure, router } from "@/../server/trpc-base";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import jwt from "jsonwebtoken";
@@ -62,7 +62,7 @@ export const refreshTokenRouter = router({
         data: {
           hashedToken: newHashedRefresh,
           userId: user.id,
-          // expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), 
+          // expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
         },
       });
 

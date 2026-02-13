@@ -1,16 +1,16 @@
 // src/hooks/useCurrentGoal.ts
 
 import { useState, useEffect } from "react";
-import { trpc } from "../trpc";
-import { useAuthStore } from "../store/authStore";
+import { trpc } from "@/trpc";
+import { useAuthStore } from "@/store/authStore";
 import {
   getCachedCurrentGoal,
   saveCurrentGoal,
   clearCurrentGoalCache,
-} from "../utils/goalCache";
+} from "@/utils/goalCache";
 
 interface CurrentGoalDisplay {
-  id: string;                        // ← added
+  id: string; // ← added
   goalWeightKg: number;
   goalSetAt: string;
   reachedAt: string | null;
@@ -22,8 +22,8 @@ export function useCurrentGoal() {
 
   const query = trpc.weight.getCurrentGoal.useQuery(undefined, {
     enabled: !!userId,
-    staleTime: 1000 * 30,     // 30 seconds
-    gcTime: 1000 * 60 * 10,   // 10 minutes
+    staleTime: 1000 * 30, // 30 seconds
+    gcTime: 1000 * 60 * 10, // 10 minutes
   });
 
   const { data, isSuccess, isLoading } = query;
@@ -52,7 +52,7 @@ export function useCurrentGoal() {
     }
 
     const goalData = {
-      id: data.id,                           // ← added
+      id: data.id, // ← added
       goalWeightKg: data.goalWeightKg,
       goalSetAt: data.goalSetAt,
       reachedAt: data.reachedAt,
@@ -71,7 +71,8 @@ export function useCurrentGoal() {
   }, [isSuccess, data]);
 
   const isFromCache = display?.source === "cache";
-  const isServerLoaded = isSuccess && !isLoading && display?.source === "server";
+  const isServerLoaded =
+    isSuccess && !isLoading && display?.source === "server";
 
   return {
     currentGoal: display,

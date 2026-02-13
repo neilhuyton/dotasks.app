@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/chart";
 import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
 import { format } from "date-fns";
-import { useWeightChartPage } from "../hooks/useWeightChartPage";
+import { useWeightChartPage } from "@/hooks/useWeightChartPage";
 
 function WeightChartPage() {
   const {
@@ -38,15 +38,17 @@ function WeightChartPage() {
   } = useWeightChartPage("daily");
 
   // Simple trend: last vs first point
-  const trend = chartData.length >= 2
-    ? chartData[chartData.length - 1].weight - chartData[0].weight
-    : 0;
+  const trend =
+    chartData.length >= 2
+      ? chartData[chartData.length - 1].weight - chartData[0].weight
+      : 0;
 
-  const trendLabel = trend > 0
-    ? `Up ${Math.abs(trend).toFixed(1)} kg`
-    : trend < 0
-      ? `Down ${Math.abs(trend).toFixed(1)} kg`
-      : "Stable";
+  const trendLabel =
+    trend > 0
+      ? `Up ${Math.abs(trend).toFixed(1)} kg`
+      : trend < 0
+        ? `Down ${Math.abs(trend).toFixed(1)} kg`
+        : "Stable";
 
   const TrendIcon = trend > 0 ? TrendingUp : TrendingDown;
 
@@ -160,7 +162,9 @@ function WeightChartPage() {
                   content={
                     <ChartTooltipContent
                       indicator="line"
-                      labelFormatter={(value: string) => format(new Date(value), "PPP")}
+                      labelFormatter={(value: string) =>
+                        format(new Date(value), "PPP")
+                      }
                       // Fixed formatter – safe conversion + type assertion
                       formatter={(value) => [
                         `${Number(value).toFixed(1)} kg`,

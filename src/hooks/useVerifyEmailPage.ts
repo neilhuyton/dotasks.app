@@ -1,7 +1,7 @@
 // src/hooks/useVerifyEmailPage.ts
 
 import { useEffect, useState } from "react";
-import { trpc } from "../trpc";
+import { trpc } from "@/trpc";
 
 export function useVerifyEmailPage(token: string) {
   const [message, setMessage] = useState<string | null>(null);
@@ -10,7 +10,9 @@ export function useVerifyEmailPage(token: string) {
 
   const verifyMutation = trpc.verifyEmail.useMutation({
     onSuccess: (data) => {
-      setMessage(data.message || "Email verified successfully! You can now log in.");
+      setMessage(
+        data.message || "Email verified successfully! You can now log in.",
+      );
       setIsSuccess(true);
       setIsVerifying(false);
     },

@@ -10,7 +10,6 @@ import { server } from "../../__mocks__/server";
 import "@testing-library/jest-dom";
 // import { TRPCError } from "@trpc/server";
 
-
 import {
   weightGetWeightsHandler,
   weightGetCurrentGoalHandler,
@@ -38,7 +37,7 @@ describe("WeightChartPage", () => {
         <QueryClientProvider client={queryClient}>
           <WeightChartPage />
         </QueryClientProvider>
-      </trpc.Provider>
+      </trpc.Provider>,
     );
 
   beforeEach(() => {
@@ -69,7 +68,9 @@ describe("WeightChartPage", () => {
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Your Stats");
+      expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+        "Your Stats",
+      );
       expect(screen.getByRole("combobox")).toBeInTheDocument();
       expect(screen.getByText("Daily")).toBeInTheDocument();
     });
@@ -117,7 +118,9 @@ describe("WeightChartPage", () => {
     await user.click(screen.getByRole("combobox"));
 
     await waitFor(() => {
-      expect(screen.getByRole("option", { name: "Weekly" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("option", { name: "Weekly" }),
+      ).toBeInTheDocument();
     });
 
     await user.click(screen.getByRole("option", { name: "Weekly" }));

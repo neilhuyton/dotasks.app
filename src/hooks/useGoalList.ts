@@ -1,7 +1,7 @@
 // src/hooks/useGoalList.ts
 
-import { trpc } from "../trpc";
-import { formatDate } from "../utils/date"; 
+import { trpc } from "@/trpc";
+import { formatDate } from "@/utils/date";
 
 export function useGoalList() {
   const {

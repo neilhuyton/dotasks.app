@@ -1,8 +1,8 @@
 // src/pages/WeightLogPage.tsx
 
 import { useState } from "react";
-import CurrentWeightCard from "../components/CurrentWeightCard";
-import WeightHistoryDialog from "../components/WeightHistoryDialog";
+import CurrentWeightCard from "@/components/CurrentWeightCard";
+import WeightHistoryDialog from "@/components/WeightHistoryDialog";
 import { Button } from "@/components/ui/button";
 
 export default function WeightLogPage() {

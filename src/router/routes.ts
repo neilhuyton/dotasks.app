@@ -11,7 +11,7 @@ import ResetPasswordPage from "../pages/ResetPasswordPage";
 import ConfirmResetPasswordPage from "../pages/ConfirmResetPasswordPage";
 import VerifyEmailPage from "../pages/VerifyEmailPage";
 import ProfilePage from "../pages/ProfilePage";
-import { useAuthStore } from "../store/authStore";
+import { useAuthStore } from "@/store/authStore";
 import {
   verifyEmailSearchSchema,
   confirmResetPasswordSearchSchema,
@@ -26,7 +26,8 @@ interface DecodedToken {
 }
 
 const checkAuth = async () => {
-  const { isLoggedIn, refreshToken, accessToken, logout } = useAuthStore.getState();
+  const { isLoggedIn, refreshToken, accessToken, logout } =
+    useAuthStore.getState();
 
   if (!isLoggedIn || !refreshToken) {
     console.debug("[checkAuth] No valid session → redirect to login");
@@ -40,10 +41,15 @@ const checkAuth = async () => {
       const decoded = jwtDecode<DecodedToken>(accessToken);
       const now = Math.floor(Date.now() / 1000);
       if (decoded.exp < now - 30) {
-        console.debug("[checkAuth] Access token already expired → refresh link should handle");
+        console.debug(
+          "[checkAuth] Access token already expired → refresh link should handle",
+        );
       }
     } catch (err) {
-      console.debug("[checkAuth] Invalid token format → refresh link will handle", err);
+      console.debug(
+        "[checkAuth] Invalid token format → refresh link will handle",
+        err,
+      );
     }
   }
 
