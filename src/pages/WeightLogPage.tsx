@@ -9,21 +9,34 @@ export default function WeightLogPage() {
   const [historyOpen, setHistoryOpen] = useState(false);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8 px-4 py-8">
-      <h1 className="text-3xl font-bold tracking-tight text-center">
+    <div 
+      className="
+        min-h-[calc(100vh-3.5rem)] 
+        flex flex-col 
+        px-4 py-6 
+        pb-24 sm:pb-28 lg:pb-32
+      "
+    >
+      {/* Title stays at the top */}
+      <h1 className="text-3xl font-bold tracking-tight text-center mb-8">
         Weight Tracker
       </h1>
 
-      <CurrentWeightCard />
+      {/* Centered content */}
+      <div className="flex-1 flex flex-col items-center justify-center">
+        <div className="w-full max-w-3xl space-y-10">
+          <CurrentWeightCard />
 
-      <div className="text-center">
-        <Button
-          variant="outline"
-          onClick={() => setHistoryOpen(true)}
-          className="min-w-55 border-primary text-primary hover:bg-primary/10 hover:text-primary focus-visible:ring-primary/50"
-        >
-          View Weight History
-        </Button>
+          <div className="text-center">
+            <Button
+              variant="outline"
+              onClick={() => setHistoryOpen(true)}
+              className="min-w-[180px] border-primary text-primary hover:bg-primary/10 hover:text-primary focus-visible:ring-primary/50"
+            >
+              View Weight History
+            </Button>
+          </div>
+        </div>
       </div>
 
       <WeightHistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} />

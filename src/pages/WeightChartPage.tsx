@@ -36,7 +36,6 @@ function WeightChartPage() {
     handleTrendPeriodChange,
   } = useWeightChartPage("daily");
 
-  // Simple trend: last vs first point
   const trend =
     chartData.length >= 2
       ? chartData[chartData.length - 1].weight - chartData[0].weight
@@ -51,123 +50,139 @@ function WeightChartPage() {
 
   const TrendIcon = trend > 0 ? TrendingUp : TrendingDown;
 
-  // Use the current theme's primary color via CSS variable
   const chartConfig = {
     weight: {
       label: "Weight (kg)",
-      color: "hsl(var(--primary))", // or just "var(--primary)" – both work
+      color: "var(--primary)",
     },
   } satisfies ChartConfig;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8 px-4 py-8">
-      <h1 className="text-3xl font-bold tracking-tight text-center">
+    <div
+      className="
+        min-h-[calc(100vh-3.5rem)]
+        flex flex-col
+        px-4 py-6
+        pb-24 sm:pb-28 lg:pb-32
+        bg-background
+      "
+    >
+      {/* Title — exactly the same classes as WeightLogPage & WeightGoalPage */}
+      <h1 className="text-3xl font-bold tracking-tight text-center mb-8">
         Your Stats
       </h1>
 
-      <Card className="overflow-hidden bg-card/60">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <div>
-            <CardTitle>Weight Trend</CardTitle>
-            <CardDescription>
-              {trendPeriod.charAt(0).toUpperCase() + trendPeriod.slice(1)} view
-            </CardDescription>
-          </div>
+      {/* Centered content area — adapted from the other pages */}
+      <div className="flex-1 flex flex-col items-center justify-center">
+        <div className="w-full max-w-3xl space-y-10 px-0 sm:px-0">
+          <Card className="overflow-hidden bg-card/60 shadow-lg w-full">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div>
+                <CardTitle>Weight Trend</CardTitle>
+                <CardDescription>
+                  {trendPeriod.charAt(0).toUpperCase() + trendPeriod.slice(1)} view
+                </CardDescription>
+              </div>
 
-          <Select value={trendPeriod} onValueChange={handleTrendPeriodChange}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="daily">Daily</SelectItem>
-              <SelectItem value="weekly">Weekly</SelectItem>
-              <SelectItem value="monthly">Monthly</SelectItem>
-            </SelectContent>
-          </Select>
-        </CardHeader>
+              <Select value={trendPeriod} onValueChange={handleTrendPeriodChange}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily">Daily</SelectItem>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                </SelectContent>
+              </Select>
+            </CardHeader>
 
-        <CardContent className="p-0 pb-4">
-          {isLoading ? (
-            <div className="h-[400px] flex items-center justify-center">
-              <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-primary" />
-            </div>
-          ) : isWeightsError ? (
-            <div className="h-[400px] flex items-center justify-center text-destructive text-center px-6">
-              {error?.message || "Failed to load weight data"}
-            </div>
-          ) : chartData.length === 0 ? (
-            <div className="h-[400px] flex items-center justify-center text-muted-foreground">
-              No weight measurements recorded yet
-            </div>
-          ) : (
-            <ChartContainer config={chartConfig} className="h-[400px] w-full">
-              <LineChart
-                accessibilityLayer
-                data={chartData}
-                margin={{ top: 20, right: 20, left: 12, bottom: 20 }}
-              >
-                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+            <CardContent className="p-0 pb-4">
+              {isLoading ? (
+                <div className="h-[400px] flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-primary" />
+                </div>
+              ) : isWeightsError ? (
+                <div className="h-[400px] flex items-center justify-center text-destructive text-center px-6">
+                  {error?.message || "Failed to load weight data"}
+                </div>
+              ) : chartData.length === 0 ? (
+                <div className="h-[400px] flex items-center justify-center text-muted-foreground">
+                  No weight measurements recorded yet
+                </div>
+              ) : (
+                <ChartContainer config={chartConfig} className="h-[400px] w-full">
+                  <LineChart
+                    accessibilityLayer
+                    data={chartData}
+                    margin={{ top: 20, right: 20, left: 12, bottom: 20 }}
+                  >
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" />
 
-                <XAxis
-                  dataKey="date"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  tickFormatter={(value: string) => {
-                    if (!value) return "";
-                    const d = new Date(value);
-                    if (trendPeriod === "daily") return format(d, "d MMM");
-                    if (trendPeriod === "weekly") return format(d, "dd MMM");
-                    return format(d, "MMM yyyy");
-                  }}
-                />
-
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  tickFormatter={(value) => `${value} kg`}
-                />
-
-                <ChartTooltip
-                  cursor={false}
-                  content={
-                    <ChartTooltipContent
-                      indicator="line"
-                      labelFormatter={(value: string) =>
-                        format(new Date(value), "PPP")
-                      }
-                      formatter={(value) => [
-                        `${Number(value).toFixed(1)} kg`,
-                        "Weight",
-                      ]}
+                    <XAxis
+                      dataKey="date"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      tickFormatter={(value: string) => {
+                        if (!value) return "";
+                        const d = new Date(value);
+                        if (trendPeriod === "daily") return format(d, "d MMM");
+                        if (trendPeriod === "weekly") return format(d, "dd MMM");
+                        return format(d, "MMM yyyy");
+                      }}
                     />
-                  }
-                />
 
-                <Line
-                  type="linear"
-                  dataKey="weight"
-                  stroke="var(--primary)"          // ← uses current theme color
-                  strokeWidth={2.5}
-                  dot={{ r: 4, strokeWidth: 2 }}
-                  activeDot={{ r: 6 }}
-                  isAnimationActive={true}
-                />
-              </LineChart>
-            </ChartContainer>
-          )}
-        </CardContent>
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      tickFormatter={(value) => `${value} kg`}
+                    />
 
-        <CardFooter className="flex-col items-start gap-2 text-sm border-t pt-4">
-          <div className="flex gap-2 font-medium leading-none">
-            {trendLabel} <TrendIcon className="h-4 w-4" />
-          </div>
-          <div className="leading-none text-muted-foreground">
-            Showing weight trend over time ({trendPeriod} aggregation)
-          </div>
-        </CardFooter>
-      </Card>
+                    <ChartTooltip
+                      cursor={false}
+                      content={
+                        <ChartTooltipContent
+                          indicator="line"
+                          labelFormatter={(value: string) =>
+                            format(new Date(value), "PPP")
+                          }
+                          formatter={(value) => [
+                            `${Number(value).toFixed(1)} kg`,
+                            "Weight",
+                          ]}
+                        />
+                      }
+                    />
+
+                    <Line
+                      type="linear"
+                      dataKey="weight"
+                      stroke="var(--primary)"
+                      strokeWidth={2.5}
+                      dot={{ r: 4, strokeWidth: 2 }}
+                      activeDot={{ r: 6 }}
+                      isAnimationActive={true}
+                    />
+                  </LineChart>
+                </ChartContainer>
+              )}
+            </CardContent>
+
+            <CardFooter className="flex-col items-start gap-2 text-sm border-t pt-4">
+              <div className="flex gap-2 font-medium leading-none">
+                {trendLabel} <TrendIcon className="h-4 w-4" />
+              </div>
+              <div className="leading-none text-muted-foreground">
+                Showing weight trend over time ({trendPeriod} aggregation)
+              </div>
+            </CardFooter>
+          </Card>
+
+          {/* Optional: small extra space at bottom if needed – can be removed */}
+          <div className="h-4" />
+        </div>
+      </div>
     </div>
   );
 }
