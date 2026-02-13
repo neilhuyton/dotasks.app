@@ -1,5 +1,3 @@
-// src/components/WeightChartPage.tsx
-
 import { TrendingUp, TrendingDown } from "lucide-react";
 import {
   Select,
@@ -54,7 +52,7 @@ function WeightChartPage() {
   const chartConfig = {
     weight: {
       label: "Weight (kg)",
-      color: "hsl(var(--chart-1))", // Customize via theme or use e.g. "hsl(221.2 83.2% 53.3%)"
+      color: "hsl(var(--chart-1))",
     },
   } satisfies ChartConfig;
 
@@ -64,8 +62,7 @@ function WeightChartPage() {
         Your Stats
       </h1>
 
-      {/* Main Chart Card */}
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden bg-card/60">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <div>
             <CardTitle>Weight Trend</CardTitle>
@@ -86,7 +83,7 @@ function WeightChartPage() {
           </Select>
         </CardHeader>
 
-        <CardContent className="p-0 pb-4">
+        <CardContent className="p-0 pb-4 ">
           {isLoading ? (
             <div className="h-[400px] flex items-center justify-center">
               <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-primary" />
@@ -100,7 +97,10 @@ function WeightChartPage() {
               No weight measurements recorded yet
             </div>
           ) : (
-            <ChartContainer config={chartConfig} className="h-[400px] w-full">
+            <ChartContainer
+              config={chartConfig}
+              className="h-[400px] w-full "
+            >
               <LineChart
                 accessibilityLayer
                 data={chartData}
@@ -137,7 +137,6 @@ function WeightChartPage() {
                       labelFormatter={(value: string) =>
                         format(new Date(value), "PPP")
                       }
-                      // Fixed formatter – safe conversion + type assertion
                       formatter={(value) => [
                         `${Number(value).toFixed(1)} kg`,
                         "Weight",
