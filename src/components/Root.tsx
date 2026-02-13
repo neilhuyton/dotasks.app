@@ -45,8 +45,14 @@ function Root({
                 data-testid="header"
                 className="sticky top-0 left-0 right-0 z-50 bg-background flex items-center justify-between px-4 py-2"
               >
-                <ThemeToggle />
-                <ProfileIcon />
+                {/* Empty left side – or add a logo/title here later if desired */}
+                <div />  {/* ← placeholder to keep justify-between balanced */}
+
+                {/* Right side: Theme toggle + Profile icon */}
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <ThemeToggle />
+                  <ProfileIcon />
+                </div>
               </header>
             )}
             <InstallPrompt

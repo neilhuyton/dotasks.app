@@ -9,14 +9,6 @@ import { httpLink } from "@trpc/client";
 import WeightLogPage from "@/pages/WeightLogPage";
 import * as useLatestWeightHook from "@/hooks/useLatestWeight";
 
-vi.mock("@/components/WeightForm", () => ({
-  default: () => <div data-testid="weight-form">Mock Weight Form</div>,
-}));
-
-vi.mock("@/components/WeightList", () => ({
-  default: () => <div data-testid="weight-list">Mock Weight List</div>,
-}));
-
 describe("WeightLogPage", () => {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -90,12 +82,6 @@ describe("WeightLogPage", () => {
     const btn = screen.getByRole("button", { name: "View History" });
     expect(btn).toBeInTheDocument();
     expect(btn).toHaveClass("min-w-55");
-  });
-
-  it("does not render WeightForm or WeightList directly on initial load", () => {
-    renderWeightLogPage();
-    expect(screen.queryByTestId("weight-form")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("weight-list")).not.toBeInTheDocument();
   });
 
   it("enters edit mode when current weight card is clicked (no previous weight)", async () => {

@@ -41,7 +41,7 @@ vi.mock("../../src/components/GoalList", () => ({
   default: () => <div data-testid="goal-list">Mocked GoalList</div>,
 }));
 
-describe("WeightGoalPage (modal version)", () => {
+describe("WeightGoalPage", () => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: 0, staleTime: 0 },
