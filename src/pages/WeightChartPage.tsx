@@ -34,7 +34,6 @@ function WeightChartPage() {
     chartData,
     trendPeriod,
     handleTrendPeriodChange,
-    goalWeight,
   } = useWeightChartPage("daily");
 
   // Simple trend: last vs first point
@@ -60,37 +59,10 @@ function WeightChartPage() {
   } satisfies ChartConfig;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
-      <h1
-        className="text-2xl font-bold text-foreground text-center"
-        role="heading"
-        aria-level={1}
-      >
+    <div className="mx-auto max-w-3xl space-y-8 px-4 py-8">
+      <h1 className="text-3xl font-bold tracking-tight text-center">
         Your Stats
       </h1>
-
-      {/* Latest & Goal cards */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {goalWeight && !isLoading && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Goal Weight</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">
-                {goalWeight}
-                <span className="text-xl font-normal text-muted-foreground ml-2">
-                  kg
-                </span>
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                {/* Replace with actual goalSetAt if exposed in hook */}
-                Set on 01 Oct 2023
-              </p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
 
       {/* Main Chart Card */}
       <Card className="overflow-hidden">
