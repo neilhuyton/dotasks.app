@@ -119,3 +119,106 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ================================================
+   Color Theme Overrides
+   Place this AFTER your :root and .dark definitions
+   ================================================ */
+
+/* Zinc / Neutral (default fallback) */
+[data-color-theme="zinc"] {
+  --primary:           oklch(0.21 0.006 285.885);
+  --primary-foreground: oklch(0.985 0 0);
+  --primary-muted:     oklch(0.65 0.08 285);
+  --ring:              oklch(0.708 0 0);
+}
+
+/* Blue */
+[data-color-theme="blue"] {
+  --primary:           oklch(0.62 0.18 250);
+  --primary-foreground: oklch(0.985 0 0);
+  --primary-muted:     oklch(0.62 0.12 250);
+  --ring:              oklch(0.62 0.18 250 / 0.5);
+}
+
+/* Green */
+[data-color-theme="green"] {
+  --primary:           oklch(0.62 0.15 160);
+  --primary-foreground: oklch(0.985 0 0);
+  --primary-muted:     oklch(0.62 0.10 160);
+  --ring:              oklch(0.62 0.15 160 / 0.5);
+}
+
+/* Rose / Pinkish-red */
+[data-color-theme="rose"] {
+  --primary:           oklch(0.65 0.22 350);
+  --primary-foreground: oklch(0.985 0 0);
+  --primary-muted:     oklch(0.65 0.15 350);
+  --ring:              oklch(0.65 0.22 350 / 0.5);
+}
+
+/* Violet / Purple */
+[data-color-theme="violet"] {
+  --primary:           oklch(0.58 0.22 280);
+  --primary-foreground: oklch(0.985 0 0);
+  --primary-muted:     oklch(0.58 0.14 280);
+  --ring:              oklch(0.58 0.22 280 / 0.5);
+}
+
+/* Orange */
+[data-color-theme="orange"] {
+  --primary:           oklch(0.68 0.22 60);
+  --primary-foreground: oklch(0.145 0 0);
+  --primary-muted:     oklch(0.68 0.15 60);
+  --ring:              oklch(0.68 0.22 60 / 0.5);
+}
+
+/* Red */
+[data-color-theme="red"] {
+  --primary:           oklch(0.62 0.24 25);
+  --primary-foreground: oklch(0.985 0 0);
+  --primary-muted:     oklch(0.62 0.16 25);
+  --ring:              oklch(0.62 0.24 25 / 0.5);
+}
+
+/* Yellow / Amber */
+[data-color-theme="yellow"] {
+  --primary:           oklch(0.78 0.18 80);
+  --primary-foreground: oklch(0.145 0 0);
+  --primary-muted:     oklch(0.78 0.12 80);
+  --ring:              oklch(0.78 0.18 80 / 0.5);
+}
+
+/* ────────────────────────────────────────────────
+   Dark mode adjustments for bright / warm themes
+   (optional – prevents overly bright primaries in dark mode)
+   ──────────────────────────────────────────────── */
+
+.dark [data-color-theme="yellow"] {
+  --primary:           oklch(0.85 0.18 80);
+  --primary-foreground: oklch(0.145 0 0);
+}
+
+.dark [data-color-theme="orange"] {
+  --primary:           oklch(0.75 0.22 60);
+  --primary-foreground: oklch(0.145 0 0);
+}
+
+.dark [data-color-theme="rose"] {
+  --primary:           oklch(0.72 0.22 350);
+  --primary-foreground: oklch(0.985 0 0);
+}
+
+/* ────────────────────────────────────────────────
+   Optional: softer muted / accent variants
+   (useful for hover states, badges, secondary buttons, etc.)
+   ──────────────────────────────────────────────── */
+
+[data-color-theme="blue"]   { --accent: oklch(0.62 0.12 250 / 0.15); }
+[data-color-theme="green"]  { --accent: oklch(0.62 0.10 160 / 0.15); }
+[data-color-theme="rose"]   { --accent: oklch(0.65 0.15 350 / 0.15); }
+[data-color-theme="violet"] { --accent: oklch(0.58 0.14 280 / 0.15); }
+[data-color-theme="orange"] { --accent: oklch(0.68 0.15 60   / 0.15); }
+[data-color-theme="red"]    { --accent: oklch(0.62 0.16 25   / 0.15); }
+[data-color-theme="yellow"] { --accent: oklch(0.78 0.12 80   / 0.15); }
+[data-color-theme="zinc"]   { --accent: oklch(0.65 0.05 285  / 0.15); }

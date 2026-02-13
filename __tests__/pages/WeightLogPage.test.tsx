@@ -79,7 +79,7 @@ describe("WeightLogPage", () => {
 
   it("renders the 'View History' button with correct styling", () => {
     renderWeightLogPage();
-    const btn = screen.getByRole("button", { name: "View History" });
+    const btn = screen.getByRole("button", { name: "View Weight History" });
     expect(btn).toBeInTheDocument();
     expect(btn).toHaveClass("min-w-55");
   });

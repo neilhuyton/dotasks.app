@@ -11,6 +11,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import type { TRPCClient } from "@trpc/client";
 import type { AppRouter } from "@/../server/trpc";
+import { ColorThemeToggle } from "./ColorThemeToggle";
 
 const publicRoutes = [
   "/login",
@@ -46,11 +47,11 @@ function Root({
                 className="sticky top-0 left-0 right-0 z-50 bg-background flex items-center justify-between px-4 py-2"
               >
                 {/* Empty left side – or add a logo/title here later if desired */}
-                <div />  {/* ← placeholder to keep justify-between balanced */}
-
+                <div /> {/* ← placeholder to keep justify-between balanced */}
                 {/* Right side: Theme toggle + Profile icon */}
                 <div className="flex items-center gap-3 sm:gap-4">
                   <ThemeToggle />
+                  <ColorThemeToggle />
                   <ProfileIcon />
                 </div>
               </header>

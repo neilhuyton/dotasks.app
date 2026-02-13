@@ -20,16 +20,13 @@ export default function WeightLogPage() {
         <Button
           variant="outline"
           onClick={() => setHistoryOpen(true)}
-          className="min-w-55"
+          className="min-w-55 border-primary text-primary hover:bg-primary/10 hover:text-primary focus-visible:ring-primary/50"
         >
-          View History
+          View Weight History
         </Button>
       </div>
 
-      <WeightHistoryDialog
-        open={historyOpen}
-        onOpenChange={setHistoryOpen}
-      />
+      <WeightHistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} />
     </div>
   );
 }

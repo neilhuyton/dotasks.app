@@ -20,7 +20,7 @@ export default function WeightGoalPage() {
         <Button
           variant="outline"
           onClick={() => setHistoryModalOpen(true)}
-          className="min-w-55"
+          className="min-w-55 border-primary text-primary hover:bg-primary/10 hover:text-primary focus-visible:ring-primary/50"
         >
           View Goal History
         </Button>

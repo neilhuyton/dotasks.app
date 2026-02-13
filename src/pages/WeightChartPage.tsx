@@ -51,10 +51,11 @@ function WeightChartPage() {
 
   const TrendIcon = trend > 0 ? TrendingUp : TrendingDown;
 
+  // Use the current theme's primary color via CSS variable
   const chartConfig = {
     weight: {
       label: "Weight (kg)",
-      color: "hsl(var(--chart-1))",
+      color: "hsl(var(--primary))", // or just "var(--primary)" – both work
     },
   } satisfies ChartConfig;
 
@@ -85,7 +86,7 @@ function WeightChartPage() {
           </Select>
         </CardHeader>
 
-        <CardContent className="p-0 pb-4 ">
+        <CardContent className="p-0 pb-4">
           {isLoading ? (
             <div className="h-[400px] flex items-center justify-center">
               <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-primary" />
@@ -99,10 +100,7 @@ function WeightChartPage() {
               No weight measurements recorded yet
             </div>
           ) : (
-            <ChartContainer
-              config={chartConfig}
-              className="h-[400px] w-full "
-            >
+            <ChartContainer config={chartConfig} className="h-[400px] w-full">
               <LineChart
                 accessibilityLayer
                 data={chartData}
@@ -150,7 +148,7 @@ function WeightChartPage() {
                 <Line
                   type="linear"
                   dataKey="weight"
-                  stroke="blue"
+                  stroke="var(--primary)"          // ← uses current theme color
                   strokeWidth={2.5}
                   dot={{ r: 4, strokeWidth: 2 }}
                   activeDot={{ r: 6 }}
