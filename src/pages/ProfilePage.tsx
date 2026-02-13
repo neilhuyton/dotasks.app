@@ -73,7 +73,6 @@ export default function ProfilePage() {
                 User Profile
               </DialogTitle>
 
-              {/* Hidden description for accessibility – matches your WeightHistoryDialog pattern */}
               <VisuallyHidden.Root>
                 <DialogDescription className="mt-2 text-center text-muted-foreground">
                   Manage your account settings, email, and password.
