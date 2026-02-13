@@ -1,10 +1,15 @@
-// // src/components/WeightHistoryDialog.tsx
-
-import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogClose,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import WeightList from "@/components/WeightList";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
+import { VisuallyHidden } from "radix-ui";
 
 interface WeightHistoryDialogProps {
   open: boolean;
@@ -31,13 +36,13 @@ export default function WeightHistoryDialog({
       >
         <div className="flex h-full flex-col">
           {/* Header – pushed further down */}
-          <header className="relative px-4 sm:px-6 pt-22 pb-6 shrink-0">
+          <header className="relative px-4 sm:px-6 pt- pb-6 shrink-0">
             {/* Custom close button – top-left (position adjusted slightly if needed) */}
             <DialogClose asChild>
               <Button
                 variant="outline"
                 size="icon"
-                className="absolute left-3 top-3 sm:left-6 sm:top-8 z-10"
+                className="absolute left-4 top-6 sm:left-6 sm:top-8 z-10"
                 aria-label="Close weight history"
               >
                 <X className="h-[1.2rem] w-[1.2rem]" />
@@ -48,9 +53,15 @@ export default function WeightHistoryDialog({
             <h1 className="sr-only">Weight History</h1>
 
             <div className="mx-auto max-w-3xl">
-              <h1 className="text-3xl font-bold tracking-tight text-center">
+              <DialogTitle className="text-3xl font-bold tracking-tight text-center">
                 Weight History
-              </h1>
+              </DialogTitle>
+
+              <VisuallyHidden.Root>
+                <DialogDescription className="mt-3 text-center text-muted-foreground text-base">
+                  Most recent measurements first
+                </DialogDescription>
+              </VisuallyHidden.Root>
             </div>
           </header>
 

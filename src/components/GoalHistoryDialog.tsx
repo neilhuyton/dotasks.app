@@ -1,10 +1,17 @@
 // src/components/GoalHistoryDialog.tsx
 
-import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogClose,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import GoalList from "@/components/GoalList";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
+import { VisuallyHidden } from "radix-ui";
 
 interface GoalHistoryDialogProps {
   open: boolean;
@@ -48,9 +55,15 @@ export default function GoalHistoryDialog({
             <h1 className="sr-only">Goal History</h1>
 
             <div className="mx-auto max-w-3xl">
-              <h1 className="text-3xl font-bold tracking-tight text-center">
+              <DialogTitle className="text-3xl font-bold tracking-tight text-center">
                 Goal History
-              </h1>
+              </DialogTitle>
+
+              <VisuallyHidden.Root>
+                <DialogDescription className="mt-3 text-center text-muted-foreground text-base">
+                  Most recent goals first
+                </DialogDescription>
+              </VisuallyHidden.Root>
             </div>
           </header>
 
