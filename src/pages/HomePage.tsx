@@ -1,9 +1,11 @@
-import { useHomePage } from '@/hooks/useHomePage';
-import { Loader2 } from 'lucide-react';
+// src/pages/HomePage.tsx
 
-import EmptyLists from '@/components/EmptyLists';
-import TaskCreation from '@/components/TaskCreation';
-import TaskList from '@/components/TaskList';
+import { useHomePage } from "@/hooks/useHomePage";
+import { Loader2 } from "lucide-react";
+
+import EmptyLists from "@/components/EmptyLists";
+import TaskCreation from "@/components/TaskCreation";
+import TaskList from "@/components/TaskList";
 
 export default function HomePage() {
   const {
@@ -34,7 +36,9 @@ export default function HomePage() {
   }
 
   if (!activeListId || !activeList) {
-    return <div className="p-8 text-center text-xl">Select a list to begin</div>;
+    return (
+      <div className="p-8 text-center text-xl">Select a list to begin</div>
+    );
   }
 
   return (

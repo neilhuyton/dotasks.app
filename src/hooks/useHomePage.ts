@@ -1,11 +1,12 @@
 // src/hooks/useHomePage.ts
+
 import { useEffect, useState } from "react";
 import { trpc } from "@/trpc";
 import { useTodoStore } from "@/store/todoStore";
 import { useAuthStore } from "@/store/authStore";
 import { v4 as uuidv4 } from "uuid";
 import type { inferRouterOutputs } from "@trpc/server";
-import type { AppRouter } from "../../server/trpc"; // adjust path if needed
+import type { AppRouter } from "@/../server/trpc";
 
 type RouterOutput = inferRouterOutputs<AppRouter>;
 

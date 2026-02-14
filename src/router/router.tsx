@@ -1,41 +1,48 @@
 // src/router/router.tsx
 
-import { createRouter, createRootRoute } from "@tanstack/react-router";
-import Root from "@/components/Root";
-import { trpcClient } from "../client";
-import { queryClient } from "../queryClient";
+import { createRouter } from "@tanstack/react-router";
+
+import { rootRoute } from "./rootRoute";
+import { authenticatedRoute } from "./_authenticated";
 
 import {
-  homeRoute,
   registerRoute,
   loginRoute,
   resetPasswordRoute,
   confirmResetPasswordRoute,
   verifyEmailRoute,
+  homeRedirectRoute,
+  listsIndexRoute,
+  listDetailRoute,
   profileRoute,
 } from "./routes";
 
-const rootRoute = createRootRoute<unknown>({
-  component: () => <Root queryClient={queryClient} trpcClient={trpcClient} />,
-  errorComponent: (props) => (
-    <div>
-      An error occurred. Please try again.
-      <pre>{JSON.stringify(props.error, null, 2)}</pre>
-    </div>
-  ),
-});
+import { queryClient } from "@/queryClient";
+import { trpcClient } from "@/client";
 
-export const routeTree = rootRoute.addChildren([
-  homeRoute(rootRoute),
-  registerRoute(rootRoute),
-  loginRoute(rootRoute),
-  resetPasswordRoute(rootRoute),
-  confirmResetPasswordRoute(rootRoute),
-  verifyEmailRoute(rootRoute),
-  profileRoute(rootRoute),
+// Protected subtree
+const protectedRoutes = authenticatedRoute.addChildren([
+  homeRedirectRoute,
+  listsIndexRoute,
+  listDetailRoute,
+  profileRoute,
 ]);
 
-export const router = createRouter({ routeTree });
+// Full tree
+export const routeTree = rootRoute.addChildren([
+  registerRoute,
+  loginRoute,
+  resetPasswordRoute,
+  confirmResetPasswordRoute,
+  verifyEmailRoute,
+  protectedRoutes,
+]);
+
+export const router = createRouter({
+  routeTree,
+  defaultPreload: "intent",
+  context: { queryClient, trpcClient },
+});
 
 declare module "@tanstack/react-router" {
   interface Register {
