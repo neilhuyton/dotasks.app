@@ -48,6 +48,7 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
     "trpc-token-refresh-link": "^0.5.3",
+    "uuid": "^13.0.0",
     "zod": "^4.0.17",
     "zustand": "^5.0.8"
   },
@@ -64,6 +65,7 @@
     "@types/node": "^24.3.0",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
+    "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^5.0.0",
     "eslint": "^9.33.0",
     "eslint-plugin-react-hooks": "^5.2.0",

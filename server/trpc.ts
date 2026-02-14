@@ -9,6 +9,10 @@ import { verifyEmailRouter } from "./routers/verifyEmail";
 import { resetPasswordRouter } from "./routers/resetPassword";
 import { refreshTokenRouter } from "./routers/refreshToken";
 
+// ← Add these
+import { listRouter } from "./routers/todo/list";
+import { taskRouter } from "./routers/todo/task";
+
 export const appRouter = router({
   user: userRouter,
   register: registerRouter.register,
@@ -16,6 +20,10 @@ export const appRouter = router({
   verifyEmail: verifyEmailRouter.verifyEmail,
   resetPassword: resetPasswordRouter,
   refreshToken: refreshTokenRouter,
+
+  // New domains
+  list: listRouter,
+  task: taskRouter,
 });
 
 export type AppRouter = typeof appRouter;

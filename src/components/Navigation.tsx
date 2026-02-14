@@ -1,48 +1,39 @@
 // src/components/Navigation.tsx
 
-import { Link } from "@tanstack/react-router";
-import {
-  ScaleIcon,
-  LineChartIcon,
-  TargetIcon,
-  type LucideIcon,
-} from "lucide-react";
+import { Link } from '@tanstack/react-router';
+import { ListTodo, ListChecks, User } from 'lucide-react';
 
 interface NavItemProps {
   to: string;
   label: string;
-  Icon: LucideIcon;
+  Icon: typeof ListTodo;
 }
 
 function NavItem({ to, label, Icon }: NavItemProps) {
   return (
     <Link
       to={to}
-      className="flex-1 flex flex-col items-center py-3 text-sm sm:text-base font-medium hover:bg-muted transition relative"
+      className="flex flex-1 flex-col items-center py-3 text-sm font-medium hover:bg-muted sm:text-base"
       activeProps={{
         className:
-          "font-semibold bg-muted before:absolute before:top-0 before:left-0 before:right-0 before:h-[2px] before:bg-primary",
+          'font-semibold bg-muted before:absolute before:left-0 before:right-0 before:top-0 before:h-1 before:bg-primary',
       }}
-      aria-label={`Navigate to ${label}`}
+      aria-label={label}
     >
-      <Icon className="h-5 w-5 sm:h-6 sm:w-6 mb-1" />
+      <Icon className="mb-1 h-6 w-6 sm:h-7 sm:w-7" />
       {label}
     </Link>
   );
 }
 
-function Navigation() {
+export default function Navigation() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-background shadow-md z-10">
-      <div className="flex flex-row items-center justify-between p-2 sm:p-4">
-        <div className="flex flex-row w-full items-center">
-          <NavItem to="/page1" label="Page 1" Icon={ScaleIcon} />
-          <NavItem to="/page2" label="Page 2" Icon={LineChartIcon} />
-          <NavItem to="/page3" label="Page 3" Icon={TargetIcon} />
-        </div>
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background">
+      <div className="mx-auto flex max-w-md justify-around">
+        <NavItem to="/" label="Today" Icon={ListTodo} />
+        <NavItem to="/lists" label="Lists" Icon={ListChecks} /> {/* placeholder */}
+        <NavItem to="/profile" label="Me" Icon={User} />
       </div>
     </nav>
   );
 }
-
-export default Navigation;

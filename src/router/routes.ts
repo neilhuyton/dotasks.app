@@ -1,7 +1,7 @@
 // src/router/routes.ts
 
 import { createRoute, redirect, type RootRoute } from "@tanstack/react-router";
-import Home from "../pages/HomePage";
+import Home from "../pages/HomePage";                     // ← renamed from Home.tsx to HomePage
 import RegisterPage from "../pages/RegisterPage";
 import LoginPage from "../pages/LoginPage";
 import ResetPasswordPage from "../pages/ResetPasswordPage";

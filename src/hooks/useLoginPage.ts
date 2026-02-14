@@ -1,43 +1,33 @@
 // src/hooks/useLogin.ts
-
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { trpc } from "@/trpc";
 import { useAuthStore } from "@/store/authStore";
 import { useEffect, useState } from "react";
-// import { useNavigate } from "@tanstack/react-router"; // ← change here
+import { flushSync } from "react-dom";               // ← added
+import { useNavigate } from "@tanstack/react-router"; // or your router's hook
 import type { TRPCClientErrorLike } from "@trpc/client";
-import type { AppRouter } from "server/trpc";
-
-// Adjust this interface to match your actual tRPC response shape
-interface LoginResponse {
-  user: {
-    id: string;
-    email: string;
-  };
-  accessToken: string;
-  refreshToken: string; // or `${string}-${string}-...` if you want the literal
-  message: string;
-}
+import type { AppRouter } from "../../server/trpc";
 
 const formSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address" }),
-  password: z
-    .string()
-    .min(8, { message: "Password must be at least 8 characters long" }),
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-interface UseLoginReturn {
-  form: ReturnType<typeof useForm<FormValues>>;
-  message: string | null;
-  isPending: boolean;
-  handleSubmit: (data: FormValues) => Promise<void>;
+interface LoginResponse {
+  user: { id: string; email: string };
+  accessToken: string;
+  refreshToken: string;
+  message?: string;
 }
 
-export const useLoginPage = (): UseLoginReturn => {
+export const useLoginPage = () => {
+  const navigate = useNavigate();
+  const { login } = useAuthStore();
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { email: "", password: "" },
@@ -45,43 +35,42 @@ export const useLoginPage = (): UseLoginReturn => {
   });
 
   const [message, setMessage] = useState<string | null>(null);
-  const { login } = useAuthStore();
-
-  // Use useNavigate() instead of useRouter().navigate
-  // const navigate = useNavigate();
 
   const loginMutation = trpc.login.useMutation({
-    onMutate: () => {
-      setMessage(null);
-    },
+    onMutate: () => setMessage(null),
+
     onSuccess: (data: LoginResponse) => {
       setMessage("Login successful!");
-      // Update store with the correct fields
-      login(data.user.id, data.accessToken, data.refreshToken);
+
+      // Force synchronous store update + give React a tick to re-render
+      flushSync(() => {
+        login(data.user.id, data.accessToken, data.refreshToken);
+      });
 
       form.reset();
 
-      // Navigate — this is more reliable in v1 than router.navigate in callbacks
-      // navigate({ to: "/" });
+      // Small delay helps avoid race in most cases (especially with zustand persist)
+      setTimeout(() => {
+        navigate({ to: "/" }); // or "/dashboard" — wherever your protected route is
+      }, 80); // 0–150 ms usually enough
     },
+
     onError: (error: TRPCClientErrorLike<AppRouter>) => {
       setMessage(`Login failed: ${error.message || "Unknown error"}`);
     },
   });
 
   useEffect(() => {
-    const subscription = form.watch((_, { name }) => {
-      if (name === "email" || name === "password") {
-        setMessage(null);
-      }
+    const sub = form.watch((_, { name }) => {
+      if (name === "email" || name === "password") setMessage(null);
     });
-    return () => subscription.unsubscribe();
+    return () => sub.unsubscribe();
   }, [form]);
 
-  const handleSubmit = async (data: FormValues) => {
-    const isValid = await form.trigger();
-    if (!isValid) return;
-    await loginMutation.mutateAsync(data);
+  const handleSubmit = async (values: FormValues) => {
+    await form.trigger();
+    if (!form.formState.isValid) return;
+    await loginMutation.mutateAsync(values);
   };
 
   return {

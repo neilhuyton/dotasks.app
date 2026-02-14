@@ -9,6 +9,9 @@ import type { IncomingMessage } from 'http';
 //    (avoids connection pool exhaustion & stale connections)
 const prisma = globalThis.prisma ?? new PrismaClient();
 
+console.log("DATABASE_URL present?", !!process.env.DATABASE_URL);
+console.log("DB host:", process.env.DATABASE_URL?.split('@')[1] || "missing");
+
 if (process.env.NODE_ENV !== 'production') {
   globalThis.prisma = prisma;
 }

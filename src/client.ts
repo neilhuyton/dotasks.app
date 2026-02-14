@@ -5,17 +5,17 @@ import {
   httpBatchLink,
   TRPCClientError,
   type TRPCLink,
-} from '@trpc/client';
-import { observable } from '@trpc/server/observable';
-import type { AnyRouter } from '@trpc/server';
-import type { Operation, OperationResultObservable } from '@trpc/client';
+} from "@trpc/client";
+import { observable } from "@trpc/server/observable";
+import type { AnyRouter } from "@trpc/server";
+import type { Operation, OperationResultObservable } from "@trpc/client";
 
-import type { AppRouter } from '../server/trpc';
+import type { AppRouter } from "../server/trpc";
 
-import { vanillaTrpc } from './trpc-vanilla';
-import { useAuthStore } from './store/authStore';
-import { queryClient } from './queryClient';
-import { router } from './router/router';
+import { vanillaTrpc } from "./trpc-vanilla";
+import { useAuthStore } from "./store/authStore";
+import { queryClient } from "./queryClient";
+import { router } from "./router/router";
 
 let activeRefreshPromise: Promise<void> | null = null;
 
@@ -27,7 +27,10 @@ const authRefreshLink: TRPCLink<AppRouter> = () => {
           observer.next(value);
         },
         error(err) {
-          if (err instanceof TRPCClientError && err.data?.code === 'UNAUTHORIZED') {
+          if (
+            err instanceof TRPCClientError &&
+            err.data?.code === "UNAUTHORIZED"
+          ) {
             handleAuthError(err, observer, next, op);
           } else {
             observer.error(err);
@@ -45,18 +48,18 @@ const authRefreshLink: TRPCLink<AppRouter> = () => {
 function handleAuthError(
   originalErr: TRPCClientError<AppRouter>,
   observer: Parameters<
-    NonNullable<OperationResultObservable<AnyRouter, unknown>['subscribe']>
+    NonNullable<OperationResultObservable<AnyRouter, unknown>["subscribe"]>
   >[0],
   next: (op: Operation) => OperationResultObservable<AnyRouter, unknown>,
   op: Operation,
 ) {
-  console.log('[TRPC Auth] Caught UNAUTHORIZED → attempting refresh');
+  console.log("[TRPC Auth] Caught UNAUTHORIZED → attempting refresh");
 
   const state = useAuthStore.getState();
   const { refreshToken, userId } = state;
 
   if (!refreshToken || !userId) {
-    console.warn('[TRPC Auth] Missing refresh token or userId → logout');
+    console.warn("[TRPC Auth] Missing refresh token or userId → logout");
     performLogout();
     observer.error?.(originalErr);
     return;
@@ -75,33 +78,39 @@ function handleAuthError(
         refreshToken,
       });
 
-      console.log('[TRPC Auth] Refresh succeeded');
+      console.log("[TRPC Auth] Refresh succeeded");
 
-      useAuthStore.getState().login(userId, result.accessToken, result.refreshToken);
+      useAuthStore
+        .getState()
+        .login(userId, result.accessToken, result.refreshToken);
 
       retryOriginalOp(next, op, observer);
     } catch (refreshErr: unknown) {
-      console.error('[TRPC Auth] Refresh failed', refreshErr);
+      console.error("[TRPC Auth] Refresh failed", refreshErr);
 
       let clientError: TRPCClientError<AppRouter>;
 
       if (refreshErr instanceof TRPCClientError) {
         clientError = refreshErr;
       } else if (refreshErr instanceof Error) {
-        clientError = new TRPCClientError(refreshErr.message || 'Refresh failed', {
-          cause: refreshErr,
-        });
+        clientError = new TRPCClientError(
+          refreshErr.message || "Refresh failed",
+          {
+            cause: refreshErr,
+          },
+        );
       } else {
-        clientError = new TRPCClientError('Refresh failed (unknown)');
+        clientError = new TRPCClientError("Refresh failed (unknown)");
       }
 
       const code = clientError.data?.code;
       const message = clientError.message;
 
       const isFatal =
-        code === 'UNAUTHORIZED' ||
-        code === 'FORBIDDEN' ||
-        (code === 'BAD_REQUEST' && message.includes('Invalid refresh token format'));
+        code === "UNAUTHORIZED" ||
+        code === "FORBIDDEN" ||
+        (code === "BAD_REQUEST" &&
+          message.includes("Invalid refresh token format"));
 
       if (isFatal) {
         console.warn(
@@ -121,7 +130,7 @@ function retryOriginalOp(
   next: (op: Operation) => OperationResultObservable<AnyRouter, unknown>,
   op: Operation,
   observer: Parameters<
-    NonNullable<OperationResultObservable<AnyRouter, unknown>['subscribe']>
+    NonNullable<OperationResultObservable<AnyRouter, unknown>["subscribe"]>
   >[0],
 ) {
   next(op).subscribe({
@@ -141,17 +150,34 @@ function performLogout() {
   useAuthStore.getState().logout();
   queryClient.clear();
   queryClient.cancelQueries();
-  router.navigate({ to: '/login', replace: true });
+  router.navigate({ to: "/login", replace: true });
 }
 
 export const trpcClient = createTRPCClient<AppRouter>({
   links: [
     authRefreshLink,
     httpBatchLink({
-      url: '/trpc',
-      headers() {
-        const { accessToken } = useAuthStore.getState();
-        return accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+      url: "/trpc",
+      headers: () => {
+        const state = useAuthStore.getState();
+        const token = state.accessToken;
+
+        console.log(
+          "[tRPC headers] called for path:",
+          // this helps see which query/mutation is asking for headers
+          // (you can also log op if you want more detail)
+        );
+
+        if (token) {
+          console.log(
+            "[tRPC headers] sending Bearer token (first 20 chars):",
+            token.slice(0, 20) + "...",
+          );
+          return { Authorization: `Bearer ${token}` };
+        } else {
+          console.log("[tRPC headers] NO token in store right now");
+          return {};
+        }
       },
     }),
   ],
