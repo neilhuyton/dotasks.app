@@ -2,9 +2,6 @@
 
 import { createRoute, redirect, type RootRoute } from "@tanstack/react-router";
 import Home from "../pages/HomePage";
-import WeightLogPage from "../pages/WeightLogPage";
-import WeightChartPage from "../pages/WeightChartPage";
-import WeightGoalPage from "../pages/WeightGoalPage";
 import RegisterPage from "../pages/RegisterPage";
 import LoginPage from "../pages/LoginPage";
 import ResetPasswordPage from "../pages/ResetPasswordPage";
@@ -52,8 +49,6 @@ const checkAuth = async () => {
       );
     }
   }
-
-  // Session looks alive (via refresh token) → proceed
 };
 
 export const homeRoute = (rootRoute: RootRoute) =>
@@ -101,36 +96,6 @@ export const verifyEmailRoute = (rootRoute: RootRoute) =>
     path: "/verify-email",
     validateSearch: verifyEmailSearchSchema,
     component: VerifyEmailPage,
-  });
-
-export const weightRoute = (rootRoute: RootRoute) =>
-  createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/weight",
-    beforeLoad: async () => {
-      await checkAuth();
-    },
-    component: WeightLogPage,
-  });
-
-export const weightChartRoute = (rootRoute: RootRoute) =>
-  createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/stats",
-    beforeLoad: async () => {
-      await checkAuth();
-    },
-    component: WeightChartPage,
-  });
-
-export const weightGoalRoute = (rootRoute: RootRoute) =>
-  createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/goals",
-    beforeLoad: async () => {
-      await checkAuth();
-    },
-    component: WeightGoalPage,
   });
 
 export const profileRoute = (rootRoute: RootRoute) =>

@@ -22,8 +22,6 @@ model User {
   createdAt                   DateTime            @default(now())
   updatedAt                   DateTime            @updatedAt
 
-  goals                       Goal[]
-  weights                     WeightMeasurement[]
   refreshTokens               RefreshToken[]      // ← new relation
 
   @@index([createdAt])
@@ -46,26 +44,4 @@ model RefreshToken {
 
   @@index([userId])
   @@index([createdAt])
-}
-
-model WeightMeasurement {
-  id        String   @id @default(uuid())
-  userId    String
-  weightKg  Float
-  note      String?
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([createdAt])
-}
-
-model Goal {
-  id           String    @id @default(uuid())
-  userId       String
-  goalWeightKg Float
-  goalSetAt    DateTime  @default(now())
-  reachedAt    DateTime?
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([goalSetAt])
 }

@@ -36,9 +36,9 @@ function Navigation() {
     <nav className="fixed bottom-0 left-0 right-0 bg-background shadow-md z-10">
       <div className="flex flex-row items-center justify-between p-2 sm:p-4">
         <div className="flex flex-row w-full items-center">
-          <NavItem to="/weight" label="Weight" Icon={ScaleIcon} />
-          <NavItem to="/stats" label="Stats" Icon={LineChartIcon} />
-          <NavItem to="/goals" label="Goals" Icon={TargetIcon} />
+          <NavItem to="/page1" label="Page 1" Icon={ScaleIcon} />
+          <NavItem to="/page2" label="Page 2" Icon={LineChartIcon} />
+          <NavItem to="/page3" label="Page 3" Icon={TargetIcon} />
         </div>
       </div>
     </nav>

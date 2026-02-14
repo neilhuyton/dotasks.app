@@ -1,6 +1,6 @@
 // src/pages/ProfilePage.tsx
 
-import { useNavigate } from "@tanstack/react-router";
+// import { useNavigate } from "@tanstack/react-router";
 import {
   Dialog,
   DialogContent,
@@ -16,7 +16,7 @@ import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { VisuallyHidden } from "radix-ui";
 
 export default function ProfilePage() {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
   const {
     emailForm,
@@ -30,15 +30,14 @@ export default function ProfilePage() {
     handleLogout,
   } = useProfilePage();
 
-  // Close dialog → navigate back to weight tracker
-  const handleOpenChange = (open: boolean) => {
-    if (!open) {
-      navigate({ to: "/weight", replace: false });
-    }
-  };
+  // const handleOpenChange = (open: boolean) => {
+  //   if (!open) {
+  //     navigate({ to: "/", replace: false });
+  //   }
+  // };
 
   return (
-    <Dialog open={true} onOpenChange={handleOpenChange}>
+    <Dialog open={true} /*onOpenChange={handleOpenChange}*/>
       <DialogContent
         showCloseButton={false} // we use custom close
         className={cn(

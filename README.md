@@ -1,3 +1,3 @@
-# My Weigh App
+# My Todos App
 
 Text

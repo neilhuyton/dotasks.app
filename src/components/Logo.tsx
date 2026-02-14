@@ -13,7 +13,7 @@ export function Logo() {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        aria-label="My Weigh App Logo"
+        aria-label="My To Dos App App Logo"
         role="img"
       >
         <path d="M12 2a10 10 0 0 1 10 10c0 2.757-1.12 5.248-2.93 7.048M12 2a10 10 0 0 0-10 10c0 2.757 1.12 5.248 2.93 7.048M12 2v2m0 16v2" />
@@ -24,7 +24,7 @@ export function Logo() {
         className="text-xl font-semibold text-center mt-2"
         data-testid="app-name"
       >
-        My Weigh
+        My To Dos App
       </h2>
     </div>
   );

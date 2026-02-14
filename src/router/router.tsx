@@ -11,9 +11,6 @@ import {
   loginRoute,
   resetPasswordRoute,
   confirmResetPasswordRoute,
-  weightRoute,
-  weightChartRoute,
-  weightGoalRoute,
   verifyEmailRoute,
   profileRoute,
 } from "./routes";
@@ -35,9 +32,6 @@ export const routeTree = rootRoute.addChildren([
   resetPasswordRoute(rootRoute),
   confirmResetPasswordRoute(rootRoute),
   verifyEmailRoute(rootRoute),
-  weightRoute(rootRoute),
-  weightChartRoute(rootRoute),
-  weightGoalRoute(rootRoute),
   profileRoute(rootRoute),
 ]);
 

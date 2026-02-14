@@ -1,7 +1,7 @@
 {
-  "name": "My Weigh",
-  "short_name": "My Weigh",
-  "description": "Weight tracking application",
+  "name": "My ToDos App",
+  "short_name": "My ToDos App",
+  "description": "List tracking application",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

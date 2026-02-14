@@ -25,9 +25,6 @@ import {
 import { router } from "../../src/router/router";
 import {
   loginHandler,
-  weightDeleteHandler,
-  weightGetCurrentGoalHandler,
-  weightGetWeightsHandler,
 } from "../../__mocks__/handlers";
 import { suppressActWarnings } from "../act-suppress"; 
 import { trpcMsw } from "../../__mocks__/trpcMsw";
@@ -111,12 +108,6 @@ describe("LoginPage", () => {
   });
 
   beforeEach(() => {
-    server.use(
-      weightGetWeightsHandler,
-      weightDeleteHandler,
-      weightGetCurrentGoalHandler,
-    );
-
     queryClient.clear();
     vi.clearAllMocks();
   });
@@ -188,9 +179,6 @@ describe("LoginPage", () => {
           message: "Invalid email or password",
         });
       }),
-      weightGetWeightsHandler,
-      weightDeleteHandler,
-      weightGetCurrentGoalHandler,
     );
 
     await setup();
@@ -239,9 +227,6 @@ describe("LoginPage", () => {
           message: "Invalid email or password",
         });
       }),
-      weightGetWeightsHandler,
-      weightDeleteHandler,
-      weightGetCurrentGoalHandler,
     );
 
     await setup();

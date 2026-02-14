@@ -4,14 +4,10 @@ import { useLocation, Outlet } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpc } from "@/trpc";
 import { useAuthStore } from "@/store/authStore";
-import { ThemeProvider } from "./ThemeProvider";
 import Navigation from "@/components/Navigation";
 import ProfileIcon from "@/components/ProfileIcon";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { InstallPrompt } from "@/components/InstallPrompt";
 import type { TRPCClient } from "@trpc/client";
 import type { AppRouter } from "@/../server/trpc";
-import { ColorThemeToggle } from "./ColorThemeToggle";
 
 const publicRoutes = [
   "/login",
@@ -35,11 +31,7 @@ function Root({
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider
-          defaultTheme="dark"
-          storageKey="vite-ui-theme"
-          enableSystem={true}
-        >
+
           <div className="flex flex-col">
             {isLoggedIn && !isPublicRoute && (
               <header
@@ -50,16 +42,10 @@ function Root({
                 <div /> {/* ← placeholder to keep justify-between balanced */}
                 {/* Right side: Theme toggle + Profile icon */}
                 <div className="flex items-center gap-3 sm:gap-4">
-                  <ThemeToggle />
-                  <ColorThemeToggle />
                   <ProfileIcon />
                 </div>
               </header>
             )}
-            <InstallPrompt
-              isLoggedIn={isLoggedIn}
-              isPublicRoute={isPublicRoute}
-            />
             <main
               className={
                 isLoggedIn && !isPublicRoute
@@ -71,7 +57,7 @@ function Root({
               <Outlet />
             </main>
           </div>
-        </ThemeProvider>
+
       </QueryClientProvider>
     </trpc.Provider>
   );

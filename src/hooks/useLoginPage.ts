@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { trpc } from "@/trpc";
 import { useAuthStore } from "@/store/authStore";
 import { useEffect, useState } from "react";
-import { useNavigate } from "@tanstack/react-router"; // ← change here
+// import { useNavigate } from "@tanstack/react-router"; // ← change here
 import type { TRPCClientErrorLike } from "@trpc/client";
 import type { AppRouter } from "server/trpc";
 
@@ -48,7 +48,7 @@ export const useLoginPage = (): UseLoginReturn => {
   const { login } = useAuthStore();
 
   // Use useNavigate() instead of useRouter().navigate
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
   const loginMutation = trpc.login.useMutation({
     onMutate: () => {
@@ -62,7 +62,7 @@ export const useLoginPage = (): UseLoginReturn => {
       form.reset();
 
       // Navigate — this is more reliable in v1 than router.navigate in callbacks
-      navigate({ to: "/weight" });
+      // navigate({ to: "/" });
     },
     onError: (error: TRPCClientErrorLike<AppRouter>) => {
       setMessage(`Login failed: ${error.message || "Unknown error"}`);

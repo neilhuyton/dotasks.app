@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { trpc } from "@/trpc";
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/authStore";
-import { useNavigate } from "@tanstack/react-router";
+// import { useNavigate } from "@tanstack/react-router";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -43,17 +43,17 @@ export const useRegisterPage = (): UseRegisterReturn => {
 
   const [message, setMessage] = useState<string | null>(null);
   const { login } = useAuthStore();
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
   const registerMutation = trpc.register.useMutation({
     onSuccess: (data: RegisterResponse) => {
       setMessage(data.message || "Registration successful! Redirecting...");
       login(data.user.id, data.accessToken, data.refreshToken);
 
-      setTimeout(() => {
-        form.reset();
-        navigate({ to: "/weight" }); // ← changed: go to dashboard instead of login
-      }, 2500);
+      // setTimeout(() => {
+      //   form.reset();
+      //   navigate({ to: "/" }); // ← changed: go to dashboard instead of login
+      // }, 2500);
     },
     onError: (error) => {
       const errorMessage = error.message || "Failed to register";
