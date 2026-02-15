@@ -1,4 +1,4 @@
-// src/router/routes.ts
+// src/router/routes.tsx
 
 import { createRoute, redirect } from "@tanstack/react-router";
 
@@ -12,13 +12,17 @@ import ProfilePage from "@/pages/ProfilePage";
 import ListsPage from "@/pages/ListsPage";
 import ListDetailPage from "@/pages/ListDetailPage";
 
+// Import the small wrapper components
+import {
+  CreateListRoute,
+  NewTaskRoute,
+  DeleteListRoute,
+  DeleteTaskRoute,
+} from "./route-components";
+
 // Layout & root
 import { rootRoute } from "./rootRoute";
 import { authenticatedRoute } from "./_authenticated";
-import NewTaskModalPage from "@/pages/modals/NewTaskModalPage";
-import CreateListModalPage from "@/pages/modals/CreateListModalPage";
-import DeleteListConfirmModalPage from "@/pages/modals/DeleteListConfirmModalPage";
-import DeleteTaskConfirmModalPage from "@/pages/modals/DeleteTaskConfirmModalPage"; // ← NEW
 
 // ─── PUBLIC ROUTES ─────────────────────────────────────────────────
 
@@ -78,15 +82,13 @@ export const listsIndexRoute = createRoute({
 export const createListRoute = createRoute({
   getParentRoute: () => listsRoute,
   path: "new",
-  component: CreateListModalPage,
+  component: CreateListRoute,
 });
 
 export const listDetailRoute = createRoute({
   getParentRoute: () => listsRoute,
   path: "$listId",
-  parseParams: (params) => {
-    return { listId: params.listId };
-  },
+  parseParams: (params) => ({ listId: params.listId }),
   stringifyParams: ({ listId }) => ({ listId }),
   component: ListDetailPage,
 });
@@ -94,21 +96,21 @@ export const listDetailRoute = createRoute({
 export const createTaskRoute = createRoute({
   getParentRoute: () => listDetailRoute,
   path: "tasks/new",
-  component: NewTaskModalPage,
+  component: NewTaskRoute,
 });
 
 export const deleteListRoute = createRoute({
   getParentRoute: () => listDetailRoute,
   path: "delete",
-  component: DeleteListConfirmModalPage,
+  component: DeleteListRoute,
 });
 
 export const deleteTaskRoute = createRoute({
   getParentRoute: () => listDetailRoute,
-  path: "tasks/$taskId/delete", // or "tasks/delete/$taskId" — both fine
+  path: "tasks/$taskId/delete",
   parseParams: (params) => ({ taskId: params.taskId }),
   stringifyParams: ({ taskId }) => ({ taskId }),
-  component: DeleteTaskConfirmModalPage,
+  component: DeleteTaskRoute,
 });
 
 export const profileRoute = createRoute({
@@ -127,7 +129,7 @@ export const protectedRoutes = authenticatedRoute.addChildren([
     listDetailRoute.addChildren([
       createTaskRoute,
       deleteListRoute,
-      deleteTaskRoute, // ← added here
+      deleteTaskRoute,
     ]),
   ]),
   profileRoute,

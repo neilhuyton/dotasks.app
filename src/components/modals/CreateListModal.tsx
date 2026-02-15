@@ -15,36 +15,68 @@ import { Loader2, X } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { VisuallyHidden } from "radix-ui";
+import { trpc } from "@/trpc";
+import { useNavigate } from "@tanstack/react-router";
+import { useAuthStore } from "@/store/authStore";
 
 interface CreateListModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onCreate: (data: { title: string; description?: string }) => void;
-  isPending: boolean;
+  isOpen?: boolean;
 }
 
-export default function CreateListModal({
-  isOpen,
-  onClose,
-  onCreate,
-  isPending,
-}: CreateListModalProps) {
+export default function CreateListModal({ isOpen = true }: CreateListModalProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
 
+  const navigate = useNavigate();
+  const { userId } = useAuthStore();
+  const utils = trpc.useUtils();
+
+  const mutation = trpc.list.create.useMutation({
+    onMutate: async (input) => {
+      await utils.list.getAll.cancel();
+      const prev = utils.list.getAll.getData() ?? [];
+      const optimistic = {
+        id: `temp-${crypto.randomUUID()}`,
+        title: input.title,
+        description: input.description ?? null,
+        color: input.color ?? null,
+        icon: input.icon ?? null,
+        userId: userId ?? "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isArchived: false,
+      };
+      utils.list.getAll.setData(undefined, [...prev, optimistic]);
+      return { prev };
+    },
+    onError: (_, __, ctx) => {
+      if (ctx?.prev) utils.list.getAll.setData(undefined, ctx.prev);
+      console.error("Failed to create list", ctx);
+    },
+    onSuccess: (newList) => {
+      utils.list.getAll.setData(undefined, (old = []) =>
+        old.map((l) => (l.id.startsWith("temp-") ? newList : l))
+      );
+      navigate({ to: "/lists", replace: true });
+    },
+  });
+
   const handleSubmit = () => {
     if (!title.trim()) return;
-    onCreate({
+    mutation.mutate({
       title: title.trim(),
       description: description.trim() || undefined,
     });
-    setTitle("");
-    setDescription("");
-    onClose();
   };
 
+  const handleClose = () => {
+    navigate({ to: "/lists", replace: true });
+  };
+
+  if (!isOpen) return null;
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={true} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent
         showCloseButton={false}
         className={cn(
@@ -56,7 +88,7 @@ export default function CreateListModal({
           "overscroll-none",
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
           "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-          "sm:max-w-none md:max-w-none lg:max-w-none",
+          "sm:max-w-none md:max-w-none lg:max-w-none"
         )}
       >
         <div className="flex h-full flex-col">
@@ -67,6 +99,7 @@ export default function CreateListModal({
                 size="icon"
                 className="absolute left-4 top-6 sm:left-6 sm:top-8 z-10"
                 aria-label="Close"
+                onClick={handleClose}
               >
                 <X className="h-[1.2rem] w-[1.2rem]" />
               </Button>
@@ -78,8 +111,7 @@ export default function CreateListModal({
 
             <VisuallyHidden.Root>
               <DialogDescription>
-                Form to create a new task list with a name and optional
-                description.
+                Form to create a new task list with a name and optional description.
               </DialogDescription>
             </VisuallyHidden.Root>
           </header>
@@ -101,7 +133,7 @@ export default function CreateListModal({
                     placeholder="Work, Groceries, Ideas..."
                     autoFocus
                     required
-                    disabled={isPending}
+                    disabled={mutation.isPending}
                     className="h-12 text-lg"
                   />
                 </div>
@@ -118,7 +150,7 @@ export default function CreateListModal({
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Any notes about this list..."
-                    disabled={isPending}
+                    disabled={mutation.isPending}
                     rows={6}
                     className="resize-none text-base"
                   />
@@ -128,21 +160,21 @@ export default function CreateListModal({
               <DialogFooter className="flex-col sm:flex-row gap-4 pt-6 border-t">
                 <Button
                   variant="outline"
-                  onClick={onClose}
-                  disabled={isPending}
+                  onClick={handleClose}
+                  disabled={mutation.isPending}
                   className="w-full sm:w-auto"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleSubmit}
-                  disabled={isPending || !title.trim()}
+                  disabled={mutation.isPending || !title.trim()}
                   className="w-full sm:w-auto"
                 >
-                  {isPending && (
+                  {mutation.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  {isPending ? "Creating..." : "Create List"}
+                  {mutation.isPending ? "Creating..." : "Create List"}
                 </Button>
               </DialogFooter>
             </div>

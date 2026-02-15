@@ -14,33 +14,97 @@ import { Loader2, X } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { VisuallyHidden } from "radix-ui";
+import { trpc } from "@/trpc";
+import { useNavigate } from "@tanstack/react-router";
 
 interface NewTaskModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onCreate: (title: string) => void;
-  isPending: boolean;
+  isOpen?: boolean;
   listId: string;
 }
 
 export default function NewTaskModal({
-  isOpen,
-  onClose,
-  onCreate,
-  isPending,
+  isOpen = true,
+  listId,
 }: NewTaskModalProps) {
   const [title, setTitle] = useState("");
+
+  const navigate = useNavigate();
+  const utils = trpc.useUtils();
+
+  const mutation = trpc.task.create.useMutation({
+    onMutate: async (input) => {
+      await utils.task.getByList.cancel({ listId });
+
+      const previousTasks = utils.task.getByList.getData({ listId }) ?? [];
+
+      const optimisticTask = {
+        id: `temp-${crypto.randomUUID()}`,
+        title: input.title,
+        description: null,
+        listId: input.listId,
+        dueDate: null,
+        priority: null,
+        order: previousTasks.length, // or 0, or Math.max(...previousTasks.map(t => t.order)) + 1
+        isCompleted: false,
+        isCurrent: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      utils.task.getByList.setData({ listId }, [
+        ...previousTasks,
+        optimisticTask,
+      ]);
+
+      return { previousTasks };
+    },
+
+    onError: (err, _newTask, context) => {
+      if (context?.previousTasks) {
+        utils.task.getByList.setData({ listId }, context.previousTasks);
+      }
+      console.error("Failed to create task:", err);
+      // TODO: toast "Failed to create task"
+    },
+
+    onSettled: () => {
+      utils.task.getByList.invalidate({ listId });
+    },
+
+    onSuccess: () => {
+      navigate({
+        to: "/lists/$listId",
+        params: { listId },
+        replace: true,
+      });
+    },
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-    onCreate(title.trim());
+
+    mutation.mutate({
+      title: title.trim(),
+      listId,
+      // Add other fields if your task.create mutation expects them (e.g. description, dueDate, priority)
+    });
+
     setTitle("");
-    onClose();
   };
 
+  const handleClose = () => {
+    navigate({
+      to: "/lists/$listId",
+      params: { listId },
+      replace: true,
+    });
+  };
+
+  if (!isOpen) return null;
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={true} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent
         showCloseButton={false}
         className={cn(
@@ -52,7 +116,7 @@ export default function NewTaskModal({
           "overscroll-none",
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
           "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-          "sm:max-w-none"
+          "sm:max-w-none",
         )}
       >
         <div className="flex h-full flex-col">
@@ -63,6 +127,7 @@ export default function NewTaskModal({
                 size="icon"
                 className="absolute left-4 top-6 z-10"
                 aria-label="Close"
+                onClick={handleClose}
               >
                 <X className="h-[1.2rem] w-[1.2rem]" />
               </Button>
@@ -83,7 +148,10 @@ export default function NewTaskModal({
             <div className="mx-auto max-w-lg">
               <form onSubmit={handleSubmit} className="space-y-8">
                 <div className="space-y-3">
-                  <label htmlFor="task-title" className="text-base font-medium block">
+                  <label
+                    htmlFor="task-title"
+                    className="text-base font-medium block"
+                  >
                     What needs to be done?
                   </label>
                   <Input
@@ -93,28 +161,38 @@ export default function NewTaskModal({
                     placeholder="Enter task title..."
                     autoFocus
                     required
-                    disabled={isPending}
+                    disabled={mutation.isPending}
                     className="h-14 text-lg"
                   />
                 </div>
+
+                {/* 
+                  Add more form fields here if needed, e.g.:
+                  <div className="space-y-3">
+                    <label>Description (optional)</label>
+                    <Textarea ... />
+                  </div>
+                */}
 
                 <DialogFooter className="flex-col sm:flex-row gap-4 pt-8">
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={onClose}
-                    disabled={isPending}
+                    onClick={handleClose}
+                    disabled={mutation.isPending}
                     className="w-full sm:w-auto"
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
-                    disabled={isPending || !title.trim()}
+                    disabled={mutation.isPending || !title.trim()}
                     className="w-full sm:w-auto"
                   >
-                    {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {isPending ? "Creating..." : "Create Task"}
+                    {mutation.isPending && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    {mutation.isPending ? "Creating..." : "Create Task"}
                   </Button>
                 </DialogFooter>
               </form>
