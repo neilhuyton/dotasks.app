@@ -17,6 +17,8 @@ import { rootRoute } from "./rootRoute";
 import { authenticatedRoute } from "./_authenticated";
 import NewTaskModalPage from "@/pages/modals/NewTaskModalPage";
 import CreateListModalPage from "@/pages/modals/CreateListModalPage";
+import DeleteListConfirmModalPage from "@/pages/modals/DeleteListConfirmModalPage";
+import DeleteTaskConfirmModalPage from "@/pages/modals/DeleteTaskConfirmModalPage"; // ← NEW
 
 // ─── PUBLIC ROUTES ─────────────────────────────────────────────────
 
@@ -60,7 +62,7 @@ export const homeRedirectRoute = createRoute({
   },
 });
 
-// ─── Lists section (no component on "lists" itself) ───────────────
+// ─── Lists section ─────────────────────────────────────────────────
 
 export const listsRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
@@ -69,7 +71,7 @@ export const listsRoute = createRoute({
 
 export const listsIndexRoute = createRoute({
   getParentRoute: () => listsRoute,
-  path: "/",                    
+  path: "/",
   component: ListsPage,
 });
 
@@ -95,6 +97,20 @@ export const createTaskRoute = createRoute({
   component: NewTaskModalPage,
 });
 
+export const deleteListRoute = createRoute({
+  getParentRoute: () => listDetailRoute,
+  path: "delete",
+  component: DeleteListConfirmModalPage,
+});
+
+export const deleteTaskRoute = createRoute({
+  getParentRoute: () => listDetailRoute,
+  path: "tasks/$taskId/delete", // or "tasks/delete/$taskId" — both fine
+  parseParams: (params) => ({ taskId: params.taskId }),
+  stringifyParams: ({ taskId }) => ({ taskId }),
+  component: DeleteTaskConfirmModalPage,
+});
+
 export const profileRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: "profile",
@@ -108,7 +124,11 @@ export const protectedRoutes = authenticatedRoute.addChildren([
   listsRoute.addChildren([
     listsIndexRoute,
     createListRoute,
-    listDetailRoute.addChildren([createTaskRoute]),
+    listDetailRoute.addChildren([
+      createTaskRoute,
+      deleteListRoute,
+      deleteTaskRoute, // ← added here
+    ]),
   ]),
   profileRoute,
 ]);
