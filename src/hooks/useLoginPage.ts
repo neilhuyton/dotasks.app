@@ -1,12 +1,13 @@
 // src/hooks/useLogin.ts
+
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { trpc } from "@/trpc";
 import { useAuthStore } from "@/store/authStore";
 import { useEffect, useState } from "react";
-import { flushSync } from "react-dom";               // ← added
-import { useNavigate } from "@tanstack/react-router"; // or your router's hook
+import { flushSync } from "react-dom";
+import { useNavigate } from "@tanstack/react-router";
 import type { TRPCClientErrorLike } from "@trpc/client";
 import type { AppRouter } from "../../server/trpc";
 
@@ -31,7 +32,8 @@ export const useLoginPage = () => {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { email: "", password: "" },
-    mode: "onChange",
+    mode: "onSubmit",              // Changed to onSubmit – stops early validation/focus fights
+    shouldFocusError: false,       // Prevents auto-focus on fields during submit
   });
 
   const [message, setMessage] = useState<string | null>(null);
@@ -42,17 +44,15 @@ export const useLoginPage = () => {
     onSuccess: (data: LoginResponse) => {
       setMessage("Login successful!");
 
-      // Force synchronous store update + give React a tick to re-render
       flushSync(() => {
         login(data.user.id, data.accessToken, data.refreshToken);
       });
 
       form.reset();
 
-      // Small delay helps avoid race in most cases (especially with zustand persist)
       setTimeout(() => {
-        navigate({ to: "/" }); // or "/dashboard" — wherever your protected route is
-      }, 80); // 0–150 ms usually enough
+        navigate({ to: "/" });
+      }, 80);
     },
 
     onError: (error: TRPCClientErrorLike<AppRouter>) => {
@@ -67,9 +67,55 @@ export const useLoginPage = () => {
     return () => sub.unsubscribe();
   }, [form]);
 
+  // Force RHF to detect autofill / pre-filled values from password manager
+  useEffect(() => {
+    const trySyncAutofill = () => {
+      const emailInput = document.querySelector('input[type="email"]') as HTMLInputElement | null;
+      const passwordInput = document.querySelector('input[type="password"]') as HTMLInputElement | null;
+
+      let changed = false;
+
+      if (emailInput?.value && form.getValues("email") !== emailInput.value) {
+        form.setValue("email", emailInput.value, {
+          shouldDirty: true,
+          shouldTouch: true,
+          shouldValidate: true,
+        });
+        changed = true;
+      }
+
+      if (passwordInput?.value && form.getValues("password") !== passwordInput.value) {
+        form.setValue("password", passwordInput.value, {
+          shouldDirty: true,
+          shouldTouch: true,
+          shouldValidate: true,
+        });
+        changed = true;
+      }
+
+      if (changed) {
+        form.trigger(); // Re-validate so errors disappear if valid
+      }
+    };
+
+    // Run once on mount + small delay for autofill to kick in
+    const timer = setTimeout(trySyncAutofill, 150);
+
+    // Also run when inputs get focus (some managers fill on focus)
+    const emailEl = document.querySelector('input[type="email"]');
+    const pwEl = document.querySelector('input[type="password"]');
+
+    if (emailEl) emailEl.addEventListener("focus", trySyncAutofill);
+    if (pwEl) pwEl.addEventListener("focus", trySyncAutofill);
+
+    return () => {
+      clearTimeout(timer);
+      if (emailEl) emailEl.removeEventListener("focus", trySyncAutofill);
+      if (pwEl) pwEl.removeEventListener("focus", trySyncAutofill);
+    };
+  }, [form]);
+
   const handleSubmit = async (values: FormValues) => {
-    await form.trigger();
-    if (!form.formState.isValid) return;
     await loginMutation.mutateAsync(values);
   };
 

@@ -1,5 +1,3 @@
-// __tests__/pages/LoginPage.test.tsx
-
 import {
   describe,
   it,
@@ -23,9 +21,7 @@ import {
   createRouter,
 } from "@tanstack/react-router";
 import { router } from "../../src/router/router";
-import {
-  loginHandler,
-} from "../../__mocks__/handlers";
+import { loginHandler } from "../../__mocks__/handlers";
 import { suppressActWarnings } from "../act-suppress"; 
 import { trpcMsw } from "../../__mocks__/trpcMsw";
 import { TRPCError } from "@trpc/server";
@@ -170,7 +166,6 @@ describe("LoginPage", () => {
   });
 
   it("shows error message on invalid credentials", async () => {
-    // Force failure for this test only
     server.use(
       trpcMsw.login.mutation(async () => {
         await new Promise((r) => setTimeout(r, 50));
@@ -207,10 +202,14 @@ describe("LoginPage", () => {
 
     const emailInput = screen.getByTestId("email-input");
     const passwordInput = screen.getByTestId("password-input");
+    const form = screen.getByTestId("login-form");
 
     await userEvent.type(emailInput, "invalid-email");
     await userEvent.type(passwordInput, "short");
-    await userEvent.tab();
+
+    form.dispatchEvent(
+      new Event("submit", { bubbles: true, cancelable: true }),
+    );
 
     await waitFor(() => {
       expect(screen.getByText(/valid email address/i)).toBeInTheDocument();

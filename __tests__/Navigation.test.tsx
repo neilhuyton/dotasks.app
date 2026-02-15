@@ -1,7 +1,7 @@
 // __tests__/Navigation.test.tsx
 
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import {
   RouterProvider,
   createRouter,
@@ -13,12 +13,14 @@ import { act } from "react";
 
 import Navigation from "../src/components/Navigation";
 
-// Mock lucide-react icons
-vi.mock("lucide-react", () => ({
-  ScaleIcon: () => <div data-testid="scale-icon" />,
-  LineChartIcon: () => <div data-testid="line-chart-icon" />,
-  TargetIcon: () => <div data-testid="target-icon" />,
-}));
+// Mock lucide-react icons correctly – return actual mocked components
+vi.mock("lucide-react", () => {
+  return {
+    ListTodo: () => <div data-testid="list-todo-icon" />,
+    ListChecks: () => <div data-testid="list-checks-icon" />,
+    User: () => <div data-testid="user-icon" />,
+  };
+});
 
 describe("Navigation Component", () => {
   const createTestRouter = (initialPath = "/") => {
@@ -27,9 +29,18 @@ describe("Navigation Component", () => {
     });
 
     const routeTree = rootRoute.addChildren([
-      createRoute({ getParentRoute: () => rootRoute, path: "/page1" }),
-      createRoute({ getParentRoute: () => rootRoute, path: "/page2" }),
-      createRoute({ getParentRoute: () => rootRoute, path: "/page3" }),
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: "/page1",
+      }),
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: "/page2",
+      }),
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: "/page3",
+      }),
     ]);
 
     const history = createMemoryHistory({ initialEntries: [initialPath] });
@@ -50,59 +61,56 @@ describe("Navigation Component", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
-    document.body.innerHTML = "";
   });
 
   it("renders all navigation links with correct text, href, and icons", async () => {
     await renderNavigation("/");
 
-    const page1Link = screen.getByRole("link", { name: "Navigate to Page 1" });
-    const page2Link = screen.getByRole("link", { name: "Navigate to Page 2" });
-    const page3Link = screen.getByRole("link", { name: "Navigate to Page 3" });
+    // Find links by accessible name (aria-label)
+    const todayLink = screen.getByRole("link", { name: "Today" });
+    const listsLink = screen.getByRole("link", { name: "Lists" });
+    const meLink = screen.getByRole("link", { name: "Me" });
 
-    // Text content (still checks visible text)
-    expect(page1Link).toHaveTextContent("Page 1");
-    expect(page2Link).toHaveTextContent("Page 2");
-    expect(page3Link).toHaveTextContent("Page 3");
+    expect(todayLink).toHaveTextContent("Today");
+    expect(listsLink).toHaveTextContent("Lists");
+    expect(meLink).toHaveTextContent("Me");
 
-    // href
-    expect(page1Link).toHaveAttribute("href", "/page1");
-    expect(page2Link).toHaveAttribute("href", "/page2");
-    expect(page3Link).toHaveAttribute("href", "/page3");
+    expect(todayLink).toHaveAttribute("href", "/");
+    expect(listsLink).toHaveAttribute("href", "/lists");
+    expect(meLink).toHaveAttribute("href", "/profile");
 
     // Icons
-    expect(screen.getByTestId("scale-icon")).toBeInTheDocument();
-    expect(screen.getByTestId("line-chart-icon")).toBeInTheDocument();
-    expect(screen.getByTestId("target-icon")).toBeInTheDocument();
+    expect(screen.getByTestId("list-todo-icon")).toBeInTheDocument();
+    expect(screen.getByTestId("list-checks-icon")).toBeInTheDocument();
+    expect(screen.getByTestId("user-icon")).toBeInTheDocument();
   });
 
   it("applies active styles to the current route", async () => {
-    await renderNavigation("/page1");
+    await renderNavigation("/");
 
-    const page1Link = screen.getByRole("link", { name: "Navigate to Page 1" });
+    const todayLink = screen.getByRole("link", { name: "Today" });
 
-    expect(page1Link).toHaveClass("font-semibold");
-    expect(page1Link).toHaveClass("bg-muted");
+    expect(todayLink).toHaveClass("font-semibold");
+    expect(todayLink).toHaveClass("bg-muted");
 
-    // Other links should not be active
-    const page2Link = screen.getByRole("link", { name: "Navigate to Page 2" });
-    expect(page2Link).not.toHaveClass("font-semibold");
-    expect(page2Link).not.toHaveClass("bg-muted");
+    const listsLink = screen.getByRole("link", { name: "Lists" });
+    expect(listsLink).not.toHaveClass("font-semibold");
+    expect(listsLink).not.toHaveClass("bg-muted");
 
-    const page3Link = screen.getByRole("link", { name: "Navigate to Page 3" });
-    expect(page3Link).not.toHaveClass("font-semibold");
-    expect(page3Link).not.toHaveClass("bg-muted");
+    const meLink = screen.getByRole("link", { name: "Me" });
+    expect(meLink).not.toHaveClass("font-semibold");
+    expect(meLink).not.toHaveClass("bg-muted");
   });
 
   it("navigates when a link is clicked", async () => {
     const history = await renderNavigation("/");
 
-    const page3Link = screen.getByRole("link", { name: "Navigate to Page 3" });
+    const listsLink = screen.getByRole("link", { name: "Lists" });
 
     await act(async () => {
-      fireEvent.click(page3Link);
+      listsLink.click();
     });
 
-    expect(history.location.pathname).toBe("/page3");
+    expect(history.location.pathname).toBe("/lists");
   });
 });

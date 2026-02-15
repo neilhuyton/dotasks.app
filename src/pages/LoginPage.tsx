@@ -52,10 +52,9 @@ function LoginPage() {
                           id="email"
                           type="email"
                           placeholder="m@example.com"
-                          required
+                          // removed required
                           data-testid="email-input"
                           disabled={isPending}
-                          tabIndex={1}
                           {...field}
                         />
                       </FormControl>
@@ -78,7 +77,6 @@ function LoginPage() {
                           href="#"
                           className="inline-block text-sm underline-offset-0 hover:underline"
                           data-testid="forgot-password-link"
-                          tabIndex={3}
                           onClick={(e) => {
                             e.preventDefault();
                             router.navigate({ to: "/reset-password" });
@@ -92,11 +90,10 @@ function LoginPage() {
                           id="password"
                           type="password"
                           placeholder="Enter your password"
-                          required
+                          // removed required
                           data-testid="password-input"
                           disabled={isPending}
                           className="w-full"
-                          tabIndex={2}
                           {...field}
                         />
                       </FormControl>
@@ -123,7 +120,14 @@ function LoginPage() {
                 className="w-full mt-4"
                 data-testid="login-button"
                 disabled={isPending}
-                tabIndex={5}
+                onClick={() => {
+                  console.log("Login button clicked", {
+                    isPending,
+                    dirty: form.formState.isDirty,
+                    valid: form.formState.isValid,
+                    values: form.getValues(),
+                  });
+                }}
               >
                 {isPending ? "Logging in..." : "Login"}
               </Button>
@@ -134,7 +138,6 @@ function LoginPage() {
                   role="link"
                   className="underline underline-offset-4"
                   data-testid="signup-link"
-                  tabIndex={4}
                   onClick={(e) => {
                     e.preventDefault();
                     router.navigate({ to: "/register" });
