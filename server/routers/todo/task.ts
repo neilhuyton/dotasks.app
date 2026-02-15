@@ -47,6 +47,7 @@ export const taskRouter = router({
         data: {
           ...input,
           isCompleted: false,
+          isCurrent: false, // ← explicitly false on creation
         },
       });
     }),
@@ -89,5 +90,110 @@ export const taskRouter = router({
       });
     }),
 
-  // delete, reorder, update title, etc. can be added later
+  delete: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const task = await ctx.prisma.task.findUnique({
+        where: { id: input.id },
+        select: { listId: true },
+      });
+
+      if (!task) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Task not found" });
+      }
+
+      const list = await ctx.prisma.todoList.findUnique({
+        where: { id: task.listId },
+        select: { userId: true },
+      });
+
+      if (!list || list.userId !== ctx.userId) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      return ctx.prisma.task.delete({
+        where: { id: input.id },
+      });
+    }),
+
+  // ─── NEW: Set exactly one task as the "current/working on" task per list ───
+  setCurrent: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(), // task id
+        listId: z.string().uuid(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Verify task exists and belongs to user via list
+      const task = await ctx.prisma.task.findFirst({
+        where: {
+          id: input.id,
+          listId: input.listId,
+          list: { userId: ctx.userId },
+        },
+      });
+
+      if (!task) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Task not found or you don't have access",
+        });
+      }
+
+      if (task.isCompleted) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot set a completed task as current",
+        });
+      }
+
+      return ctx.prisma.$transaction(async (tx) => {
+        // Remove current flag from all other tasks in the list
+        await tx.task.updateMany({
+          where: {
+            listId: input.listId,
+            isCurrent: true,
+            id: { not: input.id },
+          },
+          data: { isCurrent: false },
+        });
+
+        // Set this task as current
+        return tx.task.update({
+          where: { id: input.id },
+          data: { isCurrent: true },
+        });
+      });
+    }),
+
+  clearCurrent: protectedProcedure
+    .input(
+      z.object({
+        listId: z.string().uuid(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Verify user owns the list
+      const list = await ctx.prisma.todoList.findUnique({
+        where: { id: input.listId },
+        select: { userId: true },
+      });
+
+      if (!list || list.userId !== ctx.userId) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      // Clear isCurrent from all tasks in the list
+      await ctx.prisma.task.updateMany({
+        where: {
+          listId: input.listId,
+          isCurrent: true,
+        },
+        data: { isCurrent: false },
+      });
+
+      // Return something simple (no single updated task)
+      return { success: true };
+    }),
 });
