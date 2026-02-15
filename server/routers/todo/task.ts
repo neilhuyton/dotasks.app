@@ -82,10 +82,14 @@ export const taskRouter = router({
         });
       }
 
+      const willBeCompleted = !task.isCompleted;
+
       return ctx.prisma.task.update({
         where: { id: input.id },
         data: {
           isCompleted: !task.isCompleted,
+          // Force-remove isCurrent when completing the task
+          isCurrent: willBeCompleted ? false : undefined, // only change when becoming completed
         },
       });
     }),

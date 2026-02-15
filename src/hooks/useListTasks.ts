@@ -86,16 +86,25 @@ export function useListTasks(listId: string | null | undefined) {
     },
   });
 
-  // Toggle, delete, setCurrent, clearCurrent remain almost identical — just use newest-first sort
   const toggle = trpc.task.toggle.useMutation({
     onMutate: async ({ id }) => {
       if (!enabled) return { previousSorted: [] };
+
       await utils.task.getByList.cancel(queryKey);
       const previousRaw = utils.task.getByList.getData(queryKey) ?? [];
       const previousSorted = sortNewestFirst(previousRaw);
 
       optimisticUpdate((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, isCompleted: !t.isCompleted } : t))
+        prev.map((t) =>
+          t.id === id
+            ? {
+                ...t,
+                isCompleted: !t.isCompleted,
+                // If becoming completed → force-remove star/current flag
+                isCurrent: !t.isCompleted ? false : t.isCurrent,
+              }
+            : t
+        )
       );
 
       return { previousSorted };
@@ -106,6 +115,7 @@ export function useListTasks(listId: string | null | undefined) {
   const remove = trpc.task.delete.useMutation({
     onMutate: async ({ id }) => {
       if (!enabled) return { previousSorted: [] };
+
       await utils.task.getByList.cancel(queryKey);
       const previousRaw = utils.task.getByList.getData(queryKey) ?? [];
       const previousSorted = sortNewestFirst(previousRaw);
@@ -120,6 +130,7 @@ export function useListTasks(listId: string | null | undefined) {
   const setCurrent = trpc.task.setCurrent.useMutation({
     onMutate: async ({ id }) => {
       if (!enabled) return { previousSorted: [] };
+
       await utils.task.getByList.cancel(queryKey);
       const previousRaw = utils.task.getByList.getData(queryKey) ?? [];
       const previousSorted = sortNewestFirst(previousRaw);
@@ -139,6 +150,7 @@ export function useListTasks(listId: string | null | undefined) {
   const clearCurrent = trpc.task.clearCurrent.useMutation({
     onMutate: async () => {
       if (!enabled) return { previousSorted: [] };
+
       await utils.task.getByList.cancel(queryKey);
       const previousRaw = utils.task.getByList.getData(queryKey) ?? [];
       const previousSorted = sortNewestFirst(previousRaw);
