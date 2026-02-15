@@ -1,9 +1,7 @@
 // src/router/router.tsx
 
 import { createRouter } from "@tanstack/react-router";
-
 import { rootRoute } from "./rootRoute";
-import { authenticatedRoute } from "./_authenticated";
 
 import {
   registerRoute,
@@ -11,24 +9,12 @@ import {
   resetPasswordRoute,
   confirmResetPasswordRoute,
   verifyEmailRoute,
-  homeRedirectRoute,
-  listsIndexRoute,
-  listDetailRoute,
-  profileRoute,
+  protectedRoutes,
 } from "./routes";
 
 import { queryClient } from "@/queryClient";
 import { trpcClient } from "@/client";
 
-// Protected subtree
-const protectedRoutes = authenticatedRoute.addChildren([
-  homeRedirectRoute,
-  listsIndexRoute,
-  listDetailRoute,
-  profileRoute,
-]);
-
-// Full tree
 export const routeTree = rootRoute.addChildren([
   registerRoute,
   loginRoute,

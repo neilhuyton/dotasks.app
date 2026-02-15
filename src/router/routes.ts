@@ -1,56 +1,52 @@
 // src/router/routes.ts
-import { createRoute, redirect } from '@tanstack/react-router';
-import { z } from 'zod';
+
+import { createRoute, redirect } from "@tanstack/react-router";
 
 // Pages
-import RegisterPage from '@/pages/RegisterPage';
-import LoginPage from '@/pages/LoginPage';
-import ResetPasswordPage from '@/pages/ResetPasswordPage';
-import ConfirmResetPasswordPage from '@/pages/ConfirmResetPasswordPage';
-import VerifyEmailPage from '@/pages/VerifyEmailPage';
-import ProfilePage from '@/pages/ProfilePage';
-import ListsPage from '@/pages/ListsPage';
-import ListDetailPage from '@/pages/ListDetailPage';
-
-// Schemas for search params (modals)
-const modalSearchSchema = z.object({
-  modal: z.enum(['new-list', 'new-task', 'edit-list', 'edit-task']).optional(),
-  taskId: z.string().uuid().optional(), // only for edit-task
-});
+import RegisterPage from "@/pages/RegisterPage";
+import LoginPage from "@/pages/LoginPage";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
+import ConfirmResetPasswordPage from "@/pages/ConfirmResetPasswordPage";
+import VerifyEmailPage from "@/pages/VerifyEmailPage";
+import ProfilePage from "@/pages/ProfilePage";
+import ListsPage from "@/pages/ListsPage";
+import ListDetailPage from "@/pages/ListDetailPage";
 
 // Layout & root
-import { rootRoute } from './rootRoute';
-import { authenticatedRoute } from './_authenticated';
+import { rootRoute } from "./rootRoute";
+import { authenticatedRoute } from "./_authenticated";
+import NewTaskModalPage from "@/pages/modals/NewTaskModalPage";
+import CreateListModalPage from "@/pages/modals/CreateListModalPage";
 
 // ─── PUBLIC ROUTES ─────────────────────────────────────────────────
 
 export const registerRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/register',
+  path: "/register",
   component: RegisterPage,
 });
 
 export const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/login',
+  path: "/login",
   component: LoginPage,
 });
 
 export const resetPasswordRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/reset-password',
+  path: "/reset-password",
   component: ResetPasswordPage,
 });
 
 export const confirmResetPasswordRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/confirm-reset-password',
+  path: "/confirm-reset-password",
   component: ConfirmResetPasswordPage,
 });
 
 export const verifyEmailRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/verify-email',
+  path: "/verify-email",
   component: VerifyEmailPage,
 });
 
@@ -58,30 +54,70 @@ export const verifyEmailRoute = createRoute({
 
 export const homeRedirectRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
-  path: '/',
+  path: "/",
   loader: () => {
-    throw redirect({ to: '/lists' as const, replace: true });
+    throw redirect({ to: "/lists" as const, replace: true });
   },
 });
 
-export const listsIndexRoute = createRoute({
+// ─── Lists section (no component on "lists" itself) ───────────────
+
+export const listsRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
-  path: 'lists',
-  validateSearch: modalSearchSchema,
+  path: "lists",
+});
+
+export const listsIndexRoute = createRoute({
+  getParentRoute: () => listsRoute,
+  path: "/",                    
   component: ListsPage,
 });
 
+export const createListRoute = createRoute({
+  getParentRoute: () => listsRoute,
+  path: "new",
+  component: CreateListModalPage,
+});
+
 export const listDetailRoute = createRoute({
-  getParentRoute: () => authenticatedRoute,
-  path: '$listId',
-  parseParams: (params) => ({ listId: params.listId }),
+  getParentRoute: () => listsRoute,
+  path: "$listId",
+  parseParams: (params) => {
+    return { listId: params.listId };
+  },
   stringifyParams: ({ listId }) => ({ listId }),
-  validateSearch: modalSearchSchema,
   component: ListDetailPage,
+});
+
+export const createTaskRoute = createRoute({
+  getParentRoute: () => listDetailRoute,
+  path: "tasks/new",
+  component: NewTaskModalPage,
 });
 
 export const profileRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
-  path: 'profile',
+  path: "profile",
   component: ProfilePage,
 });
+
+// ─── Route tree ─────────────────────────────────────────────────────
+
+export const protectedRoutes = authenticatedRoute.addChildren([
+  homeRedirectRoute,
+  listsRoute.addChildren([
+    listsIndexRoute,
+    createListRoute,
+    listDetailRoute.addChildren([createTaskRoute]),
+  ]),
+  profileRoute,
+]);
+
+export const routeTree = rootRoute.addChildren([
+  registerRoute,
+  loginRoute,
+  resetPasswordRoute,
+  confirmResetPasswordRoute,
+  verifyEmailRoute,
+  protectedRoutes,
+]);
