@@ -10,7 +10,7 @@ import { listsIndexRoute } from '@/router/routes';
 import ListsHeader from '@/components/lists/ListsHeader';
 import ListsTable from '@/components/lists/ListsTable';
 import CreateListModal from '@/components/lists/CreateListModal';
-import DeleteListConfirmModal from '@/components/lists/DeleteListConfirmModal';
+import DeleteListConfirmModal from '@/components/modals/DeleteListConfirmModal';
 
 export default function ListsPage() {
   const { userId } = useAuthStore();
