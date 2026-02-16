@@ -1,4 +1,4 @@
-// src/router/routes.tsx
+// src/router/routes.ts
 
 import { createRoute, redirect } from "@tanstack/react-router";
 

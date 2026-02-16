@@ -1,18 +1,99 @@
-// ListsTable.tsx
+// src/components/lists/ListsTable.tsx
 
-import { Link } from '@tanstack/react-router';
-import { Trash2 } from 'lucide-react';
-import { listDetailRoute } from '@/router/routes';
-import type { RouterOutputs } from '@/trpc';
+import { Link, linkOptions } from "@tanstack/react-router";
+import { Trash2 } from "lucide-react";
+import { useAuthStore } from "@/store/authStore";
+import { trpc } from "@/trpc";
 
-type TodoList = RouterOutputs['list']['getAll'][number];
+export default function ListsTable() {
+  const { userId } = useAuthStore();
 
-interface ListsTableProps {
-  lists: TodoList[];
-  onDelete: (id: string) => void;
-}
+  const {
+    data: lists = [],
+    isLoading,
+    error,
+  } = trpc.list.getAll.useQuery(undefined, {
+    enabled: !!userId,
+  });
 
-export default function ListsTable({ lists, onDelete }: ListsTableProps) {
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+        <div className="animate-pulse space-y-6 max-w-2xl mx-auto">
+          <div className="h-8 bg-gray-200 rounded w-1/2 mx-auto"></div>
+          <div className="space-y-3">
+            <div className="h-4 bg-gray-200 rounded w-full"></div>
+            <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-10 text-center">
+        <div className="text-red-600 mb-4">
+          <svg
+            className="w-16 h-16 mx-auto"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={1.5}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+            />
+          </svg>
+        </div>
+        <h3 className="text-xl font-semibold text-gray-900 mb-3">
+          Failed to load your lists
+        </h3>
+        <p className="text-gray-600 mb-8 max-w-md mx-auto">
+          We encountered an error while trying to fetch your lists. Please try again later.
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (lists.length === 0) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+        <svg
+          className="mx-auto h-16 w-16 text-gray-400"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.5}
+            d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+          />
+        </svg>
+        <h3 className="mt-6 text-xl font-medium text-gray-900">
+          No lists yet
+        </h3>
+        <p className="mt-3 text-gray-600 max-w-md mx-auto">
+          Create your first list to organize tasks, groceries, ideas, or anything else.
+        </p>
+        {/* You can add a real "Create List" button/link here later when implemented */}
+      </div>
+    );
+  }
+
+  // When there are lists → show the table
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       <div className="overflow-x-auto">
@@ -47,8 +128,10 @@ export default function ListsTable({ lists, onDelete }: ListsTableProps) {
               >
                 <td className="px-6 py-4 whitespace-nowrap">
                   <Link
-                    to={listDetailRoute.to}
-                    params={{ listId: list.id }}
+                    {...linkOptions({
+                      to: "/lists/$listId",
+                      params: { listId: list.id },
+                    })}
                     className="text-lg font-medium text-gray-900 hover:text-blue-700 transition-colors"
                   >
                     {list.title}
@@ -63,7 +146,6 @@ export default function ListsTable({ lists, onDelete }: ListsTableProps) {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                   <button
-                    onClick={() => onDelete(list.id)}
                     className="text-gray-400 hover:text-red-600 transition-colors p-1 rounded hover:bg-red-50"
                     title="Delete list"
                   >

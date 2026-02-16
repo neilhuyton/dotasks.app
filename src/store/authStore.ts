@@ -94,3 +94,20 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
 // Optional: helper to get current state outside of components (e.g. in trpc links)
 export const getAuthState = () => useAuthStore.getState();
+
+export const resetAuthStore = () => {
+  useAuthStore.setState({
+    isLoggedIn: false,
+    userId: null,
+    accessToken: null,
+    refreshToken: null,
+  });
+
+  // Also clear storage to match real logout behavior
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(STORAGE_KEYS.userId);
+    localStorage.removeItem(STORAGE_KEYS.refreshToken);
+  }
+
+  console.debug('[authStore] Auth fully reset (for testing)');
+};
