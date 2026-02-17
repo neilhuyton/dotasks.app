@@ -16,6 +16,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as ConfirmResetPasswordRouteImport } from './routes/confirm-reset-password'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedListsIndexRouteImport } from './routes/_authenticated/lists/index'
 import { Route as AuthenticatedListsNewRouteImport } from './routes/_authenticated/lists/new'
 import { Route as AuthenticatedListsListIdRouteImport } from './routes/_authenticated/lists/$listId'
@@ -56,6 +57,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedListsIndexRoute = AuthenticatedListsIndexRouteImport.update({
   id: '/lists/',
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/profile': typeof AuthenticatedProfileRoute
   '/lists/$listId': typeof AuthenticatedListsListIdRouteWithChildren
   '/lists/new': typeof AuthenticatedListsNewRoute
   '/lists/': typeof AuthenticatedListsIndexRoute
@@ -113,6 +120,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/profile': typeof AuthenticatedProfileRoute
   '/lists/$listId': typeof AuthenticatedListsListIdRouteWithChildren
   '/lists/new': typeof AuthenticatedListsNewRoute
   '/lists': typeof AuthenticatedListsIndexRoute
@@ -129,6 +137,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/lists/$listId': typeof AuthenticatedListsListIdRouteWithChildren
   '/_authenticated/lists/new': typeof AuthenticatedListsNewRoute
   '/_authenticated/lists/': typeof AuthenticatedListsIndexRoute
@@ -145,6 +154,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-password'
     | '/verify-email'
+    | '/profile'
     | '/lists/$listId'
     | '/lists/new'
     | '/lists/'
@@ -159,6 +169,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-password'
     | '/verify-email'
+    | '/profile'
     | '/lists/$listId'
     | '/lists/new'
     | '/lists'
@@ -174,6 +185,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-password'
     | '/verify-email'
+    | '/_authenticated/profile'
     | '/_authenticated/lists/$listId'
     | '/_authenticated/lists/new'
     | '/_authenticated/lists/'
@@ -243,6 +255,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/profile': {
+      id: '/_authenticated/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthenticatedProfileRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/lists/': {
       id: '/_authenticated/lists/'
       path: '/lists'
@@ -309,12 +328,14 @@ const AuthenticatedListsListIdRouteWithChildren =
   )
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedListsListIdRoute: typeof AuthenticatedListsListIdRouteWithChildren
   AuthenticatedListsNewRoute: typeof AuthenticatedListsNewRoute
   AuthenticatedListsIndexRoute: typeof AuthenticatedListsIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedListsListIdRoute: AuthenticatedListsListIdRouteWithChildren,
   AuthenticatedListsNewRoute: AuthenticatedListsNewRoute,
   AuthenticatedListsIndexRoute: AuthenticatedListsIndexRoute,
