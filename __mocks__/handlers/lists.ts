@@ -1,12 +1,8 @@
 // __mocks__/handlers/lists.ts
 
-// import { TRPCError } from "@trpc/server";
-import { trpcMsw } from "../trpcMsw";   // adjust path if needed
+import { TRPCError } from "@trpc/server";
+import { trpcMsw } from "../trpcMsw";
 
-// ───────────────────────────────────────────────────────────────
-// In-memory mock state for LISTS
-// Matches typical Prisma List / TodoList model
-// ───────────────────────────────────────────────────────────────
 let mockLists: {
   id: string;
   userId: string;
@@ -70,15 +66,45 @@ export function resetMockLists() {
 }
 
 export function getMockLists() {
-  return [...mockLists]; // return copy
+  return [...mockLists];
 }
 
-// ───────────────────────────────────────────────────────────────
-// Handlers
-// ───────────────────────────────────────────────────────────────
+export const deleteListResolver = ({ input }: { input: { id: string } }) => {
+  const { id } = input;
+
+  const initialLength = mockLists.length;
+  const deletedList = mockLists.find((l) => l.id === id);
+
+  mockLists = mockLists.filter((l) => l.id !== id);
+
+  if (mockLists.length === initialLength || !deletedList) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "List not found",
+    });
+  }
+
+  return {
+    id: deletedList.id,
+    userId: deletedList.userId,
+    title: deletedList.title,
+    description: deletedList.description,
+    color: deletedList.color,
+    icon: deletedList.icon,
+    isArchived: deletedList.isArchived,
+    createdAt: deletedList.createdAt.toISOString(),
+    updatedAt: deletedList.updatedAt.toISOString(),
+  };
+};
+
+export const listDeleteHandler = trpcMsw.list.delete.mutation(deleteListResolver);
+
+export const delayedListDeleteHandler = trpcMsw.list.delete.mutation(async (ctx) => {
+  await new Promise(resolve => setTimeout(resolve, 400));
+  return deleteListResolver(ctx);
+});
 
 export const listGetAllHandler = trpcMsw.list.getAll.query(() => {
-  // Return serializable shape (ISO strings for dates)
   return mockLists.map((list) => ({
     id: list.id,
     userId: list.userId,
@@ -94,7 +120,6 @@ export const listGetAllHandler = trpcMsw.list.getAll.query(() => {
 
 export const listGetEmptyHandler = trpcMsw.list.getAll.query(() => []);
 
-// Optional: useful for more realistic tests later
 export const listCreateHandler = trpcMsw.list.create.mutation(({ input }) => {
   const now = new Date();
 
@@ -119,26 +144,8 @@ export const listCreateHandler = trpcMsw.list.create.mutation(({ input }) => {
   };
 });
 
-// export const listDeleteHandler = trpcMsw.list.delete.mutation(({ input }) => {
-//   const { id } = input;
-
-//   const initialLength = mockLists.length;
-//   mockLists = mockLists.filter((l) => l.id !== id);
-
-//   if (mockLists.length === initialLength) {
-//     throw new TRPCError({
-//       code: "NOT_FOUND",
-//       message: "List not found",
-//     });
-//   }
-
-//   return { success: true, deletedId: id };
-// });
-
-// Export array for easy server.use(...listHandlers)
 export const listHandlers = [
-  // listGetEmptyHandler,
   listGetAllHandler,
-  // listCreateHandler,    // uncomment when you write create tests
-  // listDeleteHandler,    // uncomment when needed
+  listCreateHandler,
+  listDeleteHandler,
 ];

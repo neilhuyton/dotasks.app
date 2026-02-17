@@ -12,9 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, X } from "lucide-react";
-import { useState } from "react";
+import { useState, type SyntheticEvent } from "react";
 import { cn } from "@/lib/utils";
-import { VisuallyHidden } from "radix-ui";
+import { VisuallyHidden } from "radix-ui"; // usually @radix-ui/react-visually-hidden
 import { trpc } from "@/trpc";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuthStore } from "@/store/authStore";
@@ -38,7 +38,6 @@ export default function CreateListModal({
       await utils.list.getAll.cancel();
       const prev = utils.list.getAll.getData() ?? [];
 
-      // Create optimistic item
       const optimistic = {
         id: `temp-${crypto.randomUUID()}`,
         title: input.title,
@@ -51,7 +50,6 @@ export default function CreateListModal({
         isArchived: false,
       };
 
-      // ← Key change: add to the BEGINNING (newest first)
       utils.list.getAll.setData(undefined, [optimistic, ...prev]);
 
       return { prev };
@@ -64,17 +62,18 @@ export default function CreateListModal({
 
     onSuccess: (newList) => {
       utils.list.getAll.setData(undefined, (old = []) =>
-        // Replace the temp item with real one, keep newest-first order
         old.map((l) => (l.id.startsWith("temp-") ? newList : l)),
       );
 
-      // Optional: navigate back
       navigate({ to: "/lists", replace: true });
     },
   });
 
-  const handleSubmit = () => {
+  const handleSubmit = (e: SyntheticEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
     if (!title.trim()) return;
+
     mutation.mutate({
       title: title.trim(),
       description: description.trim() || undefined,
@@ -123,14 +122,17 @@ export default function CreateListModal({
 
             <VisuallyHidden.Root>
               <DialogDescription>
-                Form to create a new task list with a name and optional
-                description.
+                Form to create a new task list with a name and optional description.
               </DialogDescription>
             </VisuallyHidden.Root>
           </header>
 
           <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-8">
-            <div className="mx-auto max-w-2xl space-y-8">
+            <form
+              data-testid="create-list-form"
+              onSubmit={handleSubmit}
+              className="mx-auto max-w-2xl space-y-8"
+            >
               <div className="space-y-6">
                 <div className="space-y-2">
                   <label
@@ -172,6 +174,7 @@ export default function CreateListModal({
 
               <DialogFooter className="flex-col sm:flex-row gap-4 pt-6 border-t">
                 <Button
+                  type="button"
                   variant="outline"
                   onClick={handleClose}
                   disabled={mutation.isPending}
@@ -179,8 +182,9 @@ export default function CreateListModal({
                 >
                   Cancel
                 </Button>
+
                 <Button
-                  onClick={handleSubmit}
+                  type="submit"
                   disabled={mutation.isPending || !title.trim()}
                   className="w-full sm:w-auto"
                 >
@@ -190,7 +194,7 @@ export default function CreateListModal({
                   {mutation.isPending ? "Creating..." : "Create List"}
                 </Button>
               </DialogFooter>
-            </div>
+            </form>
           </div>
         </div>
       </DialogContent>

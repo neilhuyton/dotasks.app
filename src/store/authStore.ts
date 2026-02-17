@@ -1,11 +1,13 @@
 // src/store/authStore.ts
+
 import { create } from 'zustand';
+import { queryClient } from "../queryClient";
 
 export interface AuthState {
   isLoggedIn: boolean;
   userId: string | null;
-  accessToken: string | null;      // short-lived JWT — never persisted
-  refreshToken: string | null;     // long-lived, rotated — persisted
+  accessToken: string | null;     
+  refreshToken: string | null;
   login: (userId: string, accessToken: string, refreshToken: string) => void;
   setAccessToken: (accessToken: string) => void;
   logout: () => void;
@@ -88,11 +90,16 @@ export const useAuthStore = create<AuthState>()((set) => ({
     localStorage.removeItem(STORAGE_KEYS.userId);
     localStorage.removeItem(STORAGE_KEYS.refreshToken);
 
-    console.debug('[authStore] User logged out – storage cleared');
+    // ─── MOST IMPORTANT CHANGE ──────────────────────────────────────
+    // Remove all cached queries to prevent showing previous user's data
+    queryClient.removeQueries();
+    // Alternative (more aggressive): queryClient.clear();
+
+    console.debug('[authStore] User logged out – storage & query cache cleared');
   },
 }));
 
-// Optional: helper to get current state outside of components (e.g. in trpc links)
+// Optional: helper to get current state outside of components
 export const getAuthState = () => useAuthStore.getState();
 
 export const resetAuthStore = () => {
@@ -103,11 +110,13 @@ export const resetAuthStore = () => {
     refreshToken: null,
   });
 
-  // Also clear storage to match real logout behavior
   if (typeof window !== 'undefined') {
     localStorage.removeItem(STORAGE_KEYS.userId);
     localStorage.removeItem(STORAGE_KEYS.refreshToken);
   }
+
+  // Also clear query cache during reset (useful for tests/dev)
+  queryClient.removeQueries();
 
   console.debug('[authStore] Auth fully reset (for testing)');
 };
