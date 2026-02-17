@@ -53,7 +53,8 @@ export default function ListsTable() {
           Failed to load your lists
         </h3>
         <p className="text-gray-600 mb-8 max-w-md mx-auto">
-          We encountered an error while trying to fetch your lists. Please try again later.
+          We encountered an error while trying to fetch your lists. Please try
+          again later.
         </p>
         <button
           onClick={() => window.location.reload()}
@@ -82,11 +83,10 @@ export default function ListsTable() {
             d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           />
         </svg>
-        <h3 className="mt-6 text-xl font-medium text-gray-900">
-          No lists yet
-        </h3>
+        <h3 className="mt-6 text-xl font-medium text-gray-900">No lists yet</h3>
         <p className="mt-3 text-gray-600 max-w-md mx-auto">
-          Create your first list to organize tasks, groceries, ideas, or anything else.
+          Create your first list to organize tasks, groceries, ideas, or
+          anything else.
         </p>
       </div>
     );
@@ -144,12 +144,15 @@ export default function ListsTable() {
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                  <button
+                  <Link
+                    to="/lists/$listId/delete"
+                    params={{ listId: list.id }}
                     className="text-gray-400 hover:text-red-600 transition-colors p-1 rounded hover:bg-red-50"
                     title="Delete list"
+                    aria-label={`Delete list: ${list.title}`}
                   >
                     <Trash2 size={18} />
-                  </button>
+                  </Link>
                 </td>
               </tr>
             ))}

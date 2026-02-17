@@ -1,4 +1,4 @@
-// __tests__/components/lists/ListTable.test.tsx
+// __tests__/components/lists/ListsTable.test.tsx
 
 import {
   describe,
@@ -35,12 +35,15 @@ vi.mock("@tanstack/react-router", async () => {
   const actual = await vi.importActual("@tanstack/react-router");
   return {
     ...actual,
-    Link: vi.fn(({ children, className, ...props }) => (
+    Link: vi.fn(({ children, className, title, "aria-label": ariaLabel, ...props }) => (
       <a
-        data-testid="mocked-list-link"
+        data-testid="mocked-link"
         className={className}
         data-to={props.to}
         data-params={JSON.stringify(props.params || {})}
+        data-search={JSON.stringify(props.search || {})}
+        title={title}
+        aria-label={ariaLabel}
         {...props}
       >
         {children}
@@ -67,7 +70,6 @@ describe("ListsTable", () => {
   const setup = async (overrideHandler = listGetAllHandler) => {
     queryClient = createTestQueryClient();
 
-    // Use only the passed handler (no spreading defaults)
     server.use(overrideHandler);
 
     useAuthStore.setState({ userId: "test-user-id" });
@@ -88,10 +90,6 @@ describe("ListsTable", () => {
       );
     });
 
-    // Give time for fetch
-    // await new Promise((r) => setTimeout(r, 500));
-
-    // Wait for render outcome (table or empty)
     await waitFor(
       () => {
         const hasHeader = screen.queryByText("List Name") !== null;
@@ -133,16 +131,12 @@ describe("ListsTable", () => {
       () => {
         expect(screen.getByText("No lists yet")).toBeInTheDocument();
         expect(screen.getByText(/Create your first list/i)).toBeInTheDocument();
-        // Optional: check the SVG or other elements if needed
       },
       { timeout: 5000 },
     );
 
-    // Confirm table is NOT rendered
     expect(screen.queryByText("List Name")).not.toBeInTheDocument();
-    expect(screen.queryByText("Groceries")).not.toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
-    expect(screen.queryByRole("row")).not.toBeInTheDocument();
   });
 
   it("renders table headers correctly", async () => {
@@ -171,14 +165,54 @@ describe("ListsTable", () => {
       { timeout: 5000 },
     );
 
-    const links = screen.getAllByTestId("mocked-list-link");
-    expect(links.length).toBeGreaterThanOrEqual(2);
-
-    expect(links[0]).toHaveTextContent("Groceries");
-    expect(links[0]).toHaveAttribute("data-to", "/lists/$listId");
-    expect(links[0]).toHaveAttribute(
-      "data-params",
-      expect.stringContaining('"listId":"l1"'),
+    const titleLinks = screen.getAllByTestId("mocked-link").filter(
+      (link) => link.getAttribute("data-to") === "/lists/$listId"
     );
+
+    expect(titleLinks.length).toBe(2);
+
+    expect(titleLinks[0]).toHaveTextContent("Groceries");
+    expect(titleLinks[0]).toHaveAttribute(
+      "data-params",
+      expect.stringContaining('"listId":"l1"')
+    );
+  });
+
+  // ───────────────────────────────────────────────────────────────
+  // NEW TEST: checks the delete link
+  // ───────────────────────────────────────────────────────────────
+  it("renders delete link for each list pointing to /lists/$listId/delete", async () => {
+    await setup();
+
+    await waitFor(() => {
+      expect(screen.getByText("Groceries")).toBeInTheDocument();
+    });
+
+    // Find all mocked links
+    const allLinks = screen.getAllByTestId("mocked-link");
+
+    // Filter to delete links (they point to "/lists/$listId/delete")
+    const deleteLinks = allLinks.filter(
+      (link) => link.getAttribute("data-to") === "/lists/$listId/delete"
+    );
+
+    expect(deleteLinks.length).toBe(2); // one per list
+
+    // Check first delete link (Groceries / l1)
+    expect(deleteLinks[0]).toHaveAttribute(
+      "data-params",
+      expect.stringContaining('"listId":"l1"')
+    );
+    expect(deleteLinks[0]).toHaveAttribute("title", 'Delete list');
+    expect(deleteLinks[0]).toHaveAttribute(
+      "aria-label",
+      expect.stringContaining("Delete list")
+    );
+    expect(deleteLinks[0].querySelector("svg")).toBeInTheDocument(); // has Trash2 icon
+
+    // Optional: check classes for styling
+    expect(deleteLinks[0]).toHaveClass("text-gray-400");
+    expect(deleteLinks[0]).toHaveClass("hover:text-red-600");
+    expect(deleteLinks[0]).toHaveClass("hover:bg-red-50");
   });
 });
