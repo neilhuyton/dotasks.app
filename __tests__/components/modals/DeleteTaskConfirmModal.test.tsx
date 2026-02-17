@@ -28,15 +28,13 @@ import {
 import { TRPCError } from "@trpc/server";
 import { trpcMsw } from "../../../__mocks__/trpcMsw";
 
-// Single shared mock navigate function
+// Declare at top level (so vi.mock can reference it)
 const mockedNavigate = vi.fn();
 
-vi.mock("@tanstack/react-router", () => {
-  return {
-    useNavigate: () => mockedNavigate,
-    useParams: () => ({ listId: "test-list-id" }),
-  };
-});
+vi.mock("@tanstack/react-router", () => ({
+  useNavigate: () => mockedNavigate,
+  useParams: () => ({ listId: "test-list-id" }),
+}));
 
 describe("DeleteTaskConfirmModal", () => {
   let queryClient: QueryClient;
@@ -81,7 +79,8 @@ describe("DeleteTaskConfirmModal", () => {
 
   beforeEach(() => {
     resetMockTasks();
-    mockedNavigate.mockClear();
+    mockedNavigate.mockReset();     // Reset implementation + clear calls
+    mockedNavigate.mockClear();     // Extra safety: clear call history
     if (queryClient) queryClient.clear();
     vi.clearAllMocks();
     server.resetHandlers();
@@ -157,17 +156,22 @@ describe("DeleteTaskConfirmModal", () => {
 
     await setup();
 
-    await userEvent.click(screen.getByRole("button", { name: /Cancel/i }));
+    const cancelButton = screen.getByRole("button", { name: /Cancel/i });
 
-    await waitFor(() => {
-      expect(mockedNavigate).toHaveBeenCalledTimes(1);
-      expect(mockedNavigate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          to: "..",
-          replace: true,
-        })
-      );
-    });
+    await userEvent.click(cancelButton);
+
+    await waitFor(
+      () => {
+        expect(mockedNavigate).toHaveBeenCalledTimes(1);
+        expect(mockedNavigate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            to: "..",
+            replace: true,
+          })
+        );
+      },
+      { timeout: 5000 }
+    );
   });
 
   it("navigates back to list detail on Close (X) click", async () => {

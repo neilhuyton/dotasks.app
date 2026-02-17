@@ -146,7 +146,7 @@ export default function NewTaskModal({
 
           <div className="flex-1 overflow-y-auto px-6 py-6">
             <div className="mx-auto max-w-lg">
-              <form onSubmit={handleSubmit} className="space-y-8">
+              <form onSubmit={handleSubmit} className="space-y-8" data-testid="new-task-form">
                 <div className="space-y-3">
                   <label
                     htmlFor="task-title"

@@ -6,7 +6,8 @@ import { Link } from "@tanstack/react-router";
 
 import ListsTable from "@/components/lists/ListsTable";
 
-export const Route = createFileRoute('/_authenticated/lists/')({  // ← path is /lists (plugin handles nesting under _authenticated)
+export const Route = createFileRoute("/_authenticated/lists/")({
+  // ← path is /lists (plugin handles nesting under _authenticated)
   component: ListsPage,
 });
 
@@ -28,10 +29,8 @@ function ListsPage() {
           New List
         </Link>
       </div>
-
       <ListsTable />
 
-      {/* Mobile FAB – only visible on small screens */}
       <div className="fixed bottom-20 sm:bottom-24 right-6 z-[60] md:hidden">
         <Link
           to="/lists/new"
@@ -47,8 +46,7 @@ function ListsPage() {
           <Plus size={28} strokeWidth={2.5} />
         </Link>
       </div>
-
-      <Outlet />  {/* ← keeps support for nested routes like /lists/new, /lists/$listId */}
+      <Outlet />
     </div>
   );
 }

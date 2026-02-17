@@ -1,9 +1,13 @@
-// __mocks__/handlers/register.ts
-
 import { TRPCError } from "@trpc/server";
 import { trpcMsw } from "../trpcMsw";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+
+// ────────────────────────────────────────────────
+// Delay only in test environment
+const isTestEnv = typeof process !== "undefined" && process.env?.NODE_ENV === "test";
+const TEST_DELAY_MS = 600; // Adjust if needed (400–800 ms usually works well)
+// ────────────────────────────────────────────────
 
 export let mockUsers: {
   id: string;
@@ -27,13 +31,17 @@ interface RegisterInput {
   password: string;
 }
 
-export const registerHandler = trpcMsw.register.mutation(({ input }) => {
-  const rawInput = '0' in input ? input['0'] : input;
+export const registerHandler = trpcMsw.register.mutation(async ({ input }) => {
+  // Artificial delay for tests – makes loading states visible
+  if (isTestEnv) {
+    await new Promise((resolve) => setTimeout(resolve, TEST_DELAY_MS));
+  }
 
+  const rawInput = '0' in input ? input['0'] : input;
   const typedInput = rawInput as RegisterInput | undefined;
 
-  const email = typedInput?.email ?? '';
-  const password = typedInput?.password ?? '';
+  const email = typedInput?.email ?? "";
+  const password = typedInput?.password ?? "";
 
   if (!email || !password) {
     throw new TRPCError({

@@ -4,10 +4,19 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
-import { tanstackRouter } from '@tanstack/router-plugin/vite'
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), tanstackRouter(), ],
+  plugins: [
+    react(),
+    tailwindcss(),
+    tanstackRouter({
+      routesDirectory: "./src/routes", // explicit
+      generatedRouteTree: "./src/routeTree.gen.ts", // explicit
+      routeFileIgnorePrefix: "-", // ignore _authenticated etc. if needed, but optional
+      // optional: verbose: true,  // add this to see logs during dev server start
+    }),
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
