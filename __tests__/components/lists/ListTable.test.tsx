@@ -26,7 +26,7 @@ import {
 
 import { useAuthStore } from "@/store/authStore";
 import { act } from "react";
-import { suppressActWarnings } from "../../act-suppress"; 
+import { suppressActWarnings } from "../../act-suppress";
 
 suppressActWarnings();
 
@@ -126,6 +126,25 @@ describe("ListsTable", () => {
 
   afterAll(() => server.close());
 
+  it("shows empty state UI when user has no lists", async () => {
+    await setup(listGetEmptyHandler);
+
+    await waitFor(
+      () => {
+        expect(screen.getByText("No lists yet")).toBeInTheDocument();
+        expect(screen.getByText(/Create your first list/i)).toBeInTheDocument();
+        // Optional: check the SVG or other elements if needed
+      },
+      { timeout: 5000 },
+    );
+
+    // Confirm table is NOT rendered
+    expect(screen.queryByText("List Name")).not.toBeInTheDocument();
+    expect(screen.queryByText("Groceries")).not.toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.queryByRole("row")).not.toBeInTheDocument();
+  });
+
   it("renders table headers correctly", async () => {
     await setup();
 
@@ -161,24 +180,5 @@ describe("ListsTable", () => {
       "data-params",
       expect.stringContaining('"listId":"l1"'),
     );
-  });
-
-  it("shows empty state UI when user has no lists", async () => {
-    await setup(listGetEmptyHandler);
-
-    await waitFor(
-      () => {
-        expect(screen.getByText("No lists yet")).toBeInTheDocument();
-        expect(screen.getByText(/Create your first list/i)).toBeInTheDocument();
-        // Optional: check the SVG or other elements if needed
-      },
-      { timeout: 5000 },
-    );
-
-    // Confirm table is NOT rendered
-    expect(screen.queryByText("List Name")).not.toBeInTheDocument();
-    expect(screen.queryByText("Groceries")).not.toBeInTheDocument();
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
-    expect(screen.queryByRole("row")).not.toBeInTheDocument();
   });
 });

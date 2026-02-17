@@ -88,7 +88,6 @@ export default function ListsTable() {
         <p className="mt-3 text-gray-600 max-w-md mx-auto">
           Create your first list to organize tasks, groceries, ideas, or anything else.
         </p>
-        {/* You can add a real "Create List" button/link here later when implemented */}
       </div>
     );
   }

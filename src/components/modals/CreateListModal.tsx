@@ -23,7 +23,9 @@ interface CreateListModalProps {
   isOpen?: boolean;
 }
 
-export default function CreateListModal({ isOpen = true }: CreateListModalProps) {
+export default function CreateListModal({
+  isOpen = true,
+}: CreateListModalProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
 
@@ -35,6 +37,8 @@ export default function CreateListModal({ isOpen = true }: CreateListModalProps)
     onMutate: async (input) => {
       await utils.list.getAll.cancel();
       const prev = utils.list.getAll.getData() ?? [];
+
+      // Create optimistic item
       const optimistic = {
         id: `temp-${crypto.randomUUID()}`,
         title: input.title,
@@ -46,17 +50,25 @@ export default function CreateListModal({ isOpen = true }: CreateListModalProps)
         updatedAt: new Date().toISOString(),
         isArchived: false,
       };
-      utils.list.getAll.setData(undefined, [...prev, optimistic]);
+
+      // ← Key change: add to the BEGINNING (newest first)
+      utils.list.getAll.setData(undefined, [optimistic, ...prev]);
+
       return { prev };
     },
+
     onError: (_, __, ctx) => {
       if (ctx?.prev) utils.list.getAll.setData(undefined, ctx.prev);
       console.error("Failed to create list", ctx);
     },
+
     onSuccess: (newList) => {
       utils.list.getAll.setData(undefined, (old = []) =>
-        old.map((l) => (l.id.startsWith("temp-") ? newList : l))
+        // Replace the temp item with real one, keep newest-first order
+        old.map((l) => (l.id.startsWith("temp-") ? newList : l)),
       );
+
+      // Optional: navigate back
       navigate({ to: "/lists", replace: true });
     },
   });
@@ -88,7 +100,7 @@ export default function CreateListModal({ isOpen = true }: CreateListModalProps)
           "overscroll-none",
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
           "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-          "sm:max-w-none md:max-w-none lg:max-w-none"
+          "sm:max-w-none md:max-w-none lg:max-w-none",
         )}
       >
         <div className="flex h-full flex-col">
@@ -111,7 +123,8 @@ export default function CreateListModal({ isOpen = true }: CreateListModalProps)
 
             <VisuallyHidden.Root>
               <DialogDescription>
-                Form to create a new task list with a name and optional description.
+                Form to create a new task list with a name and optional
+                description.
               </DialogDescription>
             </VisuallyHidden.Root>
           </header>

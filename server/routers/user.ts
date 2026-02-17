@@ -6,6 +6,30 @@ import { TRPCError } from '@trpc/server';
 import { sendEmailChangeNotification } from '../email';
 
 export const userRouter = router({
+  getCurrent: protectedProcedure
+    .query(async ({ ctx }) => {
+      const user = await ctx.prisma.user.findUnique({
+        where: { id: ctx.userId },
+        select: {
+          id: true,
+          email: true,
+          // You can add more fields later if needed, e.g.:
+          // name: true,
+          // createdAt: true,
+          // avatarUrl: true,
+        },
+      });
+
+      if (!user) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'User not found',
+        });
+      }
+
+      return user;
+    }),
+
   updateEmail: protectedProcedure
     .input(
       z.object({

@@ -1,6 +1,5 @@
 // src/pages/ProfilePage.tsx
 
-// import { useNavigate } from "@tanstack/react-router";
 import {
   Dialog,
   DialogContent,
@@ -16,8 +15,6 @@ import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { VisuallyHidden } from "radix-ui";
 
 export default function ProfilePage() {
-  // const navigate = useNavigate();
-
   const {
     emailForm,
     passwordForm,
@@ -28,18 +25,14 @@ export default function ProfilePage() {
     handleEmailSubmit,
     handlePasswordSubmit,
     handleLogout,
+    currentEmail,
+    isUserLoading,
   } = useProfilePage();
 
-  // const handleOpenChange = (open: boolean) => {
-  //   if (!open) {
-  //     navigate({ to: "/", replace: false });
-  //   }
-  // };
-
   return (
-    <Dialog open={true} /*onOpenChange={handleOpenChange}*/>
+    <Dialog open={true}>
       <DialogContent
-        showCloseButton={false} // we use custom close
+        showCloseButton={false}
         className={cn(
           "fixed inset-0 z-50",
           "h-[100dvh] w-[100dvw] max-h-none max-w-none",
@@ -55,7 +48,6 @@ export default function ProfilePage() {
         <div className="flex h-full flex-col">
           {/* Header */}
           <header className="relative px-4 sm:px-6 pt-16 pb-6 shrink-0">
-            {/* Custom close button – using DialogClose to avoid nesting issues */}
             <DialogClose asChild>
               <Button
                 variant="outline"
@@ -84,6 +76,33 @@ export default function ProfilePage() {
           <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6">
             <div className="mx-auto max-w-3xl space-y-12">
 
+              {/* Current Email Display */}
+              <div className="space-y-4">
+                <h2 className="text-xl font-semibold text-center sm:text-left">
+                  Account Information
+                </h2>
+
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-muted/40 p-5 rounded-lg border">
+                  <Mail className="h-6 w-6 text-primary flex-shrink-0 mt-1 sm:mt-0" />
+                  <div className="flex-1 min-w-0">
+                    <label className="block text-sm font-medium text-muted-foreground">
+                      Current Email
+                    </label>
+                    {isUserLoading ? (
+                      <div className="h-6 bg-muted animate-pulse rounded w-64 mt-1" />
+                    ) : currentEmail ? (
+                      <p className="text-base font-medium mt-1 break-all" data-testid="current-email">
+                        {currentEmail}
+                      </p>
+                    ) : (
+                      <p className="text-base text-muted-foreground mt-1 italic">
+                        Not available
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* Change Email */}
               <form
                 onSubmit={emailForm.handleSubmit(handleEmailSubmit)}
@@ -95,7 +114,7 @@ export default function ProfilePage() {
                 </h2>
 
                 <div className="flex items-center gap-3">
-                  <Mail className="h-6 w-6 text-primary flex-shrink-0" />
+                  <Mail className="h-6 w-6 text-primary flex-shrink-0 opacity-70" />
                   <input
                     type="email"
                     placeholder="New email address"
@@ -212,9 +231,7 @@ export default function ProfilePage() {
               <div className="flex flex-col sm:flex-row justify-between items-center gap-6 pt-8 border-t">
                 <Button
                   variant="destructive"
-                  onClick={() => {
-                    handleLogout(); // hook already navigates to /login
-                  }}
+                  onClick={handleLogout}
                   className="w-full sm:w-auto flex items-center gap-2"
                   data-testid="logout-button"
                 >

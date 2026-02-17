@@ -8,7 +8,7 @@ export const listRouter = router({
   getAll: protectedProcedure.query(async ({ ctx }) => {
     return ctx.prisma.todoList.findMany({
       where: { userId: ctx.userId }, // ← changed from ctx.user.id
-      orderBy: { createdAt: "asc" },
+      orderBy: { createdAt: "desc" },
     });
   }),
 

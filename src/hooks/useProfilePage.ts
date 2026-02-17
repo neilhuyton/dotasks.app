@@ -24,11 +24,11 @@ interface PasswordFormValues {
 }
 
 const emailFormSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address" }),
+  email: z.email({ message: "Please enter a valid email address" }),
 });
 
 const passwordFormSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address" }),
+  email: z.email({ message: "Please enter a valid email address" }),
 });
 
 interface UseProfileReturn {
@@ -41,11 +41,20 @@ interface UseProfileReturn {
   handleEmailSubmit: (data: EmailFormValues) => Promise<void>;
   handlePasswordSubmit: (data: PasswordFormValues) => Promise<void>;
   handleLogout: () => void;
+  currentEmail: string | null;
+  isUserLoading: boolean;
 }
 
 export const useProfilePage = (): UseProfileReturn => {
   const { logout } = useAuthStore();
   const router = useRouter();
+
+  // Fetch current user data (including email)
+  const { data: currentUser, isLoading: isUserLoading } =
+    trpc.user.getCurrent.useQuery(undefined, {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      retry: 1,
+    });
 
   const handleLogout = () => {
     logout();
@@ -156,5 +165,7 @@ export const useProfilePage = (): UseProfileReturn => {
     handleEmailSubmit,
     handlePasswordSubmit,
     handleLogout,
+    currentEmail: currentUser?.email ?? null,
+    isUserLoading,
   };
 };
