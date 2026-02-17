@@ -5,7 +5,7 @@ import CreateListModal from "@/components/modals/CreateListModal";
 import NewTaskModal from "@/components/modals/NewTaskModal";
 import DeleteListConfirmModal from "@/components/modals/DeleteListConfirmModal";
 import DeleteTaskConfirmModal from "@/components/modals/DeleteTaskConfirmModal";
-import { listDetailRoute, deleteTaskRoute } from "./routes";
+import { listDetailRoute, deleteTaskRoute } from "./xxxxxroutes";
 
 export function CreateListRoute() {
   return <CreateListModal isOpen={true} />;

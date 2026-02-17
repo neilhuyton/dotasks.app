@@ -1,37 +1,27 @@
 // src/router/router.tsx
 
-import { createRouter } from "@tanstack/react-router";
-import { rootRoute } from "./rootRoute";
+import { createRouter } from '@tanstack/react-router'
+import { routeTree } from '../routeTree.gen'  // ← correct relative import (from src/router/ → src/routeTree.gen.ts)
 
-import {
-  registerRoute,
-  loginRoute,
-  resetPasswordRoute,
-  confirmResetPasswordRoute,
-  verifyEmailRoute,
-  protectedRoutes,
-} from "./routes";
+import { queryClient } from '@/queryClient'
+import { trpcClient } from '@/client'
 
-import { queryClient } from "@/queryClient";
-import { trpcClient } from "@/client";
-
-export const routeTree = rootRoute.addChildren([
-  registerRoute,
-  loginRoute,
-  resetPasswordRoute,
-  confirmResetPasswordRoute,
-  verifyEmailRoute,
-  protectedRoutes,
-]);
-
+// Create the router instance with your context and options
 export const router = createRouter({
   routeTree,
-  defaultPreload: "intent",
-  context: { queryClient, trpcClient },
-});
+  defaultPreload: 'intent',  // preload on hover/intent (your original setting)
+  context: {
+    queryClient,
+    trpcClient,
+  },
+  // Optional extras you might want later (uncomment as needed):
+  // defaultPendingComponent: () => <div>Loading...</div>,
+  // defaultErrorComponent: ({ error }) => <div>Error: {error.message}</div>,
+})
 
-declare module "@tanstack/react-router" {
+// Register the router for full type safety (Link, useNavigate, etc.)
+declare module '@tanstack/react-router' {
   interface Register {
-    router: typeof router;
+    router: typeof router
   }
 }

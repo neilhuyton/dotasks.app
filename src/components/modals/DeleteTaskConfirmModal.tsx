@@ -15,7 +15,6 @@ import { cn } from "@/lib/utils";
 import { VisuallyHidden } from "radix-ui";
 import { trpc } from "@/trpc";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { deleteTaskRoute } from "@/router/routes";
 
 interface DeleteTaskConfirmModalProps {
   isOpen: boolean;
@@ -27,7 +26,12 @@ export default function DeleteTaskConfirmModal({
   taskId,
 }: DeleteTaskConfirmModalProps) {
   const navigate = useNavigate();
-  const { listId } = useParams({ from: deleteTaskRoute.id });
+
+  // Get listId from the current route params
+  // We specify the full expected route path for type safety
+  const { listId } = useParams({
+    from: "/_authenticated/lists/$listId/tasks/$taskId/delete",
+  });
 
   const utils = trpc.useUtils();
 
@@ -54,14 +58,14 @@ export default function DeleteTaskConfirmModal({
 
     onSettled: () => {
       utils.task.getByList.invalidate({ listId });
-      // If deleting a task affects list metadata (e.g. task count), also invalidate:
+      // Optional: if task count affects list metadata
       // utils.list.getOne.invalidate({ id: listId });
     },
 
     onSuccess: () => {
+      // Navigate back to the parent detail page (relative up one level)
       navigate({
-        to: "/lists/$listId",
-        params: { listId },
+        to: "..",
         replace: true,
       });
     },
@@ -71,8 +75,7 @@ export default function DeleteTaskConfirmModal({
 
   const handleClose = () => {
     navigate({
-      to: "/lists/$listId",
-      params: { listId },
+      to: "..",
       replace: true,
     });
   };
@@ -90,7 +93,7 @@ export default function DeleteTaskConfirmModal({
           "overscroll-none",
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
           "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-          "sm:max-w-none"
+          "sm:max-w-none",
         )}
       >
         <div className="relative flex min-h-full flex-col px-6 pb-12 pt-20">
@@ -107,10 +110,12 @@ export default function DeleteTaskConfirmModal({
             </Button>
           </DialogClose>
 
-          {/* Main content – takes available space and centers vertically */}
+          {/* Main content – centered vertically */}
           <div className="flex flex-1 flex-col items-center justify-center text-center">
             <DialogHeader className="space-y-4 mb-10">
-              <DialogTitle className="text-3xl font-bold">Delete Task?</DialogTitle>
+              <DialogTitle className="text-3xl font-bold">
+                Delete Task?
+              </DialogTitle>
 
               <VisuallyHidden.Root>
                 <DialogDescription>
@@ -124,7 +129,7 @@ export default function DeleteTaskConfirmModal({
             </DialogHeader>
           </div>
 
-          {/* Footer – pinned near bottom with safe padding */}
+          {/* Footer – pinned near bottom */}
           <DialogFooter className="mt-auto flex-col gap-4 sm:flex-row sm:justify-center w-full max-w-sm mx-auto pb-8 sm:pb-10">
             <Button
               variant="outline"
@@ -140,7 +145,9 @@ export default function DeleteTaskConfirmModal({
               disabled={mutation.isPending}
               className="w-full sm:w-40"
             >
-              {mutation.isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+              {mutation.isPending && (
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              )}
               {mutation.isPending ? "Deleting..." : "Delete Task"}
             </Button>
           </DialogFooter>
