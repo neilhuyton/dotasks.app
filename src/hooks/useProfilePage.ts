@@ -5,13 +5,6 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { trpc } from "@/trpc";
 import { useEffect, useState } from "react";
-import { type TRPCClientErrorLike } from "@trpc/client";
-import type {
-  inferProcedureOutput,
-  inferProcedureInput,
-  TRPCDefaultErrorShape,
-} from "@trpc/server";
-import type { AppRouter } from "@/../server/trpc";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "@tanstack/react-router";
 
@@ -88,15 +81,19 @@ export const useProfilePage = (): UseProfileReturn => {
       setEmailMessage(data.message || "Email updated successfully");
       emailForm.reset();
     },
-    onError: (
-      error: TRPCClientErrorLike<{
-        input: inferProcedureInput<AppRouter["user"]["updateEmail"]>;
-        output: inferProcedureOutput<AppRouter["user"]["updateEmail"]>;
-        transformer: false;
-        errorShape: TRPCDefaultErrorShape;
-      }>,
-    ) => {
-      setEmailMessage(error.message || "Failed to update email");
+    onError: (error) => {
+      let msg = "Failed to update email. Please try again.";
+      
+      // Handle common TRPC error codes more specifically
+      if (error.data?.code === "CONFLICT") {
+        msg = "This email is already in use by another account.";
+      } else if (error.data?.httpStatus === 404) {
+        msg = "User not found.";
+      } else if (error.message) {
+        msg = error.message;
+      }
+      
+      setEmailMessage(msg);
     },
     onSettled: () => {},
   });
@@ -109,15 +106,12 @@ export const useProfilePage = (): UseProfileReturn => {
       setPasswordMessage(data.message || "Reset link sent to your email");
       passwordForm.reset();
     },
-    onError: (
-      error: TRPCClientErrorLike<{
-        input: inferProcedureInput<AppRouter["resetPassword"]["request"]>;
-        output: inferProcedureOutput<AppRouter["resetPassword"]["request"]>;
-        transformer: false;
-        errorShape: TRPCDefaultErrorShape;
-      }>,
-    ) => {
-      setPasswordMessage(error.message || "Failed to send reset email");
+    onError: (error) => {
+      let msg = "Failed to send reset email.";
+      if (error.message) {
+        msg = error.message;
+      }
+      setPasswordMessage(msg);
     },
     onSettled: () => {},
   });

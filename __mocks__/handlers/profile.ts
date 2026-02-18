@@ -4,47 +4,70 @@ import { trpcMsw } from "../trpcMsw";
 import { mockUsers } from "../mockUsers";
 import { TRPCError } from "@trpc/server";
 
-// Current user – fixed response
-export const getCurrentUserHandler = trpcMsw.user.getCurrent.query(async () => {
-  const user = mockUsers.find((u) => u.id === "test-user-123");
-
-  if (!user) {
-    throw new TRPCError({
-      code: "NOT_FOUND",
-      message: "User not found",
+// Ensure our test user exists in mockUsers (safety check)
+const ensureTestUser = () => {
+  if (!mockUsers.some((u) => u.id === "test-user-123")) {
+    mockUsers.push({
+      id: "test-user-123",
+      email: "testuser@example.com",
+      password: "$2b$10$BfZjnkEBinREhMQwsUwFjOdeidxX1dvXSKn.n3MxdwmRTcfV8JR16",
+      verificationToken: null,
+      isEmailVerified: true,
+      resetPasswordToken: null,
+      resetPasswordTokenExpiresAt: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      refreshToken: "mock-refresh-token-for-tests",
     });
   }
+};
 
+// Current user – success response
+export const getCurrentUserHandler = trpcMsw.user.getCurrent.query(async () => {
+  ensureTestUser();
+  const user = mockUsers.find((u) => u.id === "test-user-123");
+  if (!user) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+  }
   return {
     id: user.id,
     email: user.email || "testuser@example.com",
   };
 });
 
-// Loading variant – never resolves
+// Loading variant – hangs to simulate isLoading
 export const getCurrentUserLoadingHandler = trpcMsw.user.getCurrent.query(async () => {
-  return new Promise(() => {}); // hangs forever → isLoading: true
+  return new Promise(() => {}); // never resolves
 });
 
-// Update email – success or conflict based on mock data
+// Update email – throws CONFLICT when email is taken by another user
 export const updateEmailHandler = trpcMsw.user.updateEmail.mutation(
   async ({ input }) => {
+    ensureTestUser();
+
     const { email: newEmail } = input;
 
-    const user = mockUsers.find((u) => u.id === "test-user-123");
-    if (!user) {
+    const currentUser = mockUsers.find((u) => u.id === "test-user-123");
+    if (!currentUser) {
       throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
     }
 
-    // Simulate conflict if email already used by someone else
-    if (mockUsers.some((u) => u.email === newEmail && u.id !== "test-user-123")) {
+    // Check if new email is already used by **another** user
+    const emailTaken = mockUsers.some(
+      (u) => u.email === newEmail && u.id !== "test-user-123"
+    );
+
+    if (emailTaken) {
+      console.log("[MOCK] Throwing CONFLICT for email:", newEmail);
       throw new TRPCError({
         code: "CONFLICT",
         message: "This email is already in use by another account",
       });
     }
 
-    user.email = newEmail;
+    // Simulate successful update
+    currentUser.email = newEmail;
+    currentUser.updatedAt = new Date().toISOString();
 
     return {
       message: "Email updated successfully",
@@ -53,18 +76,21 @@ export const updateEmailHandler = trpcMsw.user.updateEmail.mutation(
   }
 );
 
-// Force success variant
-export const updateEmailSuccessHandler = trpcMsw.user.updateEmail.mutation(async ({ input }) => {
-  const { email: newEmail } = input;
-  return {
-    message: "Email updated successfully",
-    email: newEmail,
-  };
-});
+// Force success variant (no conflict possible)
+export const updateEmailSuccessHandler = trpcMsw.user.updateEmail.mutation(
+  async ({ input }) => {
+    return {
+      message: "Email updated successfully",
+      email: input.email,
+    };
+  }
+);
 
-// Password reset request – always success
-export const sendPasswordResetHandler = trpcMsw.resetPassword.request.mutation(async () => {
-  return {
-    message: "If an account with this email exists, a reset link has been sent.",
-  };
-});
+// Password reset – always success message
+export const sendPasswordResetHandler = trpcMsw.resetPassword.request.mutation(
+  async () => {
+    return {
+      message: "If an account with this email exists, a reset link has been sent.",
+    };
+  }
+);
