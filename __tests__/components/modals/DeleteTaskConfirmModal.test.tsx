@@ -21,7 +21,7 @@ import DeleteTaskConfirmModal from "@/components/modals/DeleteTaskConfirmModal";
 import { server } from "@/../__mocks__/server";
 import {
   resetMockTasks,
-  taskGetByListHandler,
+  taskGetByListSuccess,
   delayedTaskDeleteHandler,
   getMockTasks,
 } from "../../../__mocks__/handlers/tasks";
@@ -39,6 +39,8 @@ vi.mock("@tanstack/react-router", () => ({
 describe("DeleteTaskConfirmModal", () => {
   let queryClient: QueryClient;
 
+  const DEFAULT_TASK_ID = "t-real-1"; // Exists in mockTasks
+
   const createTestQueryClient = () =>
     new QueryClient({
       defaultOptions: {
@@ -47,7 +49,7 @@ describe("DeleteTaskConfirmModal", () => {
       },
     });
 
-  const setup = async (taskId = "t1", isOpen = true) => {
+  const setup = async (taskId = DEFAULT_TASK_ID, isOpen = true) => {
     queryClient = createTestQueryClient();
 
     render(
@@ -79,8 +81,8 @@ describe("DeleteTaskConfirmModal", () => {
 
   beforeEach(() => {
     resetMockTasks();
-    mockedNavigate.mockReset();     // Reset implementation + clear calls
-    mockedNavigate.mockClear();     // Extra safety: clear call history
+    mockedNavigate.mockReset();
+    mockedNavigate.mockClear();
     if (queryClient) queryClient.clear();
     vi.clearAllMocks();
     server.resetHandlers();
@@ -96,7 +98,7 @@ describe("DeleteTaskConfirmModal", () => {
   });
 
   it("renders title, description, and buttons when open", async () => {
-    server.use(taskGetByListHandler);
+    server.use(taskGetByListSuccess);
 
     await setup();
 
@@ -107,9 +109,9 @@ describe("DeleteTaskConfirmModal", () => {
   });
 
   it("shows loading state and disables buttons during deletion", async () => {
-    server.use(taskGetByListHandler, delayedTaskDeleteHandler);
+    server.use(taskGetByListSuccess, delayedTaskDeleteHandler);
 
-    await setup("t1");
+    await setup();
 
     const deleteButton = screen.getByRole("button", { name: /Delete Task/i });
 
@@ -126,16 +128,20 @@ describe("DeleteTaskConfirmModal", () => {
   });
 
   it("navigates back to list detail on successful deletion", async () => {
-    server.use(taskGetByListHandler, delayedTaskDeleteHandler);
+    server.use(taskGetByListSuccess, delayedTaskDeleteHandler);
 
-    await setup("t1");
+    await setup(DEFAULT_TASK_ID);
+
+    // Confirm task exists in mock data before deletion attempt
+    expect(getMockTasks().some((t) => t.id === DEFAULT_TASK_ID)).toBe(true);
+    expect(getMockTasks()).toHaveLength(2); // initial state
 
     const deleteButton = screen.getByRole("button", { name: /Delete Task/i });
     await userEvent.click(deleteButton);
 
     await waitFor(
       () => {
-        expect(mockedNavigate).toHaveBeenCalled();
+        expect(mockedNavigate).toHaveBeenCalledTimes(1);
         expect(mockedNavigate).toHaveBeenCalledWith(
           expect.objectContaining({
             to: "..",
@@ -143,16 +149,18 @@ describe("DeleteTaskConfirmModal", () => {
           })
         );
       },
-      { timeout: 8000 }
+      { timeout: 5000 }
     );
 
-    // Verify task was actually removed from mock state
-    expect(getMockTasks().some((t) => t.id === "t1")).toBe(false);
-    expect(getMockTasks()).toHaveLength(1);
+    // Verify task was removed (optimistic update + successful mutation)
+    await waitFor(() => {
+      expect(getMockTasks().some((t) => t.id === DEFAULT_TASK_ID)).toBe(false);
+      expect(getMockTasks()).toHaveLength(1);
+    });
   });
 
   it("navigates back to list detail on Cancel click", async () => {
-    server.use(taskGetByListHandler);
+    server.use(taskGetByListSuccess);
 
     await setup();
 
@@ -170,32 +178,35 @@ describe("DeleteTaskConfirmModal", () => {
           })
         );
       },
-      { timeout: 5000 }
+      { timeout: 3000 }
     );
   });
 
   it("navigates back to list detail on Close (X) click", async () => {
-    server.use(taskGetByListHandler);
+    server.use(taskGetByListSuccess);
 
     await setup();
 
     await userEvent.click(screen.getByRole("button", { name: "Close" }));
 
-    await waitFor(() => {
-      expect(mockedNavigate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          to: "..",
-          replace: true,
-        })
-      );
-    });
+    await waitFor(
+      () => {
+        expect(mockedNavigate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            to: "..",
+            replace: true,
+          })
+        );
+      },
+      { timeout: 3000 }
+    );
   });
 
   it("handles deletion failure gracefully (resets UI)", async () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     server.use(
-      taskGetByListHandler,
+      taskGetByListSuccess,
       trpcMsw.task.delete.mutation(() => {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -204,7 +215,7 @@ describe("DeleteTaskConfirmModal", () => {
       })
     );
 
-    await setup("t1");
+    await setup();
 
     const deleteButton = screen.getByRole("button", { name: /Delete Task/i });
 
@@ -223,9 +234,9 @@ describe("DeleteTaskConfirmModal", () => {
   });
 
   it("does not render when isOpen is false", async () => {
-    server.use(taskGetByListHandler);
+    server.use(taskGetByListSuccess);
 
-    await setup("t1", false);
+    await setup(DEFAULT_TASK_ID, false);
 
     expect(screen.queryByText("Delete Task?", { exact: false })).not.toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();

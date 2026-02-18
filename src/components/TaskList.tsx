@@ -61,7 +61,12 @@ export default function TaskList({
       {/* Active Tasks – fixed order by due date */}
       {activeTasks.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold text-gray-800 mb-3">Active</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+            Active
+            <span className="text-sm font-normal text-gray-500">
+              ({activeTasks.length})
+            </span>
+          </h3>
           <div className="space-y-3">
             {activeTasks.map((task) => (
               <TaskItem

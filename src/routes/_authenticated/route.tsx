@@ -24,21 +24,23 @@ export const Route = createFileRoute("/_authenticated")({
   component: () => {
     return (
       <div className="flex flex-col h-dvh overscroll-none">
-        {/* Header – sticky, no extra surprises */}
-        <header className="fixed top-0 left-0 right-0 z-50 bg-background border-b px-4 py-2 flex items-center justify-between">
+        {/* Header – fixed at top */}
+        <header className="fixed top-0 left-0 right-0 z-50 bg-background border-b px-4 py-3 flex items-center justify-between">
           <div />
           <div className="flex items-center gap-3 sm:gap-4">
             <ProfileIcon />
           </div>
         </header>
-        {/* Main becomes the ONLY scrolling container */}
-        <main className="flex-1 overflow-y-auto overscroll-y-contain">
-          {/* Padding clears the fixed nav + safe area */}
-          <div className="pb-20 md:pb-0">
+
+        {/* Main content area – scrolls, clears fixed header + bottom nav */}
+        <main className="flex-1 overflow-y-auto overscroll-y-contain pt-16 md:pt-20">
+          {/* Inner wrapper handles bottom clearance + safe areas */}
+          <div className="pb-24 md:pb-20 pb-[env(safe-area-inset-bottom)] min-h-[calc(100vh-var(--header-height,64px))] md:min-h-auto">
             <Outlet />
           </div>
         </main>
-        {/* Bottom nav fixed */}
+
+        {/* Bottom navigation – fixed */}
         <Navigation />
       </div>
     );

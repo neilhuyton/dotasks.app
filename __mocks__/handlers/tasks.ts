@@ -1,14 +1,14 @@
 // __mocks__/handlers/tasks.ts
 import { TRPCError } from "@trpc/server";
-import { trpcMsw } from "../trpcMsw"; // assuming this is createTRPCMsw<AppRouter>()
+import { trpcMsw } from "../trpcMsw"; // assuming this is your MSW tRPC wrapper (createTRPCMsw<AppRouter>())
 
-// Central mock state (internal storage uses Date objects for convenience)
+// In-memory mock task storage
 let mockTasks: {
   id: string;
   listId: string;
   title: string;
   description: string | null;
-  dueDate: Date | null;       // ← internal: Date | null
+  dueDate: Date | null;
   priority: number | null;
   order: number;
   isCompleted: boolean;
@@ -17,12 +17,12 @@ let mockTasks: {
   updatedAt: Date;
 }[] = [
   {
-    id: "t1",
-    listId: "l1",
-    title: "Buy milk",
+    id: "t-real-1",
+    listId: "list-abc-123",
+    title: "Finish report",
     description: null,
     dueDate: null,
-    priority: null,
+    priority: 1,
     order: 0,
     isCompleted: false,
     isCurrent: false,
@@ -30,10 +30,10 @@ let mockTasks: {
     updatedAt: new Date("2025-02-15T10:00:00Z"),
   },
   {
-    id: "t2",
-    listId: "l1",
-    title: "Buy bread",
-    description: "Sourdough please",
+    id: "t-real-2",
+    listId: "list-abc-123",
+    title: "Call client",
+    description: "Discuss Q4 goals",
     dueDate: new Date("2025-02-20T23:59:59Z"),
     priority: 2,
     order: 1,
@@ -47,12 +47,12 @@ let mockTasks: {
 export function resetMockTasks() {
   mockTasks = [
     {
-      id: "t1",
-      listId: "l1",
-      title: "Buy milk",
+      id: "t-real-1",
+      listId: "list-abc-123",
+      title: "Finish report",
       description: null,
       dueDate: null,
-      priority: null,
+      priority: 1,
       order: 0,
       isCompleted: false,
       isCurrent: false,
@@ -60,10 +60,10 @@ export function resetMockTasks() {
       updatedAt: new Date("2025-02-15T10:00:00Z"),
     },
     {
-      id: "t2",
-      listId: "l1",
-      title: "Buy bread",
-      description: "Sourdough please",
+      id: "t-real-2",
+      listId: "list-abc-123",
+      title: "Call client",
+      description: "Discuss Q4 goals",
       dueDate: new Date("2025-02-20T23:59:59Z"),
       priority: 2,
       order: 1,
@@ -80,12 +80,11 @@ export function getMockTasks() {
 }
 
 // ────────────────────────────────────────────────
-// Reusable delete resolver
+// Delete task resolver
 const deleteTaskResolver = ({ input }: { input: { id: string } }) => {
   const { id } = input;
 
   const deletedTask = mockTasks.find((t) => t.id === id);
-
   if (!deletedTask) {
     throw new TRPCError({
       code: "NOT_FOUND",
@@ -100,7 +99,7 @@ const deleteTaskResolver = ({ input }: { input: { id: string } }) => {
     listId: deletedTask.listId,
     title: deletedTask.title,
     description: deletedTask.description,
-    dueDate: deletedTask.dueDate?.toISOString() ?? null,  // ← Date → string
+    dueDate: deletedTask.dueDate?.toISOString() ?? null,
     priority: deletedTask.priority,
     order: deletedTask.order,
     isCompleted: deletedTask.isCompleted,
@@ -110,7 +109,7 @@ const deleteTaskResolver = ({ input }: { input: { id: string } }) => {
   };
 };
 
-export const taskDeleteHandler = trpcMsw.task.delete.mutation(deleteTaskResolver);
+export const taskDeleteSuccess = trpcMsw.task.delete.mutation(deleteTaskResolver);
 
 export const delayedTaskDeleteHandler = trpcMsw.task.delete.mutation(async (ctx) => {
   await new Promise((resolve) => setTimeout(resolve, 400));
@@ -118,8 +117,8 @@ export const delayedTaskDeleteHandler = trpcMsw.task.delete.mutation(async (ctx)
 });
 
 // ────────────────────────────────────────────────
-// getByList
-export const taskGetByListHandler = trpcMsw.task.getByList.query(({ input }) => {
+// getByList - returns tasks (used in most success cases)
+export const taskGetByListSuccess = trpcMsw.task.getByList.query(({ input }) => {
   const { listId } = input;
 
   return mockTasks
@@ -129,7 +128,7 @@ export const taskGetByListHandler = trpcMsw.task.getByList.query(({ input }) => 
       listId: t.listId,
       title: t.title,
       description: t.description,
-      dueDate: t.dueDate?.toISOString() ?? null,  // ← Date → string
+      dueDate: t.dueDate?.toISOString() ?? null,
       priority: t.priority,
       order: t.order,
       isCompleted: t.isCompleted,
@@ -139,10 +138,21 @@ export const taskGetByListHandler = trpcMsw.task.getByList.query(({ input }) => 
     }));
 });
 
-export const taskGetEmptyByListHandler = trpcMsw.task.getByList.query(() => []);
+// getByList - returns empty array
+export const taskGetByListEmpty = trpcMsw.task.getByList.query(() => []);
+
+// getByList - simulates loading state (delayed response)
+export const taskGetByListLoading = trpcMsw.task.getByList.query(async () => {
+  // Simulate slow network response – long enough for test to detect loading UI
+  await new Promise((resolve) => setTimeout(resolve, 1800));
+
+  // Return empty after delay (realistic loading → empty transition)
+  return [];
+  // Alternative (infinite loading): await new Promise(() => {});
+});
 
 // ────────────────────────────────────────────────
-// create
+// Create task
 export const taskCreateHandler = trpcMsw.task.create.mutation(({ input }) => {
   const now = new Date();
 
@@ -151,7 +161,7 @@ export const taskCreateHandler = trpcMsw.task.create.mutation(({ input }) => {
     listId: input.listId,
     title: input.title,
     description: input.description ?? null,
-    dueDate: input.dueDate ? new Date(input.dueDate) : null,  // accept string → convert to Date internally
+    dueDate: input.dueDate ? new Date(input.dueDate) : null,
     priority: input.priority ?? null,
     order: input.order ?? 0,
     isCompleted: false,
@@ -167,7 +177,7 @@ export const taskCreateHandler = trpcMsw.task.create.mutation(({ input }) => {
     listId: newTask.listId,
     title: newTask.title,
     description: newTask.description,
-    dueDate: newTask.dueDate?.toISOString() ?? null,  // ← output: string | null
+    dueDate: newTask.dueDate?.toISOString() ?? null,
     priority: newTask.priority,
     order: newTask.order,
     isCompleted: newTask.isCompleted,
@@ -177,15 +187,15 @@ export const taskCreateHandler = trpcMsw.task.create.mutation(({ input }) => {
   };
 });
 
-// Export commonly used combinations
+// Commonly used handler combinations
 export const taskHandlers = [
-  taskGetByListHandler,
+  taskGetByListSuccess,
   taskCreateHandler,
-  taskDeleteHandler,
+  taskDeleteSuccess,
 ];
 
 export const emptyTaskHandlers = [
-  taskGetEmptyByListHandler,
+  taskGetByListEmpty,
   taskCreateHandler,
-  taskDeleteHandler,
+  taskDeleteSuccess,
 ];

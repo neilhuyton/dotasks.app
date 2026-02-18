@@ -144,8 +144,69 @@ export const listCreateHandler = trpcMsw.list.create.mutation(({ input }) => {
   };
 });
 
+// ──────────────────────────────────────────────
+// Handlers specifically for list.getOne (used in detail page tests)
+// ──────────────────────────────────────────────
+
+/**
+ * Success handler for list.getOne – returns full list shape
+ */
+export const listGetOneSuccessHandler = trpcMsw.list.getOne.query(({ input }) => {
+  const found = mockLists.find((l) => l.id === input.id);
+  if (!found) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "List not found" });
+  }
+  return {
+    id: found.id,
+    userId: found.userId,
+    title: found.title,
+    description: found.description,
+    color: found.color,
+    icon: found.icon,
+    isArchived: found.isArchived,
+    createdAt: found.createdAt.toISOString(),
+    updatedAt: found.updatedAt.toISOString(),
+  };
+});
+
+/**
+ * Loading handler: delays response to simulate slow fetch (full shape)
+ */
+export const listLoadingHandler = trpcMsw.list.getOne.query(async ({ input }) => {
+  // Simulate slow network / loading state
+  await new Promise((resolve) => setTimeout(resolve, 1200)); // 1.2 seconds delay
+
+  const found = mockLists.find((l) => l.id === input.id);
+  if (!found) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "List not found" });
+  }
+  return {
+    id: found.id,
+    userId: found.userId,
+    title: found.title,
+    description: found.description,
+    color: found.color,
+    icon: found.icon,
+    isArchived: found.isArchived,
+    createdAt: found.createdAt.toISOString(),
+    updatedAt: found.updatedAt.toISOString(),
+  };
+});
+
+/**
+ * Not-found handler: always throws NOT_FOUND (no data returned)
+ */
+export const getListNotFoundHandler = trpcMsw.list.getOne.query(() => {
+  throw new TRPCError({
+    code: "NOT_FOUND",
+    message: "List not found or you don't have access.",
+  });
+});
+
 export const listHandlers = [
   listGetAllHandler,
   listCreateHandler,
   listDeleteHandler,
+  // You can optionally include one as global default, but better to control per-test
+  // listGetOneSuccessHandler,
 ];
