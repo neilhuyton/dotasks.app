@@ -7,31 +7,41 @@ import { PrismaClient } from '@prisma/client';
 import { createCaller } from '../../server/trpc';
 import type { Context } from '../../server/context';
 
-// Deep mock of the full PrismaClient
+// Create a deep mock of PrismaClient
 export const mockPrisma = mockDeep<PrismaClient>();
 
+// Make $transaction behave like the real one:
+// - If called with a function, execute it with the mock as the transaction client
+// - This is the key fix for setCurrent (and any future transactional procedures)
+mockPrisma.$transaction.mockImplementation(async (arg) => {
+  if (typeof arg === 'function') {
+    // Pass the same mockPrisma as the transaction client (tx)
+    return arg(mockPrisma);
+  }
+  // If used with array of operations (rare), we could handle it too — but for now keep simple
+  throw new Error('$transaction called with unsupported format in tests');
+});
+
+// Reset all mocks (useful in beforeEach)
 export function resetPrismaMocks() {
   vi.clearAllMocks();
+  // Optionally re-apply $transaction mock if needed after clear
+  // (usually not necessary as mockImplementation survives clearAllMocks)
 }
 
-// For public procedures (no authentication)
+// Public caller — no authentication
 export function createPublicCaller(overrides: Partial<Context> = {}) {
   return createCaller({
-    userId: undefined,           // ← fixed: use undefined instead of null
+    userId: undefined,  // No user → public context
     prisma: mockPrisma,
-    // If your real Context has other required/optional fields, set defaults here
-    // e.g.:
-    // session: null,
-    // req: {} as any,
-    // res: {} as any,
     ...overrides,
   });
 }
 
-// For protected procedures (with fake authenticated user)
+// Protected caller — fake authenticated user
 export function createProtectedCaller(overrides: Partial<Context> = {}) {
   return createCaller({
-    userId: 'test-user-id',
+    userId: 'test-user-id',  // Fixed fake user ID
     prisma: mockPrisma,
     ...overrides,
   });
