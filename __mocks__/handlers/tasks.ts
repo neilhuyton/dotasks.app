@@ -199,3 +199,41 @@ export const emptyTaskHandlers = [
   taskCreateHandler,
   taskDeleteSuccess,
 ];
+
+// Add this new export
+export const delayedTaskCreateHandler = trpcMsw.task.create.mutation(async ({ input }) => {
+  // Simulate network delay so the test can see the "Creating..." state
+  await new Promise((resolve) => setTimeout(resolve, 600)); // 600ms is usually enough
+
+  const now = new Date();
+
+  const newTask = {
+    id: `t-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    listId: input.listId,
+    title: input.title,
+    description: input.description ?? null,
+    dueDate: input.dueDate ? new Date(input.dueDate) : null,
+    priority: input.priority ?? null,
+    order: input.order ?? 0,
+    isCompleted: false,
+    isCurrent: false,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  mockTasks.push(newTask);
+
+  return {
+    id: newTask.id,
+    listId: newTask.listId,
+    title: newTask.title,
+    description: newTask.description,
+    dueDate: newTask.dueDate?.toISOString() ?? null,
+    priority: newTask.priority,
+    order: newTask.order,
+    isCompleted: newTask.isCompleted,
+    isCurrent: newTask.isCurrent,
+    createdAt: newTask.createdAt.toISOString(),
+    updatedAt: newTask.updatedAt.toISOString(),
+  };
+});
