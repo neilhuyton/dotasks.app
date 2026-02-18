@@ -4,6 +4,7 @@ import { createFileRoute, redirect, Outlet } from "@tanstack/react-router";
 import { useAuthStore } from "@/store/authStore";
 import Navigation from "@/components/Navigation";
 import ProfileIcon from "@/components/ProfileIcon";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 // Detect test environment to skip redirect
 const isTestEnv = import.meta.env.MODE === "test" || process.env.NODE_ENV === "test";
@@ -28,6 +29,7 @@ export const Route = createFileRoute("/_authenticated")({
         <header className="fixed top-0 left-0 right-0 z-50 bg-background border-b px-4 py-3 flex items-center justify-between">
           <div />
           <div className="flex items-center gap-3 sm:gap-4">
+            <ThemeToggle />
             <ProfileIcon />
           </div>
         </header>

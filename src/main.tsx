@@ -8,6 +8,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpcClient } from "@/client";
 import { trpc } from "@/trpc";
 import "./index.css";
+import { ThemeProvider } from "./components/ThemeProvider";
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,8 +23,14 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
+        <ThemeProvider
+          defaultTheme="dark"
+          storageKey="vite-ui-theme"
+          enableSystem={true}
+        >
+          <RouterProvider router={router} />
+        </ThemeProvider>
       </QueryClientProvider>
     </trpc.Provider>
-  </StrictMode>
+  </StrictMode>,
 );
