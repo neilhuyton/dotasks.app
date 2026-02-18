@@ -34,6 +34,9 @@ import {
   getMockLists,
   listGetAllHandler,
 } from "../../../../__mocks__/handlers/lists";
+import { suppressActWarnings } from "../../../act-suppress";
+
+suppressActWarnings();
 
 describe("Create New List Page (/_authenticated/lists/new)", () => {
   let queryClient: QueryClient;

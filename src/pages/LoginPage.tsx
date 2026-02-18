@@ -120,14 +120,6 @@ function LoginPage() {
                 className="w-full mt-4"
                 data-testid="login-button"
                 disabled={isPending}
-                onClick={() => {
-                  console.log("Login button clicked", {
-                    isPending,
-                    dirty: form.formState.isDirty,
-                    valid: form.formState.isValid,
-                    values: form.getValues(),
-                  });
-                }}
               >
                 {isPending ? "Logging in..." : "Login"}
               </Button>

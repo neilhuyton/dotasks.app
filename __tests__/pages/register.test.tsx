@@ -1,3 +1,5 @@
+// __tests__/pages/register.test.tsx
+
 import {
   describe,
   it,
@@ -18,6 +20,9 @@ import "@testing-library/jest-dom";
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
 import { router } from "../../src/router/router";
 import { registerHandler } from "../../__mocks__/handlers/register";
+import { suppressActWarnings } from "../act-suppress";
+
+suppressActWarnings();
 
 describe("RegisterPage", () => {
   let queryClient: QueryClient;

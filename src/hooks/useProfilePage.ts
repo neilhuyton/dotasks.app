@@ -17,11 +17,11 @@ interface PasswordFormValues {
 }
 
 const emailFormSchema = z.object({
-  email: z.email({ message: "Please enter a valid email address" }),
+  email: z.string().email({ message: "Please enter a valid email address" }),
 });
 
 const passwordFormSchema = z.object({
-  email: z.email({ message: "Please enter a valid email address" }),
+  email: z.string().email({ message: "Please enter a valid email address" }),
 });
 
 interface UseProfileReturn {
@@ -31,8 +31,8 @@ interface UseProfileReturn {
   passwordMessage: string | null;
   isEmailPending: boolean;
   isPasswordPending: boolean;
-  handleEmailSubmit: (data: EmailFormValues) => Promise<void>;
-  handlePasswordSubmit: (data: PasswordFormValues) => Promise<void>;
+  handleEmailSubmit: (data: EmailFormValues) => void;          // ← no longer Promise
+  handlePasswordSubmit: (data: PasswordFormValues) => void;    // ← no longer Promise
   handleLogout: () => void;
   currentEmail: string | null;
   isUserLoading: boolean;
@@ -83,8 +83,7 @@ export const useProfilePage = (): UseProfileReturn => {
     },
     onError: (error) => {
       let msg = "Failed to update email. Please try again.";
-      
-      // Handle common TRPC error codes more specifically
+
       if (error.data?.code === "CONFLICT") {
         msg = "This email is already in use by another account.";
       } else if (error.data?.httpStatus === 404) {
@@ -92,10 +91,9 @@ export const useProfilePage = (): UseProfileReturn => {
       } else if (error.message) {
         msg = error.message;
       }
-      
+
       setEmailMessage(msg);
     },
-    onSettled: () => {},
   });
 
   const resetPasswordMutation = trpc.resetPassword.request.useMutation({
@@ -113,7 +111,6 @@ export const useProfilePage = (): UseProfileReturn => {
       }
       setPasswordMessage(msg);
     },
-    onSettled: () => {},
   });
 
   useEffect(() => {
@@ -133,20 +130,18 @@ export const useProfilePage = (): UseProfileReturn => {
     };
   }, [emailForm, passwordForm]);
 
-  const handleEmailSubmit = async (data: EmailFormValues) => {
-    const isValid = await emailForm.trigger();
-    if (!isValid) {
-      return;
-    }
-    await updateEmailMutation.mutateAsync(data);
+  const handleEmailSubmit = (data: EmailFormValues) => {
+    emailForm.trigger().then((isValid) => {
+      if (!isValid) return;
+      updateEmailMutation.mutate(data);   // ← changed to .mutate()
+    });
   };
 
-  const handlePasswordSubmit = async (data: PasswordFormValues) => {
-    const isValid = await passwordForm.trigger();
-    if (!isValid) {
-      return;
-    }
-    await resetPasswordMutation.mutateAsync({ email: data.email });
+  const handlePasswordSubmit = (data: PasswordFormValues) => {
+    passwordForm.trigger().then((isValid) => {
+      if (!isValid) return;
+      resetPasswordMutation.mutate({ email: data.email });   // ← changed to .mutate()
+    });
   };
 
   return {

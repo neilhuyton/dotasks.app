@@ -53,8 +53,6 @@ function handleAuthError(
   next: (op: Operation) => OperationResultObservable<AnyRouter, unknown>,
   op: Operation,
 ) {
-  console.log("[TRPC Auth] Caught UNAUTHORIZED → attempting refresh");
-
   const state = useAuthStore.getState();
   const { refreshToken, userId } = state;
 
@@ -77,8 +75,6 @@ function handleAuthError(
       const result = await vanillaTrpc.refreshToken.refresh.mutate({
         refreshToken,
       });
-
-      console.log("[TRPC Auth] Refresh succeeded");
 
       useAuthStore
         .getState()
@@ -162,20 +158,9 @@ export const trpcClient = createTRPCClient<AppRouter>({
         const state = useAuthStore.getState();
         const token = state.accessToken;
 
-        console.log(
-          "[tRPC headers] called for path:",
-          // this helps see which query/mutation is asking for headers
-          // (you can also log op if you want more detail)
-        );
-
         if (token) {
-          console.log(
-            "[tRPC headers] sending Bearer token (first 20 chars):",
-            token.slice(0, 20) + "...",
-          );
           return { Authorization: `Bearer ${token}` };
         } else {
-          console.log("[tRPC headers] NO token in store right now");
           return {};
         }
       },

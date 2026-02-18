@@ -36,6 +36,9 @@ import {
   listGetAllHandler,
   prepareDetailPageTestList,
 } from "../../../../../__mocks__/handlers/lists";
+import { suppressActWarnings } from "../../../../act-suppress";
+
+suppressActWarnings();
 
 describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)", () => {
   let queryClient: QueryClient;

@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { trpc } from "@/trpc";
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/authStore";
-// import { useNavigate } from "@tanstack/react-router";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -31,7 +30,7 @@ interface UseRegisterReturn {
   form: ReturnType<typeof useForm<FormValues>>;
   message: string | null;
   isRegistering: boolean;
-  handleRegister: (data: FormValues) => Promise<void>;
+  handleRegister: (data: FormValues) => void;
 }
 
 export const useRegisterPage = (): UseRegisterReturn => {
@@ -43,16 +42,19 @@ export const useRegisterPage = (): UseRegisterReturn => {
 
   const [message, setMessage] = useState<string | null>(null);
   const { login } = useAuthStore();
-  // const navigate = useNavigate();
 
   const registerMutation = trpc.register.useMutation({
+    onMutate: () => {
+      setMessage(null);
+    },
     onSuccess: (data: RegisterResponse) => {
       setMessage(data.message || "Registration successful! Redirecting...");
       login(data.user.id, data.accessToken, data.refreshToken);
 
+      // Optional: uncomment if you want auto-redirect after success
       // setTimeout(() => {
       //   form.reset();
-      //   navigate({ to: "/" }); // ← changed: go to dashboard instead of login
+      //   // navigate({ to: "/" });
       // }, 2500);
     },
     onError: (error) => {
@@ -66,10 +68,14 @@ export const useRegisterPage = (): UseRegisterReturn => {
     return () => subscription.unsubscribe();
   }, [form]);
 
-  const handleRegister = async (data: FormValues) => {
-    const isValid = await form.trigger();
-    if (!isValid) return;
-    await registerMutation.mutateAsync(data);
+  const handleRegister = (data: FormValues) => {
+    // Trigger validation
+    form.trigger().then((isValid) => {
+      if (!isValid) return;
+
+      // Use mutate (not mutateAsync) → no unhandled rejections
+      registerMutation.mutate(data);
+    });
   };
 
   return {

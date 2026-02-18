@@ -51,7 +51,6 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
   login: (userId: string, accessToken: string, refreshToken: string) => {
     if (!userId || !accessToken || !refreshToken) {
-      console.warn('[authStore] login called with missing values');
       return;
     }
 
@@ -65,8 +64,6 @@ export const useAuthStore = create<AuthState>()((set) => ({
     // Persist long-lived data
     localStorage.setItem(STORAGE_KEYS.userId, userId);
     localStorage.setItem(STORAGE_KEYS.refreshToken, refreshToken);
-
-    console.debug('[authStore] User logged in – tokens stored');
   },
 
   setAccessToken: (accessToken: string) => {
@@ -75,7 +72,6 @@ export const useAuthStore = create<AuthState>()((set) => ({
       return;
     }
     set({ accessToken });
-    console.debug('[authStore] Access token updated');
   },
 
   logout: () => {

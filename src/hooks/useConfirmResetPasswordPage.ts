@@ -21,7 +21,7 @@ interface UseConfirmResetPasswordReturn {
   handleSubmit: (
     data: FormValues,
     onSwitchToLogin: () => void,
-  ) => Promise<void>;
+  ) => void;  // no longer Promise<void>
 }
 
 export const useConfirmResetPasswordPage = (
@@ -36,8 +36,12 @@ export const useConfirmResetPasswordPage = (
   const [message, setMessage] = useState<string | null>(null);
 
   const resetMutation = trpc.resetPassword.confirm.useMutation({
+    onMutate: () => {
+      setMessage(null);
+    },
     onSuccess: () => {
       setMessage("Password reset successfully!");
+      // Give user time to see success message before navigation
       setTimeout(() => {
         form.reset();
         setMessage(null);
@@ -56,22 +60,31 @@ export const useConfirmResetPasswordPage = (
     return () => subscription.unsubscribe();
   }, [form]);
 
-  const handleSubmit = async (
+  const handleSubmit = (
     data: FormValues,
     onSwitchToLogin: () => void,
   ) => {
-    const isValid = await form.trigger("newPassword");
-    if (!isValid) {
-      return;
-    }
+    // Validate form client-side first
+    form.trigger("newPassword").then((isValid) => {
+      if (!isValid) return;
 
-    if (!token) {
-      setMessage("Failed to reset password: Reset token is missing");
-      return;
-    }
+      if (!token) {
+        setMessage("Failed to reset password: Reset token is missing");
+        return;
+      }
 
-    await resetMutation.mutateAsync({ token, newPassword: data.newPassword });
-    onSwitchToLogin();
+      // Use mutate instead of mutateAsync → no unhandled rejection risk
+      resetMutation.mutate(
+        { token, newPassword: data.newPassword },
+        {
+          onSuccess: () => {
+            // Navigate only after success
+            onSwitchToLogin();
+          },
+          // onError is already handled globally above
+        },
+      );
+    });
   };
 
   return {

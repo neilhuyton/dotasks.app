@@ -58,7 +58,6 @@ export const updateEmailHandler = trpcMsw.user.updateEmail.mutation(
     );
 
     if (emailTaken) {
-      console.log("[MOCK] Throwing CONFLICT for email:", newEmail);
       throw new TRPCError({
         code: "CONFLICT",
         message: "This email is already in use by another account",

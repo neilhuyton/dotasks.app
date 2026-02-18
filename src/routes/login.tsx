@@ -1,6 +1,6 @@
 // src/routes/login.tsx
 
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import {
   Form,
@@ -15,9 +15,9 @@ import { Label } from "@/components/ui/label";
 import { useLoginPage } from "@/hooks/useLoginPage";
 import { useRouter } from "@tanstack/react-router";
 
-export const Route = createFileRoute('/login')({
+export const Route = createFileRoute("/login")({
   component: RouteComponent,
-})
+});
 
 function RouteComponent() {
   const { form, message, isPending, handleSubmit } = useLoginPage();
@@ -123,14 +123,6 @@ function RouteComponent() {
                 className="w-full mt-4"
                 data-testid="login-button"
                 disabled={isPending}
-                onClick={() => {
-                  console.log("Login button clicked", {
-                    isPending,
-                    dirty: form.formState.isDirty,
-                    valid: form.formState.isValid,
-                    values: form.getValues(),
-                  });
-                }}
               >
                 {isPending ? "Logging in..." : "Login"}
               </Button>

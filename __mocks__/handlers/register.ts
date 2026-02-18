@@ -1,3 +1,5 @@
+// __mocks__/handlers/register.ts
+
 import { TRPCError } from "@trpc/server";
 import { trpcMsw } from "../trpcMsw";
 import bcrypt from "bcryptjs";
