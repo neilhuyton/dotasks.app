@@ -59,9 +59,9 @@ describe("Profile Route (/_authenticated/profile)", () => {
         isEmailVerified: true,
         resetPasswordToken: null,
         resetPasswordTokenExpiresAt: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        refreshToken: "mock-refresh-token-for-tests",
+        createdAt: new Date(),          // ← fixed: Date object instead of string
+        updatedAt: new Date(),          // ← fixed: Date object instead of string
+
       },
       {
         id: "other-user-999",
@@ -71,9 +71,9 @@ describe("Profile Route (/_authenticated/profile)", () => {
         isEmailVerified: true,
         resetPasswordToken: null,
         resetPasswordTokenExpiresAt: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        refreshToken: "mock-refresh-token-for-tests",
+        createdAt: new Date(),          // ← fixed
+        updatedAt: new Date(),          // ← fixed
+
       },
     );
 
@@ -133,6 +133,7 @@ describe("Profile Route (/_authenticated/profile)", () => {
       </trpc.Provider>,
     );
 
+    // Give React Query / TanStack Router time to settle
     await new Promise((r) => setTimeout(r, 300));
     return { history: testRouter.history };
   };
@@ -246,7 +247,6 @@ describe("Profile Route (/_authenticated/profile)", () => {
     expect(error).toHaveTextContent(/valid email/i);
   });
 
-  // remaining tests unchanged
   it("closes the modal and navigates to /lists on close button click", async () => {
     const { history } = await renderProfile();
 
