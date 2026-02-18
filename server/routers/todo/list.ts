@@ -30,7 +30,7 @@ export const listRouter = router({
   create: protectedProcedure
     .input(
       z.object({
-        title: z.string().min(1).max(120),
+        title: z.string().trim().min(1, { message: "Title cannot be empty" }),
         description: z.string().max(1000).optional(),
         color: z.string().optional(),
         icon: z.string().optional(),

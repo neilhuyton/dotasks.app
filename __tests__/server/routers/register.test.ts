@@ -1,145 +1,193 @@
-// __tests__/server/routers/register.test.ts
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import crypto from 'node:crypto';
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { server } from "../../../__mocks__/server";
-import { trpcMsw } from "../../../__mocks__/trpcMsw";
-import { createTRPCClient, httpLink } from "@trpc/client";
-import type { AppRouter } from "@/../../server/trpc"; // adjust path to match your alias/setup
-import { TRPCError } from "@trpc/server";
-import { setupMSW } from "../../setupTests"; // adjust path if needed
-import crypto from "node:crypto";
+import { createPublicCaller, resetPrismaMocks, mockPrisma } from '../../utils/testCaller';
+import type { User } from '@prisma/client';
+import * as emailModule from '../../../server/email';
 
-describe("register procedure", () => {
-  setupMSW();
+// Minimal valid shape for RefreshToken (adjust fields if your schema has more/less)
+const mockRefreshToken = {
+  id: crypto.randomUUID(),
+  hashedToken: 'mock-hashed-token-value',
+  userId: crypto.randomUUID(),
+  createdAt: new Date(),
+  lastUsedAt: null,
+  expiresAt: null,
+} as const;
 
-  const client = createTRPCClient<AppRouter>({
-    links: [
-      httpLink({
-        url: "http://localhost:8888/trpc",
-      }),
-    ],
-  });
+// Helper to create a complete Prisma User object (consistent with other auth tests)
+function mockFullUser(partial: Partial<User> = {}): User {
+  const now = new Date();
+
+  // Base object
+  const user: User = {
+    id: crypto.randomUUID(),
+    email: 'default@example.com',
+    password: 'hashed-placeholder',
+    verificationToken: null,
+    isEmailVerified: false,
+    resetPasswordToken: null,
+    resetPasswordTokenExpiresAt: null,
+    createdAt: now,
+    updatedAt: now,
+    ...partial,
+  };
+
+  // Apply overrides for dates safely (avoid duplicate keys)
+  if ('createdAt' in partial) {
+    user.createdAt =
+      partial.createdAt instanceof Date
+        ? partial.createdAt
+        : new Date(partial.createdAt!);
+  }
+
+  if ('updatedAt' in partial) {
+    user.updatedAt =
+      partial.updatedAt instanceof Date
+        ? partial.updatedAt
+        : new Date(partial.updatedAt!);
+  }
+
+  if ('resetPasswordTokenExpiresAt' in partial) {
+    user.resetPasswordTokenExpiresAt =
+      partial.resetPasswordTokenExpiresAt
+        ? new Date(partial.resetPasswordTokenExpiresAt)
+        : null;
+  }
+
+  return user;
+}
+
+describe('register procedure (public)', () => {
+  let caller: ReturnType<typeof createPublicCaller>;
 
   beforeEach(() => {
-    server.resetHandlers();
+    caller = createPublicCaller();
+    resetPrismaMocks();
+    vi.spyOn(emailModule, 'sendVerificationEmail').mockResolvedValue({ success: true });
   });
 
-  afterEach(() => {
-    server.resetHandlers();
-  });
+  it('registers a new user successfully + sends verification email', async () => {
+    const email = 'newuser@example.com';
 
-  it("registers a new user successfully", async () => {
-    server.use(
-      trpcMsw.register.mutation(async ({ input }) => {
-        // Optional light input validation in test
-        expect(input).toMatchObject({
-          email: expect.any(String),
-          password: expect.any(String),
-        });
-        expect(input.email).toContain("@");
+    mockPrisma.user.findUnique.mockResolvedValue(null);
 
-        return {
-          user: {
-            id: "mock-user-id-123",
-            email: input.email,
-          },
-          accessToken: "mock-jwt-access-token.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-          refreshToken: crypto.randomUUID(),
-          message: "Registration successful! Please check your email to verify your account.",
-        };
-      }),
+    mockPrisma.user.create.mockResolvedValue(
+      mockFullUser({ email })
     );
 
-    const result = await client.register.mutate({
-      email: "newuser@example.com",
-      password: "password123",
+    mockPrisma.refreshToken.create.mockResolvedValue(mockRefreshToken);
+
+    const result = await caller.register({
+      email,
+      password: 'password123',
     });
 
     expect(result).toMatchObject({
       user: {
         id: expect.any(String),
-        email: "newuser@example.com",
+        email,
       },
       accessToken: expect.any(String),
       refreshToken: expect.stringMatching(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
       ),
-      message: "Registration successful! Please check your email to verify your account.",
+      message: 'Registration successful! Please check your email to verify your account.',
     });
+
+    expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+      where: { email },
+      select: { id: true },
+    });
+
+    expect(mockPrisma.user.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          email,
+          password: expect.any(String),
+          verificationToken: expect.any(String),
+          isEmailVerified: false,
+        }),
+        select: { id: true, email: true },
+      })
+    );
+
+    expect(mockPrisma.refreshToken.create).toHaveBeenCalledTimes(1);
+
+    expect(emailModule.sendVerificationEmail).toHaveBeenCalledWith(
+      email,
+      expect.any(String)
+    );
   });
 
-  it("throws BAD_REQUEST for invalid email format", async () => {
-    server.use(
-      trpcMsw.register.mutation(async () => {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Invalid email address",
-        });
-      }),
+  it('throws BAD_REQUEST for invalid email format (Zod)', async () => {
+    await expect(
+      caller.register({
+        email: 'not-an-email',
+        password: 'password123',
+      })
+    ).rejects.toThrow(/Invalid email address/);
+  });
+
+  it('throws BAD_REQUEST for password too short (Zod)', async () => {
+    await expect(
+      caller.register({
+        email: 'newuser@example.com',
+        password: 'short',
+      })
+    ).rejects.toThrow(/Password must be at least 8 characters/);
+  });
+
+  it('throws CONFLICT when email is already registered', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue(
+      mockFullUser({ email: 'existing@example.com' })
     );
 
     await expect(
-      client.register.mutate({
-        email: "not-an-email",
-        password: "password123",
-      }),
+      caller.register({
+        email: 'existing@example.com',
+        password: 'password123',
+      })
     ).rejects.toMatchObject({
-      message: "Invalid email address",
-      data: {
-        code: "BAD_REQUEST",
-        httpStatus: 400,
-        path: "register",
-      },
+      message: 'This email is already registered',
+      code: 'CONFLICT',
     });
+
+    expect(mockPrisma.user.create).not.toHaveBeenCalled();
   });
 
-  it("throws BAD_REQUEST for password too short", async () => {
-    server.use(
-      trpcMsw.register.mutation(async () => {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Password must be at least 8 characters",
-        });
-      }),
+  it('throws INTERNAL_SERVER_ERROR when JWT_SECRET is missing', async () => {
+    const originalSecret = process.env.JWT_SECRET;
+
+    // Use Vitest's env stubbing to reliably unset the variable
+    vi.stubEnv('JWT_SECRET', undefined);
+
+    mockPrisma.user.findUnique.mockResolvedValue(null);
+
+    mockPrisma.user.create.mockResolvedValue(
+      mockFullUser({ email: 'newuser2@example.com' })
     );
 
-    await expect(
-      client.register.mutate({
-        email: "newuser@example.com",
-        password: "short",
-      }),
-    ).rejects.toMatchObject({
-      message: "Password must be at least 8 characters",
-      data: {
-        code: "BAD_REQUEST",
-        httpStatus: 400,
-        path: "register",
-      },
-    });
-  });
-
-  it("throws CONFLICT when email is already registered", async () => {
-    server.use(
-      trpcMsw.register.mutation(async () => {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "This email is already registered",
-        });
-      }),
-    );
+    mockPrisma.refreshToken.create.mockResolvedValue(mockRefreshToken);
 
     await expect(
-      client.register.mutate({
-        email: "existing@example.com",
-        password: "password123",
-      }),
+      caller.register({
+        email: 'newuser2@example.com',
+        password: 'password123',
+      })
     ).rejects.toMatchObject({
-      message: "This email is already registered",
-      data: {
-        code: "CONFLICT",
-        httpStatus: 409,
-        path: "register",
-      },
+      message: 'Server configuration error',
+      code: 'INTERNAL_SERVER_ERROR',
     });
+
+    // Clean up env stubs
+    vi.unstubAllEnvs();
+
+    // Restore original value if it existed
+    if (originalSecret !== undefined) {
+      process.env.JWT_SECRET = originalSecret;
+    } else {
+      delete process.env.JWT_SECRET;
+    }
   });
 });

@@ -2,6 +2,7 @@
 
 import { TEST_VERIFICATION_TOKENS } from "../__tests__/test-constants";
 
+// Use real Date objects (Prisma returns Date, not string)
 export interface MockUser {
   id: string;
   email: string;
@@ -9,36 +10,35 @@ export interface MockUser {
   verificationToken: string | null;
   isEmailVerified: boolean;
   resetPasswordToken: string | null;
-  resetPasswordTokenExpiresAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-  refreshToken: string | null;
+  resetPasswordTokenExpiresAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  // Remove refreshToken unless you add it to User model later
+  // refreshToken?: string | null;   ← commented out
 }
 
 export const mockUsers: MockUser[] = [
   {
     id: "test-user-1",
     email: "testuser@example.com",
-    password: "$2b$10$BfZjnkEBinREhMQwsUwFjOdeidxX1dvXSKn.n3MxdwmRTcfV8JR16", // correct for "password123"
+    password: "$2b$10$BfZjnkEBinREhMQwsUwFjOdeidxX1dvXSKn.n3MxdwmRTcfV8JR16", // password123
     verificationToken: null,
     isEmailVerified: true,
     resetPasswordToken: null,
     resetPasswordTokenExpiresAt: null,
-    createdAt: "2025-08-16T10:40:39.214Z",
-    updatedAt: "2025-08-16T10:40:39.214Z",
-    refreshToken: "550e8400-e29b-41d4-a716-446655440000",
+    createdAt: new Date("2025-08-16T10:40:39.214Z"),
+    updatedAt: new Date("2025-08-16T10:40:39.214Z"),
   },
   {
     id: "verified-user-id",
     email: "verifieduser@example.com",
-    password: "$2b$10$BfZjnkEBinREhMQwsUwFjOdeidxX1dvXSKn.n3MxdwmRTcfV8JR16", // same correct hash
-    isEmailVerified: true,
+    password: "$2b$10$BfZjnkEBinREhMQwsUwFjOdeidxX1dvXSKn.n3MxdwmRTcfV8JR16",
     verificationToken: TEST_VERIFICATION_TOKENS.ALREADY_VERIFIED,
+    isEmailVerified: true,
     resetPasswordToken: null,
     resetPasswordTokenExpiresAt: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    refreshToken: "123e4567-e89b-12d3-a456-426614174000",
+    createdAt: new Date(), // or fixed date
+    updatedAt: new Date(),
   },
   {
     id: "27e72eb9-a0ad-4714-bd7a-c148ac1b903e",
@@ -47,12 +47,9 @@ export const mockUsers: MockUser[] = [
     verificationToken: TEST_VERIFICATION_TOKENS.DELAYED_SUCCESS,
     isEmailVerified: false,
     resetPasswordToken: TEST_VERIFICATION_TOKENS.RESET_PASSWORD_EXAMPLE,
-    resetPasswordTokenExpiresAt: new Date(
-      Date.now() + 60 * 60 * 1000
-    ).toISOString(),
-    createdAt: "2025-08-16T10:40:39.214Z",
-    updatedAt: "2025-08-16T11:10:39.214Z",
-    refreshToken: null,
+    resetPasswordTokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    createdAt: new Date("2025-08-16T10:40:39.214Z"),
+    updatedAt: new Date("2025-08-16T11:10:39.214Z"),
   },
   {
     id: "fb208768-1bf8-4f8d-bcad-1f94c882ed93",
@@ -62,8 +59,16 @@ export const mockUsers: MockUser[] = [
     isEmailVerified: true,
     resetPasswordToken: null,
     resetPasswordTokenExpiresAt: null,
-    createdAt: "2025-08-16T19:57:56.561Z",
-    updatedAt: "2025-08-16T19:58:22.721Z",
-    refreshToken: "987fcdeb-1234-5678-9abc-def012345678",
+    createdAt: new Date("2025-08-16T19:57:56.561Z"),
+    updatedAt: new Date("2025-08-16T19:58:22.721Z"),
   },
 ];
+
+// Optional: helper to get a copy of a user by id or email
+export function getMockUserById(id: string): MockUser | undefined {
+  return mockUsers.find(u => u.id === id);
+}
+
+export function getMockUserByEmail(email: string): MockUser | undefined {
+  return mockUsers.find(u => u.email === email);
+}

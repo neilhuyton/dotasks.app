@@ -1,19 +1,21 @@
 // server/trpc.ts
 
-import { router } from "./trpc-base";
+import { router, createCallerFactory } from './trpc-base';  // assuming createCallerFactory is imported from trpc-base
 
-import { userRouter } from "./routers/user";
-import { registerRouter } from "./routers/register";
-import { loginRouter } from "./routers/login";
-import { verifyEmailRouter } from "./routers/verifyEmail";
-import { resetPasswordRouter } from "./routers/resetPassword";
-import { refreshTokenRouter } from "./routers/refreshToken";
+// Auth / User related routers
+import { userRouter } from './routers/user';
+import { registerRouter } from './routers/register';
+import { loginRouter } from './routers/login';
+import { verifyEmailRouter } from './routers/verifyEmail';
+import { resetPasswordRouter } from './routers/resetPassword';
+import { refreshTokenRouter } from './routers/refreshToken';
 
-// ← Add these
-import { listRouter } from "./routers/todo/list";
-import { taskRouter } from "./routers/todo/task";
+// Todo domain routers
+import { listRouter } from './routers/todo/list';
+import { taskRouter } from './routers/todo/task';
 
 export const appRouter = router({
+  // Auth & user routes
   user: userRouter,
   register: registerRouter.register,
   login: loginRouter.login,
@@ -21,9 +23,14 @@ export const appRouter = router({
   resetPassword: resetPasswordRouter,
   refreshToken: refreshTokenRouter,
 
-  // New domains
+  // Todo domain
   list: listRouter,
   task: taskRouter,
 });
 
+// Export type for client generation (e.g. @trpc/react-query, @trpc/client) and testing
 export type AppRouter = typeof appRouter;
+
+// Export caller factory – required for server-side / test direct calls
+// (bypasses HTTP layer, allows testing real procedure logic with mocked context)
+export const createCaller = createCallerFactory(appRouter);

@@ -1,5 +1,3 @@
-// server/routers/register.ts
-
 import { publicProcedure, router } from '../trpc-base';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
@@ -25,6 +23,14 @@ export const registerRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const { email, password } = input;
+
+      // Fail fast: check critical configuration before doing anything expensive
+      if (!process.env.JWT_SECRET) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Server configuration error',
+        });
+      }
 
       const existingUser = await ctx.prisma.user.findUnique({
         where: { email },
@@ -73,13 +79,6 @@ export const registerRouter = router({
       sendVerificationEmail(email, verificationToken).catch((err) => {
         console.error('Failed to send verification email:', err);
       });
-
-      if (!process.env.JWT_SECRET) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Server configuration error',
-        });
-      }
 
       const accessToken = jwt.sign(
         { userId: user.id, email: user.email },

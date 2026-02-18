@@ -1,166 +1,213 @@
 // __tests__/server/routers/resetPassword.test.ts
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { server } from "../../../__mocks__/server";
-import { trpcMsw } from "../../../__mocks__/trpcMsw";
-import { createTRPCClient, httpLink } from "@trpc/client";
-import type { AppRouter } from "@/../../server/trpc"; // adjust path to match your alias
-import { TRPCError } from "@trpc/server";
-import { setupMSW } from "../../setupTests"; // adjust path if needed
+import { describe, it, expect, beforeEach } from 'vitest';
+import crypto from 'node:crypto';
 
-describe("resetPassword router (public procedures)", () => {
-  setupMSW();
+import { createPublicCaller, resetPrismaMocks, mockPrisma } from '../../utils/testCaller';
+import type { User } from '@prisma/client';
 
-  const client = createTRPCClient<AppRouter>({
-    links: [
-      httpLink({
-        url: "http://localhost:8888/trpc",
-      }),
-    ],
-  });
+// Helper to create a complete Prisma User object
+function mockFullUser(partial: Partial<User> = {}): User {
+  const defaults = {
+    id: crypto.randomUUID(),
+    email: 'default@example.com',
+    password: 'hashed-default-password',
+    verificationToken: null,
+    isEmailVerified: true,
+    resetPasswordToken: null,
+    resetPasswordTokenExpiresAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  return {
+    ...defaults,
+    ...partial,
+    createdAt:
+      partial.createdAt instanceof Date
+        ? partial.createdAt
+        : new Date(partial.createdAt || defaults.createdAt),
+    updatedAt:
+      partial.updatedAt instanceof Date
+        ? partial.updatedAt
+        : new Date(partial.updatedAt || defaults.updatedAt),
+    resetPasswordTokenExpiresAt: partial.resetPasswordTokenExpiresAt
+      ? new Date(partial.resetPasswordTokenExpiresAt)
+      : null,
+  } as User;
+}
+
+describe('resetPassword router (public procedures)', () => {
+  let caller: ReturnType<typeof createPublicCaller>;
 
   beforeEach(() => {
-    server.resetHandlers();
+    caller = createPublicCaller();
+    resetPrismaMocks();
   });
 
-  afterEach(() => {
-    server.resetHandlers();
+  describe('request', () => {
+    it('returns the same success message whether email exists or not (anti-enumeration)', async () => {
+      const email = 'existing@example.com';
+
+      mockPrisma.user.findUnique.mockResolvedValue(
+        mockFullUser({ email, isEmailVerified: true })
+      );
+
+      mockPrisma.user.update.mockResolvedValue(
+        mockFullUser({
+          email,
+          resetPasswordToken: crypto.randomUUID(),
+          resetPasswordTokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        })
+      );
+
+      const result = await caller.resetPassword.request({ email });
+
+      expect(result).toMatchObject({
+        message: 'If an account with this email exists, a reset link has been sent.',
+      });
+
+      expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+        where: { email },
+        select: { id: true, email: true },
+      });
+
+      expect(mockPrisma.user.update).toHaveBeenCalled();
+    });
+
+    it('still returns success message for non-existent email', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+
+      const result = await caller.resetPassword.request({
+        email: 'does-not-exist@example.com',
+      });
+
+      expect(result).toMatchObject({
+        message: 'If an account with this email exists, a reset link has been sent.',
+      });
+
+      expect(mockPrisma.user.findUnique).toHaveBeenCalled();
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects invalid email format (Zod)', async () => {
+      await expect(
+        caller.resetPassword.request({ email: 'not-an-email' })
+      ).rejects.toThrowError(/Invalid email address/);
+    });
+
+    it('rejects empty/whitespace-only email', async () => {
+      await expect(
+        caller.resetPassword.request({ email: '   ' })
+      ).rejects.toThrowError(/Invalid email address/);
+    });
   });
 
-  describe("request (request reset)", () => {
-    it("sends reset link for existing email (success message always)", async () => {
-      server.use(
-        trpcMsw.resetPassword.request.mutation(async ({ input }) => {
-          expect(input.email).toBe("existing@example.com");
-          return {
-            message: "If an account with this email exists, a reset link has been sent.",
-          };
-        }),
+  describe('confirm', () => {
+    const validToken = crypto.randomUUID();
+    const validPassword = 'VerySecure123!';
+
+    it('successfully resets password with valid non-expired token', async () => {
+      const userId = crypto.randomUUID();
+      const email = 'user@example.com';
+
+      mockPrisma.user.findFirst.mockResolvedValue(
+        mockFullUser({
+          id: userId,
+          email,
+          resetPasswordToken: validToken,
+          resetPasswordTokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        })
       );
 
-      const result = await client.resetPassword.request.mutate({
-        email: "existing@example.com",
-      });
-
-      expect(result).toEqual({
-        message: "If an account with this email exists, a reset link has been sent.",
-      });
-    });
-
-    it("returns same success message even if email does not exist (anti-enumeration)", async () => {
-      server.use(
-        trpcMsw.resetPassword.request.mutation(async () => {
-          return {
-            message: "If an account with this email exists, a reset link has been sent.",
-          };
-        }),
+      mockPrisma.user.update.mockResolvedValue(
+        mockFullUser({
+          id: userId,
+          email,
+          password: 'new-hashed-password',
+          resetPasswordToken: null,
+          resetPasswordTokenExpiresAt: null,
+        })
       );
 
-      const result = await client.resetPassword.request.mutate({
-        email: "nonexistent@example.com",
+      const result = await caller.resetPassword.confirm({
+        token: validToken,
+        newPassword: validPassword,
       });
 
-      expect(result).toEqual({
-        message: "If an account with this email exists, a reset link has been sent.",
+      expect(result).toMatchObject({
+        message: 'Password reset successfully. Please log in.',
       });
-    });
 
-    it("throws BAD_REQUEST for invalid email format (real Zod)", async () => {
-      await expect(
-        client.resetPassword.request.mutate({
-          email: "not-an-email",
-        }),
-      ).rejects.toMatchObject({
-        message: expect.stringContaining("Invalid email address"),
-        data: {
-          code: "BAD_REQUEST",
-          httpStatus: 400,
-          path: "resetPassword.request",
+      expect(mockPrisma.user.findFirst).toHaveBeenCalledWith({
+        where: {
+          resetPasswordToken: validToken,
+          resetPasswordTokenExpiresAt: { gt: expect.any(Date) },
         },
+        select: expect.anything(),
       });
-    });
-  });
 
-  describe("confirm (reset password with token)", () => {
-    it("resets password successfully with valid token", async () => {
-      server.use(
-        trpcMsw.resetPassword.confirm.mutation(async ({ input }) => {
-          expect(input.token).toMatch(
-            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
-          );
-          expect(input.newPassword).toBe("newsecurepassword123");
-
-          return {
-            message: "Password reset successfully. Please log in.",
-          };
-        }),
+      expect(mockPrisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: userId },
+          data: expect.objectContaining({
+            password: expect.any(String),
+            resetPasswordToken: null,
+            resetPasswordTokenExpiresAt: null,
+          }),
+        })
       );
-
-      const result = await client.resetPassword.confirm.mutate({
-        token: "550e8400-e29b-41d4-a716-446655440000",
-        newPassword: "newsecurepassword123",
-      });
-
-      expect(result).toEqual({
-        message: "Password reset successfully. Please log in.",
-      });
     });
 
-    it("throws NOT_FOUND for invalid or expired token", async () => {
-      server.use(
-        trpcMsw.resetPassword.confirm.mutation(async () => {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Invalid or expired reset token.",
-          });
-        }),
-      );
+    it('rejects expired token', async () => {
+      // Simulate the case where the expiration check fails (expired token)
+      mockPrisma.user.findFirst.mockResolvedValue(null);
 
       await expect(
-        client.resetPassword.confirm.mutate({
-          token: "invalid-token",
-          newPassword: "newsecurepassword123",
-        }),
+        caller.resetPassword.confirm({
+          token: validToken,
+          newPassword: validPassword,
+        })
       ).rejects.toMatchObject({
-        message: "Invalid or expired reset token.",
-        data: {
-          code: "NOT_FOUND",
-          httpStatus: 404,
-          path: "resetPassword.confirm",
-        },
+        code: 'NOT_FOUND',
+        message: 'Invalid or expired reset token.',
       });
+
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
     });
 
-    it("throws BAD_REQUEST for password too short (real Zod)", async () => {
+    it('rejects invalid/non-existent token', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(null);
+
       await expect(
-        client.resetPassword.confirm.mutate({
-          token: "550e8400-e29b-41d4-a716-446655440000",
-          newPassword: "short",
-        }),
+        caller.resetPassword.confirm({
+          token: validToken,
+          newPassword: validPassword,
+        })
       ).rejects.toMatchObject({
-        message: expect.stringContaining("Password must be at least 8 characters"),
-        data: {
-          code: "BAD_REQUEST",
-          httpStatus: 400,
-          path: "resetPassword.confirm",
-        },
+        code: 'NOT_FOUND',
+        message: 'Invalid or expired reset token.',
       });
+
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
     });
 
-    it("throws BAD_REQUEST for invalid token format (real Zod)", async () => {
+    it('rejects too short password (Zod)', async () => {
       await expect(
-        client.resetPassword.confirm.mutate({
-          token: "not-a-uuid",
-          newPassword: "newsecurepassword123",
-        }),
-      ).rejects.toMatchObject({
-        message: expect.stringContaining("Invalid reset token format"),
-        data: {
-          code: "BAD_REQUEST",
-          httpStatus: 400,
-          path: "resetPassword.confirm",
-        },
-      });
+        caller.resetPassword.confirm({
+          token: validToken,
+          newPassword: 'abc123',
+        })
+      ).rejects.toThrow(/Password must be at least 8 characters/);
+    });
+
+    it('rejects invalid UUID token format (Zod)', async () => {
+      await expect(
+        caller.resetPassword.confirm({
+          token: 'not-a-uuid-!!!!',
+          newPassword: validPassword,
+        })
+      ).rejects.toThrow(/Invalid reset token format/);
     });
   });
 });

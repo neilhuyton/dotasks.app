@@ -1,116 +1,162 @@
 // __tests__/server/routers/login.test.ts
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { server } from "../../../__mocks__/server";
-import { trpcMsw } from "../../../__mocks__/trpcMsw";
-import { createTRPCClient, httpLink } from "@trpc/client";
-import type { AppRouter } from "@/../../server/trpc"; // adjust path to match your alias/setup
-import { TRPCError } from "@trpc/server";
-import { setupMSW } from "../../setupTests"; // adjust path if needed
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import crypto from "node:crypto";
+import bcrypt from "bcryptjs";
 
-describe("login procedure", () => {
-  setupMSW();
+import {
+  createPublicCaller,
+  resetPrismaMocks,
+  mockPrisma,
+} from "../../utils/testCaller";
+import { Prisma } from "@prisma/client";
 
-  const client = createTRPCClient<AppRouter>({
-    links: [
-      httpLink({
-        url: "http://localhost:8888/trpc",
-      }),
-    ],
-  });
+describe("login router (public procedures)", () => {
+  let caller: ReturnType<typeof createPublicCaller>;
+  const compareSpy = vi.spyOn(bcrypt, "compare"); // inferred type is perfect
 
   beforeEach(() => {
-    server.resetHandlers();
+    caller = createPublicCaller();
+    resetPrismaMocks();
+
+    // Reset between tests – safe because it's a spy
+    compareSpy.mockReset();
   });
 
   afterEach(() => {
-    server.resetHandlers();
+    compareSpy.mockRestore(); // return to real implementation after each test
   });
 
-  it("logs in a user successfully", async () => {
-    server.use(
-      trpcMsw.login.mutation(async ({ input }) => {
-        // Optional: light input shape check
-        expect(input).toMatchObject({
-          email: expect.any(String),
-          password: expect.any(String),
-        });
+  describe("login", () => {
+    it("logs in successfully with valid credentials and verified email", async () => {
+      const email = "testuser@example.com";
+      const password = "password123";
+      const userId = crypto.randomUUID();
 
-        return {
-          user: {
-            id: "test-user-id",
-            email: input.email,
-          },
-          accessToken: "mock-jwt-access-token.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-          refreshToken: "550e8400-e29b-41d4-a716-446655440000",
-          message: "Login successful",
-        };
-      }),
-    );
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: userId,
+        email,
+        password: "any-hash",
+        isEmailVerified: true,
+        verificationToken: null,
+        resetPasswordToken: null,
+        resetPasswordTokenExpiresAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as Prisma.UserGetPayload<{
+        include: never;
+        select: undefined;
+      }>);
 
-    const result = await client.login.mutate({
-      email: "testuser@example.com",
-      password: "password123",
+      mockPrisma.refreshToken.create.mockResolvedValue({
+        id: crypto.randomUUID(),
+        hashedToken: "mock-hashed-new-refresh-token",
+        userId,
+        createdAt: new Date(),
+        lastUsedAt: null,
+        expiresAt: null,
+      } as Prisma.RefreshTokenGetPayload<{
+        include: never;
+        select: undefined;
+      }>);
+
+      compareSpy.mockImplementation(async () => true);
+
+      const result = await caller.login({
+        email,
+        password,
+      });
+
+      expect(result).toMatchObject({
+        user: {
+          id: expect.any(String),
+          email,
+        },
+        accessToken: expect.any(String),
+        refreshToken: expect.stringMatching(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+        ),
+        message: "Login successful",
+      });
+
+      expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+        where: { email },
+        select: {
+          id: true,
+          email: true,
+          password: true,
+          isEmailVerified: true,
+        },
+      });
+
+      expect(mockPrisma.refreshToken.create).toHaveBeenCalledTimes(1);
+
+      expect(compareSpy).toHaveBeenCalledWith(password, "any-hash");
+      expect(compareSpy).toHaveBeenCalledTimes(1);
     });
 
-    expect(result).toMatchObject({
-      user: {
-        id: expect.any(String),
-        email: "testuser@example.com",
-      },
-      accessToken: expect.any(String),
-      refreshToken: expect.any(String),
-      message: expect.stringContaining("successful"),
-    });
-  });
+    it("throws UNAUTHORIZED for invalid email or password", async () => {
+      const email = "nonexistent@example.com";
 
-  it("throws UNAUTHORIZED for invalid credentials", async () => {
-    server.use(
-      trpcMsw.login.mutation(async () => {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "Invalid email or password",
-        });
-      }),
-    );
+      mockPrisma.user.findUnique.mockResolvedValue(null);
 
-    await expect(
-      client.login.mutate({
-        email: "wronguser@example.com",
-        password: "wrongpassword",
-      }),
-    ).rejects.toMatchObject({
-      message: "Invalid email or password",
-      data: {
+      await expect(
+        caller.login({
+          email,
+          password: "whatever",
+        }),
+      ).rejects.toMatchObject({
+        message: "Invalid email or password",
         code: "UNAUTHORIZED",
-        httpStatus: 401,
-        path: "login",
-      },
+      });
+
+      expect(mockPrisma.refreshToken.create).not.toHaveBeenCalled();
+      expect(compareSpy).not.toHaveBeenCalled();
     });
-  });
 
-  it("throws UNAUTHORIZED when email is not verified", async () => {
-    server.use(
-      trpcMsw.login.mutation(async () => {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "Please verify your email before logging in",
-        });
-      }),
-    );
+    it("throws FORBIDDEN when email is not verified", async () => {
+      const email = "unverified@example.com";
+      const userId = crypto.randomUUID();
 
-    await expect(
-      client.login.mutate({
-        email: "unverified@example.com",
-        password: "password123",
-      }),
-    ).rejects.toMatchObject({
-      message: "Please verify your email before logging in",
-      data: {
-        code: "UNAUTHORIZED",
-        httpStatus: 401,
-        path: "login",
-      },
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: userId,
+        email,
+        password: "any-hash",
+        isEmailVerified: false,
+        verificationToken: null,
+        resetPasswordToken: null,
+        resetPasswordTokenExpiresAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as Prisma.UserGetPayload<{
+        include: never;
+        select: undefined;
+      }>);
+
+      await expect(
+        caller.login({
+          email,
+          password: "password123",
+        }),
+      ).rejects.toMatchObject({
+        message: "Please verify your email before logging in",
+        code: "FORBIDDEN",
+      });
+
+      expect(mockPrisma.refreshToken.create).not.toHaveBeenCalled();
+      expect(compareSpy).not.toHaveBeenCalled();
+    });
+
+    it("throws BAD_REQUEST for invalid input format (Zod)", async () => {
+      await expect(
+        caller.login({
+          email: "invalid-email",
+          password: "",
+        }),
+      ).rejects.toThrow(/Invalid email|password/i);
+
+      expect(compareSpy).not.toHaveBeenCalled();
+      expect(mockPrisma.user.findUnique).not.toHaveBeenCalled();
     });
   });
 });

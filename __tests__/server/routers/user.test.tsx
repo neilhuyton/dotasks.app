@@ -1,180 +1,195 @@
 // __tests__/server/routers/user.test.ts
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { server } from "../../../__mocks__/server";
-import { trpcMsw } from "../../../__mocks__/trpcMsw";
-import { createTRPCClient, httpLink } from "@trpc/client";
-import type { AppRouter } from "@/../../server/trpc";
-import { TRPCError } from "@trpc/server";
-import { setupMSW } from "../../setupTests";
+import { describe, it, expect, beforeEach } from 'vitest';
+import crypto from 'node:crypto';
 
-describe("user router (protected)", () => {
-  setupMSW();
+import {
+  createProtectedCaller,
+  resetPrismaMocks,
+  mockPrisma,
+} from '../../utils/testCaller';
 
-  const client = createTRPCClient<AppRouter>({
-    links: [
-      httpLink({
-        url: "http://localhost:8888/trpc",
-      }),
-    ],
-  });
+import { mockUsers } from '../../../__mocks__/mockUsers';
+import type { User } from '@prisma/client';
+
+// Type for what getCurrent actually returns
+type GetCurrentReturn = {
+  id: string;
+  email: string;
+};
+
+// Helper to create a complete Prisma User object
+function mockFullUser(partial: Partial<User> = {}): User {
+  const defaults = {
+    id: crypto.randomUUID(),
+    email: 'default@example.com',
+    password: 'hashed-default-password',
+    verificationToken: null,
+    isEmailVerified: true,
+    resetPasswordToken: null,
+    resetPasswordTokenExpiresAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  return {
+    ...defaults,
+    ...partial,
+    createdAt: partial.createdAt instanceof Date ? partial.createdAt : new Date(partial.createdAt || defaults.createdAt),
+    updatedAt: partial.updatedAt instanceof Date ? partial.updatedAt : new Date(partial.updatedAt || defaults.updatedAt),
+    resetPasswordTokenExpiresAt: partial.resetPasswordTokenExpiresAt
+      ? new Date(partial.resetPasswordTokenExpiresAt)
+      : null,
+  } as User;
+}
+
+describe('user router (protected procedures)', () => {
+  let caller: ReturnType<typeof createProtectedCaller>;
 
   beforeEach(() => {
-    server.resetHandlers();
+    caller = createProtectedCaller();
+    resetPrismaMocks();
   });
 
-  afterEach(() => {
-    server.resetHandlers();
-  });
+  const currentUserBase = mockUsers.find((u) => u.id === 'test-user-id') || mockUsers[0];
 
-  describe("getCurrent", () => {
-    it("returns current user data when authenticated", async () => {
-      server.use(
-        trpcMsw.user.getCurrent.query(async () => ({
-          id: "usr_abc123",
-          email: "current.user@example.com",
-        })),
+  describe('getCurrent', () => {
+    it('returns the current authenticated user data', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(
+        mockFullUser({
+          id: currentUserBase.id,
+          email: currentUserBase.email,
+        })
       );
 
-      const result = await client.user.getCurrent.query();
+      const result = await caller.user.getCurrent();
 
-      expect(result).toEqual({
-        id: "usr_abc123",
-        email: "current.user@example.com",
+      // Changed from .toEqual → .toMatchObject to ignore extra fields
+      expect(result).toMatchObject({
+        id: currentUserBase.id,
+        email: currentUserBase.email,
+      } as GetCurrentReturn);
+
+      expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+        where: { id: 'test-user-id' },
+        select: {
+          id: true,
+          email: true,
+        },
       });
     });
 
-    it("throws NOT_FOUND when user no longer exists", async () => {
-      server.use(
-        trpcMsw.user.getCurrent.query(async () => {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "User not found",
-          });
-        }),
-      );
+    it('throws NOT_FOUND when the user no longer exists', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
 
-      await expect(client.user.getCurrent.query()).rejects.toMatchObject({
-        message: "User not found",
-        data: {
-          code: "NOT_FOUND",
-          httpStatus: 404,
-          path: "user.getCurrent",
+      await expect(caller.user.getCurrent()).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+        message: 'User not found',
+      });
+
+      expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+        where: { id: 'test-user-id' },
+        select: {
+          id: true,
+          email: true,
         },
       });
     });
   });
 
-  describe("updateEmail", () => {
-    it("updates email successfully when new email is valid and available", async () => {
-      server.use(
-        trpcMsw.user.updateEmail.mutation(async ({ input }) => ({
-          message: "Email updated successfully",
-          email: input.email,
-        })),
+  describe('updateEmail', () => {
+    it('successfully updates email when new email is available', async () => {
+      const newEmail = 'brand-new@example.com';
+
+      mockPrisma.user.findUnique.mockResolvedValueOnce(
+        mockFullUser({
+          email: currentUserBase.email,
+        })
       );
 
-      const result = await client.user.updateEmail.mutate({
-        email: "new.valid@example.com",
-      });
+      mockPrisma.user.findUnique.mockResolvedValueOnce(null);
+
+      mockPrisma.user.update.mockResolvedValue(
+        mockFullUser({
+          email: newEmail,
+        })
+      );
+
+      const result = await caller.user.updateEmail({ email: newEmail });
 
       expect(result).toEqual({
-        message: "Email updated successfully",
-        email: "new.valid@example.com",
+        message: 'Email updated successfully',
+        email: newEmail,
+      });
+
+      expect(mockPrisma.user.findUnique).toHaveBeenCalledTimes(2);
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'test-user-id' },
+        data: { email: newEmail },
+        select: { email: true },
       });
     });
 
-    it("returns success message when email is unchanged", async () => {
-      server.use(
-        trpcMsw.user.updateEmail.mutation(async ({ input }) => ({
-          message: "Email is already up to date",
-          email: input.email,
-        })),
+    it('returns success message when email is unchanged (same value)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce(
+        mockFullUser({
+          email: currentUserBase.email,
+        })
       );
 
-      const result = await client.user.updateEmail.mutate({
-        email: "current.user@example.com",
+      const result = await caller.user.updateEmail({
+        email: currentUserBase.email,
       });
 
       expect(result).toEqual({
-        message: "Email is already up to date",
-        email: "current.user@example.com",
+        message: 'Email is already up to date',
+        email: currentUserBase.email,
       });
+
+      expect(mockPrisma.user.findUnique).toHaveBeenCalledTimes(1);
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
     });
 
-    // ────────────────────────────────────────────────
-    // Use mock handler to test Zod — this is standard & clean
-    // Real Zod runs in integration/E2E tests with auth
-    // ────────────────────────────────────────────────
-    it("throws BAD_REQUEST for invalid email format", async () => {
-      server.use(
-        trpcMsw.user.updateEmail.mutation(async () => {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Invalid email address",
-          });
-        }),
+    it('throws BAD_REQUEST for invalid email format (Zod)', async () => {
+      await expect(
+        caller.user.updateEmail({ email: 'invalid-email-format' })
+      ).rejects.toThrow(/Invalid email address/);
+    });
+
+    it('throws CONFLICT when new email is already taken by another user', async () => {
+      const conflictingEmail = 'already.taken@example.com';
+
+      mockPrisma.user.findUnique.mockResolvedValueOnce(
+        mockFullUser({
+          email: currentUserBase.email,
+        })
+      );
+
+      mockPrisma.user.findUnique.mockResolvedValueOnce(
+        mockFullUser({
+          id: 'other-user-id',
+          email: conflictingEmail,
+        })
       );
 
       await expect(
-        client.user.updateEmail.mutate({
-          email: "invalid-email-format",
-        }),
+        caller.user.updateEmail({ email: conflictingEmail })
       ).rejects.toMatchObject({
-        message: expect.stringContaining("Invalid email address"),
-        data: {
-          code: "BAD_REQUEST",
-          httpStatus: 400,
-          path: "user.updateEmail",
-        },
+        code: 'CONFLICT',
+        message: 'This email is already in use by another account',
       });
+
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
     });
 
-    it("throws CONFLICT when new email is already taken by another user", async () => {
-      server.use(
-        trpcMsw.user.updateEmail.mutation(async () => {
-          throw new TRPCError({
-            code: "CONFLICT",
-            message: "This email is already in use by another account",
-          });
-        }),
-      );
+    it('throws NOT_FOUND when current user does not exist (edge case)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValueOnce(null);
 
       await expect(
-        client.user.updateEmail.mutate({
-          email: "already.taken@example.com",
-        }),
+        caller.user.updateEmail({ email: 'new@example.com' })
       ).rejects.toMatchObject({
-        message: "This email is already in use by another account",
-        data: {
-          code: "CONFLICT",
-          httpStatus: 409,
-          path: "user.updateEmail",
-        },
-      });
-    });
-
-    it("throws NOT_FOUND when current user does not exist", async () => {
-      server.use(
-        trpcMsw.user.updateEmail.mutation(async () => {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "User not found",
-          });
-        }),
-      );
-
-      await expect(
-        client.user.updateEmail.mutate({
-          email: "newemail@example.com",
-        }),
-      ).rejects.toMatchObject({
-        message: "User not found",
-        data: {
-          code: "NOT_FOUND",
-          httpStatus: 404,
-          path: "user.updateEmail",
-        },
+        code: 'NOT_FOUND',
+        message: 'User not found',
       });
     });
   });

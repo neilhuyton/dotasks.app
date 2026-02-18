@@ -5,8 +5,10 @@ import type { Context } from './context';
 
 const t = initTRPC.context<Context>().create();
 
+// Export these helpers
 export const router = t.router;
 export const publicProcedure = t.procedure;
+export const createCallerFactory = t.createCallerFactory;  // ← Add this line!
 
 export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
   if (!ctx.userId) {
