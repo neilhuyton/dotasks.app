@@ -1,9 +1,10 @@
 // __mocks__/handlers/auth.ts
 
 import { trpcMsw } from "../trpcMsw";
-import { mockUsers, type MockUser } from "../mockUsers";
+import { mockUsers } from "../mockUsers";
 import bcrypt from "bcryptjs";
 import { TRPCError } from "@trpc/server";
+import crypto from "node:crypto";
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -16,36 +17,61 @@ interface RefreshInput {
   refreshToken: string;
 }
 
+// ────────────────────────────────────────────────
+// Login handler
+// ────────────────────────────────────────────────
+
 export const loginHandler = trpcMsw.login.mutation(async ({ input }) => {
   await delay(50);
 
-  const rawInput = '0' in input ? input['0'] : input;
+  // Handle tRPC batch format safely
+  const parsedInput = Array.isArray(input) && input.length > 0 ? input[0].json : input;
 
-  const email = (rawInput as LoginInput | undefined)?.email ?? '';
-  const password = (rawInput as LoginInput | undefined)?.password ?? '';
+  const email = typeof parsedInput === "object" && parsedInput !== null
+    ? (parsedInput as Partial<LoginInput>).email?.trim().toLowerCase() ?? ""
+    : "";
+
+  const password = typeof parsedInput === "object" && parsedInput !== null
+    ? (parsedInput as Partial<LoginInput>).password ?? ""
+    : "";
 
   if (!email || !password) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid email or password" });
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Email and password are required",
+    });
   }
 
-  const user = mockUsers.find((u: MockUser) => u.email === email);
+  const user = mockUsers.find((u) => u.email === email);
 
   if (!user) {
-    throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password" });
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "Invalid email or password",
+    });
   }
 
   if (!user.isEmailVerified) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Please verify your email before logging in" });
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Please verify your email before logging in",
+    });
   }
 
   const isPasswordValid = await bcrypt.compare(password, user.password);
 
   if (!isPasswordValid) {
-    throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password" });
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "Invalid email or password",
+    });
   }
 
   const accessToken =
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZXN0LXVzZXItMSJ9.dummy-signature";
+
+  // Safe assertion – crypto.randomUUID() always matches UUID format
+  const refreshToken = (user.refreshToken ?? crypto.randomUUID()) as `${string}-${string}-${string}-${string}-${string}`;
 
   return {
     user: {
@@ -53,20 +79,33 @@ export const loginHandler = trpcMsw.login.mutation(async ({ input }) => {
       email: user.email,
     },
     accessToken,
-    refreshToken: (user.refreshToken ??
-      "550e8400-e29b-41d4-a716-446655440000") as `${string}-${string}-${string}-${string}-${string}`,
+    refreshToken,
     message: "Login successful",
   };
 });
 
+// ────────────────────────────────────────────────
+// Refresh token handler
+// ────────────────────────────────────────────────
+
 export const refreshTokenHandler = trpcMsw.refreshToken.refresh.mutation(async ({ input }) => {
   await delay(30);
 
-  const rawInput = '0' in input ? input['0'] : input;
+  // Handle tRPC batch format safely
+  const parsedInput = Array.isArray(input) && input.length > 0 ? input[0].json : input;
 
-  const refreshToken = (rawInput as RefreshInput | undefined)?.refreshToken ?? '';
+  const refreshToken = typeof parsedInput === "object" && parsedInput !== null
+    ? (parsedInput as Partial<RefreshInput>).refreshToken ?? ""
+    : "";
 
-  if (!refreshToken || !refreshToken.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+  if (!refreshToken) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Refresh token is required",
+    });
+  }
+
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(refreshToken)) {
     throw new TRPCError({
       code: "BAD_REQUEST",
       message: "Invalid refresh token format",
@@ -74,6 +113,7 @@ export const refreshTokenHandler = trpcMsw.refreshToken.refresh.mutation(async (
   }
 
   const user = mockUsers.find((u) => u.refreshToken === refreshToken);
+
   if (!user) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
@@ -81,9 +121,13 @@ export const refreshTokenHandler = trpcMsw.refreshToken.refresh.mutation(async (
     });
   }
 
-  const newAccessToken = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.refreshed.${user.id}.signature`;
+  const newAccessToken = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.refreshed.${user.id}.mock-signature`;
 
-  const newRefreshToken = "550e8400-e29b-41d4-a716-446655440001" as `${string}-${string}-${string}-${string}-${string}`;
+  // Rotate refresh token – safe assertion
+  const newRefreshToken = crypto.randomUUID() as `${string}-${string}-${string}-${string}-${string}`;
+
+  // Update in mock store
+  user.refreshToken = newRefreshToken;
 
   return {
     accessToken: newAccessToken,
