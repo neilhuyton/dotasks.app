@@ -90,7 +90,7 @@ function ResetPassword() {
                   role="alert"
                   className={cn(
                     "text-sm text-center",
-                    message.includes("failed")
+                    /failed|error/i.test(message) // ← regex, case-insensitive
                       ? "text-red-500"
                       : "text-green-500",
                   )}

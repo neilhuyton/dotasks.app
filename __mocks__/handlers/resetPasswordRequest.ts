@@ -1,48 +1,67 @@
 // __mocks__/handlers/resetPasswordRequest.ts
 
-import { http, HttpResponse } from 'msw';
+import { trpcMsw } from '../trpcMsw';
+import { TRPCError } from '@trpc/server';
 
-export const resetPasswordRequestHandler = http.post(
-  '/trpc/resetPassword.request',
-  async ({ request }) => {
-    let body: unknown;
+// ────────────────────────────────────────────────
+// Default: fast success (happy path for most tests)
+export const resetPasswordRequestHandler = trpcMsw.resetPassword.request.mutation(
+  async ({ input }) => {
+    // Small realistic network delay
+    await new Promise(resolve => setTimeout(resolve, 300));
 
-    try {
-      body = await request.json();
-    } catch {
-      return HttpResponse.json(
-        { message: 'Invalid JSON request' },
-        { status: 400 }
-      );
+    const { email } = input;
+
+    if (typeof email !== 'string' || !email.trim() || !email.includes('@')) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Please enter a valid email address',
+      });
     }
 
-    if (!body || typeof body !== 'object' || body === null) {
-      return HttpResponse.json(
-        { message: 'Invalid request body' },
-        { status: 400 }
-      );
-    }
-
-    const input = body as { email?: unknown };
-    const email = input.email;
-
-    if (typeof email !== 'string' || email.trim() === '') {
-      return HttpResponse.json(
-        { message: 'Invalid email' },
-        { status: 400 }
-      );
-    }
-
-    // ← This is the important change
-    return HttpResponse.json(
-      {
-        result: {
-          data: {
-            message: 'If the email exists, a reset link has been sent.'
-          }
-        }
-      },
-      { status: 200 }
-    );
+    // Security-friendly response – don't reveal whether the email exists
+    return {
+      message: 'If the email exists, a reset link has been sent.',
+    };
   }
 );
+
+// ────────────────────────────────────────────────
+// Delayed: specifically for testing loading/disabled states in UI
+export const delayedResetPasswordRequestHandler = trpcMsw.resetPassword.request.mutation(
+  async () => {
+    // Longer delay so the test can observe spinner and disabled button
+    await new Promise(resolve => setTimeout(resolve, 1200));
+
+    return {
+      message: 'If the email exists, a reset link has been sent. (delayed response)',
+    };
+  }
+);
+
+// ────────────────────────────────────────────────
+// Server-side failure simulation (e.g. database unavailable, internal error)
+export const resetPasswordRequestServerErrorHandler = trpcMsw.resetPassword.request.mutation(
+  async () => {
+    await new Promise(resolve => setTimeout(resolve, 200));
+
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Failed to process request. Please try again later.',
+    });
+  }
+);
+
+// ────────────────────────────────────────────────
+// Rate-limit / abuse protection simulation
+export const resetPasswordRequestRateLimitedHandler = trpcMsw.resetPassword.request.mutation(
+  async () => {
+    throw new TRPCError({
+      code: 'TOO_MANY_REQUESTS',
+      message: 'Too many password reset requests. Please wait a few minutes and try again.',
+    });
+  }
+);
+
+// Optional: Export default for convenience (most tests will use this one)
+export default resetPasswordRequestHandler;

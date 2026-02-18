@@ -16,7 +16,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createMemoryHistory, createRouter } from "@tanstack/react-router";
 import { trpc } from "@/trpc";
 import { httpLink } from "@trpc/client";
-import { server } from "../../__mocks__/server";
+import { server } from "../../../__mocks__/server";
 import { routeTree } from "@/routeTree.gen";
 import { useAuthStore } from "@/store/authStore";
 import {
@@ -24,9 +24,9 @@ import {
   updateEmailHandler,
   updateEmailSuccessHandler,
   sendPasswordResetHandler,
-} from "../../__mocks__/handlers/profile";
-import { trpcMsw } from "../../__mocks__/trpcMsw";
-import { mockUsers } from "../../__mocks__/mockUsers";
+} from "../../../__mocks__/handlers/profile";
+import { trpcMsw } from "../../../__mocks__/trpcMsw";
+import { mockUsers } from "../../../__mocks__/mockUsers";
 
 describe("Profile Route (/_authenticated/profile)", () => {
   let queryClient: QueryClient;

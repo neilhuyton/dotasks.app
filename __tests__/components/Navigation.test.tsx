@@ -11,7 +11,7 @@ import {
 } from "@tanstack/react-router";
 import { act } from "react";
 
-import Navigation from "../src/components/Navigation";
+import Navigation from "@/components/Navigation";
 
 // Mock lucide-react icons correctly – return actual mocked components
 vi.mock("lucide-react", () => {
