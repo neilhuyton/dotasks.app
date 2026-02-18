@@ -71,7 +71,7 @@ describe('Confirm Reset Password (/confirm-reset-password)', () => {
       context: {
         queryClient,
         trpcClient: trpc.createClient({
-          links: [httpLink({ url: '/trpc' })],
+          links: [httpLink({ url: 'http://localhost:8888/trpc' })],
         }),
       },
       defaultPreload: 'intent',
@@ -81,7 +81,7 @@ describe('Confirm Reset Password (/confirm-reset-password)', () => {
 
     render(
       <trpc.Provider
-        client={trpc.createClient({ links: [httpLink({ url: '/trpc' })] })}
+        client={trpc.createClient({ links: [httpLink({ url: 'http://localhost:8888/trpc' })] })}
         queryClient={queryClient}
       >
         <QueryClientProvider client={queryClient}>

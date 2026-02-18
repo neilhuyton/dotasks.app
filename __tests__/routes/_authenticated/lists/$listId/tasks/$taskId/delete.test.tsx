@@ -100,7 +100,9 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
 
     render(
       <trpc.Provider
-        client={trpc.createClient({ links: [httpLink({ url: "/trpc" })] })}
+        client={trpc.createClient({
+          links: [httpLink({ url: "http://localhost:8888/trpc" })],
+        })}
         queryClient={queryClient}
       >
         <QueryClientProvider client={queryClient}>
@@ -118,16 +120,18 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
     await renderDeleteTaskPage();
 
     expect(
-      await screen.findByRole("heading", { name: "Delete Task?" })
+      await screen.findByRole("heading", { name: "Delete Task?" }),
     ).toBeInTheDocument();
 
     // Fixed: use findByText with partial match (waits for it)
     expect(
-      await screen.findByText(/This action cannot be undone/i)
+      await screen.findByText(/This action cannot be undone/i),
     ).toBeInTheDocument();
 
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Delete Task" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Delete Task" }),
+    ).toBeInTheDocument();
   });
 
   it("shows loading state during deletion", async () => {
@@ -163,10 +167,10 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
             to: "/lists/$listId",
             params: { listId: TEST_LIST_ID },
             replace: true,
-          })
+          }),
         );
       },
-      { timeout: 3000 }
+      { timeout: 3000 },
     );
 
     cachedTasks = queryClient.getQueryData<Task[]>([
@@ -183,7 +187,7 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
           code: "INTERNAL_SERVER_ERROR",
           message: "Deletion failed",
         });
-      })
+      }),
     );
 
     const { navigateSpy } = await renderDeleteTaskPage();
@@ -204,7 +208,7 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
         ]);
         expect(cachedTasks?.some((t) => t.id === TEST_TASK_ID)).toBe(true);
       },
-      { timeout: 3000 }
+      { timeout: 3000 },
     );
 
     expect(navigateSpy).not.toHaveBeenCalled();
@@ -220,7 +224,7 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
         to: "/lists/$listId",
         params: { listId: TEST_LIST_ID },
         replace: true,
-      })
+      }),
     );
   });
 
@@ -234,7 +238,7 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
         to: "/lists/$listId",
         params: { listId: TEST_LIST_ID },
         replace: true,
-      })
+      }),
     );
   });
 });

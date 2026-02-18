@@ -24,7 +24,7 @@ import {
 } from "@tanstack/react-router";
 import { router } from "../../src/router/router";
 import { loginHandler } from "../../__mocks__/handlers";
-import { suppressActWarnings } from "../act-suppress"; 
+import { suppressActWarnings } from "../act-suppress";
 import { trpcMsw } from "../../__mocks__/trpcMsw";
 import { TRPCError } from "@trpc/server";
 
@@ -48,7 +48,7 @@ describe("LoginPage", () => {
           client={trpc.createClient({
             links: [
               httpLink({
-                url: "/trpc",
+                url: "http://localhost:8888/trpc",
               }),
             ],
           })}

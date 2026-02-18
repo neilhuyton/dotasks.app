@@ -24,7 +24,6 @@ import { server } from "../../../../__mocks__/server";
 import { routeTree } from "@/routeTree.gen";
 import { useAuthStore } from "@/store/authStore";
 
-
 import {
   listLoadingHandler,
   getListNotFoundHandler,
@@ -86,7 +85,9 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
 
     render(
       <trpc.Provider
-        client={trpc.createClient({ links: [httpLink({ url: "/trpc" })] })}
+        client={trpc.createClient({
+          links: [httpLink({ url: "http://localhost:8888/trpc" })],
+        })}
         queryClient={queryClient}
       >
         <QueryClientProvider client={queryClient}>

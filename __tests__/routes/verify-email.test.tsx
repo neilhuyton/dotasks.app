@@ -33,7 +33,7 @@ describe("VerifyEmailPage", () => {
   });
 
   const trpcClient = trpc.createClient({
-    links: [httpLink({ url: "/trpc" })],
+    links: [httpLink({ url: "http://localhost:8888/trpc" })],
   });
 
   const initialMockUsers: MockUser[] = JSON.parse(JSON.stringify(mockUsers));

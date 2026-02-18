@@ -13,7 +13,11 @@ import {
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { RouterProvider, createMemoryHistory, createRouter } from "@tanstack/react-router";
+import {
+  RouterProvider,
+  createMemoryHistory,
+  createRouter,
+} from "@tanstack/react-router";
 import { trpc } from "@/trpc";
 import { httpLink } from "@trpc/client";
 import { server } from "../../../__mocks__/server";
@@ -49,7 +53,8 @@ describe("Profile Route (/_authenticated/profile)", () => {
       {
         id: "test-user-123",
         email: "testuser@example.com",
-        password: "$2b$10$BfZjnkEBinREhMQwsUwFjOdeidxX1dvXSKn.n3MxdwmRTcfV8JR16",
+        password:
+          "$2b$10$BfZjnkEBinREhMQwsUwFjOdeidxX1dvXSKn.n3MxdwmRTcfV8JR16",
         verificationToken: null,
         isEmailVerified: true,
         resetPasswordToken: null,
@@ -69,7 +74,7 @@ describe("Profile Route (/_authenticated/profile)", () => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         refreshToken: "mock-refresh-token-for-tests",
-      }
+      },
     );
 
     queryClient = new QueryClient({
@@ -117,13 +122,15 @@ describe("Profile Route (/_authenticated/profile)", () => {
 
     render(
       <trpc.Provider
-        client={trpc.createClient({ links: [httpLink({ url: "/trpc" })] })}
+        client={trpc.createClient({
+          links: [httpLink({ url: "http://localhost:8888/trpc" })],
+        })}
         queryClient={queryClient}
       >
         <QueryClientProvider client={queryClient}>
           <RouterProvider router={testRouter} />
         </QueryClientProvider>
-      </trpc.Provider>
+      </trpc.Provider>,
     );
 
     await new Promise((r) => setTimeout(r, 300));
@@ -134,7 +141,9 @@ describe("Profile Route (/_authenticated/profile)", () => {
     await renderProfile();
 
     await screen.findByText("User Profile");
-    expect(screen.getByTestId("current-email")).toHaveTextContent("testuser@example.com");
+    expect(screen.getByTestId("current-email")).toHaveTextContent(
+      "testuser@example.com",
+    );
     expect(screen.getByTestId("email-input")).toBeInTheDocument();
   });
 
@@ -173,7 +182,9 @@ describe("Profile Route (/_authenticated/profile)", () => {
     fireEvent.submit(form);
 
     const errorMsg = await screen.findByTestId("email-error");
-    expect(errorMsg.textContent?.toLowerCase()).toMatch(/already in use|conflict|taken/i);
+    expect(errorMsg.textContent?.toLowerCase()).toMatch(
+      /already in use|conflict|taken/i,
+    );
     expect(errorMsg).toHaveClass("text-red-500");
   });
 
@@ -197,7 +208,7 @@ describe("Profile Route (/_authenticated/profile)", () => {
       trpcMsw.user.updateEmail.mutation(async ({ input }) => {
         await new Promise((r) => setTimeout(r, 1200));
         return { message: "Email updated successfully", email: input.email };
-      })
+      }),
     );
 
     await renderProfile();
@@ -209,12 +220,17 @@ describe("Profile Route (/_authenticated/profile)", () => {
     fireEvent.submit(form);
 
     const submitBtn = screen.getByTestId("email-submit");
-    await waitFor(() => {
-      expect(submitBtn).toBeDisabled();
-      expect(submitBtn).toHaveTextContent(/updating/i);
-    }, { timeout: 2000 });
+    await waitFor(
+      () => {
+        expect(submitBtn).toBeDisabled();
+        expect(submitBtn).toHaveTextContent(/updating/i);
+      },
+      { timeout: 2000 },
+    );
 
-    await waitFor(() => expect(submitBtn).not.toBeDisabled(), { timeout: 3000 });
+    await waitFor(() => expect(submitBtn).not.toBeDisabled(), {
+      timeout: 3000,
+    });
   });
 
   it("shows client-side validation error for invalid email format", async () => {
@@ -258,7 +274,7 @@ describe("Profile Route (/_authenticated/profile)", () => {
     server.use(
       trpcMsw.user.getCurrent.query(() => {
         throw new Error("Failed to fetch user");
-      })
+      }),
     );
 
     await renderProfile();

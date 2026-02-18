@@ -98,7 +98,9 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
 
     render(
       <trpc.Provider
-        client={trpc.createClient({ links: [httpLink({ url: "/trpc" })] })}
+        client={trpc.createClient({
+          links: [httpLink({ url: "http://localhost:8888/trpc" })],
+        })}
         queryClient={queryClient}
       >
         <QueryClientProvider client={queryClient}>
@@ -118,17 +120,19 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
     expect(
       screen.getByRole("heading", {
         name: /Delete List "My Important Projects"/i,
-      })
+      }),
     ).toBeInTheDocument();
 
     expect(
       screen.getByText(
-        "This action cannot be undone. Tasks in this list will no longer be associated with any list."
-      )
+        "This action cannot be undone. Tasks in this list will no longer be associated with any list.",
+      ),
     ).toBeInTheDocument();
 
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Delete List" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Delete List" }),
+    ).toBeInTheDocument();
   });
 
   it("shows loading state during deletion", async () => {
@@ -159,10 +163,10 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
           expect.objectContaining({
             to: "/lists",
             replace: true,
-          })
+          }),
         );
       },
-      { timeout: 3000 }
+      { timeout: 3000 },
     );
 
     expect(getMockLists().length).toBeLessThan(initialCount);
@@ -176,7 +180,7 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
           code: "INTERNAL_SERVER_ERROR",
           message: "Deletion failed",
         });
-      })
+      }),
     );
 
     const initialCount = getMockLists().length;
@@ -189,7 +193,7 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
         expect(getMockLists()).toHaveLength(initialCount);
         expect(getMockLists().some((l) => l.id === TEST_LIST_ID)).toBe(true);
       },
-      { timeout: 3000 }
+      { timeout: 3000 },
     );
 
     expect(navigateSpy).not.toHaveBeenCalled();
@@ -204,7 +208,7 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
       expect.objectContaining({
         to: "/lists",
         replace: true,
-      })
+      }),
     );
   });
 
@@ -217,7 +221,7 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
       expect.objectContaining({
         to: "/lists",
         replace: true,
-      })
+      }),
     );
   });
 });

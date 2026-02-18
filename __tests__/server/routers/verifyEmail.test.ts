@@ -1,80 +1,132 @@
 // __tests__/server/routers/verifyEmail.test.ts
 
-import { describe, it, expect } from "vitest";
-import { http, HttpResponse } from "msw";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { server } from "../../../__mocks__/server";
-import { setupMSW } from "../../../__tests__/setupTests";
+import { trpcMsw } from "../../../__mocks__/trpcMsw";
+import { createTRPCClient, httpLink } from "@trpc/client";
+import type { AppRouter } from "@/../../server/trpc"; // ← your exact import path
+import { TRPCError } from "@trpc/server";
+import { setupMSW } from "../../setupTests";
 
-describe("verifyEmail", () => {
+describe("verifyEmail procedure", () => {
   setupMSW();
 
-  const ENDPOINT = "/trpc/verifyEmail";
-  const HEADERS = { "content-type": "application/json" };
+  // Absolute localhost URL — required in pure Node/Vitest (no browser origin)
+  // MSW intercepts requests to /trpc regardless of host/port
+  const client = createTRPCClient<AppRouter>({
+    links: [
+      httpLink({
+        url: "http://localhost:8888/trpc",
+      }),
+    ],
+  });
 
-  const mockSuccess = () =>
-    HttpResponse.json([
-      { id: 0, result: { data: { message: "Email verified successfully!" } } },
-    ]);
+  beforeEach(() => {
+    server.resetHandlers();
+  });
 
-  const mockError = (message: string, code: string, status: number) =>
-    HttpResponse.json(
-      [
-        {
-          id: 0,
-          error: {
-            message,
-            code: -32001,
-            data: { code, httpStatus: status, path: "verifyEmail" },
-          },
-        },
-      ],
-      { status },
+  afterEach(() => {
+    server.resetHandlers();
+  });
+
+  it("verifies email successfully with valid token", async () => {
+    server.use(
+      trpcMsw.verifyEmail.mutation(async ({ input }) => {
+        expect(input.token).toMatch(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+        );
+
+        return {
+          message: "Email verified successfully! You can now log in.",
+          email: "user@example.com",
+        };
+      }),
     );
 
-  const verifyEmailRequest = (token: string) =>
-    fetch(ENDPOINT, {
-      method: "POST",
-      headers: HEADERS,
-      body: JSON.stringify([{ id: 0, json: { token } }]),
+    const result = await client.verifyEmail.mutate({
+      token: "550e8400-e29b-41d4-a716-446655440000",
     });
 
-  it("verifies email successfully", async () => {
-    server.use(http.post(ENDPOINT, mockSuccess));
-
-    const response = await verifyEmailRequest("valid-token");
-
-    expect(response.status).toBe(200);
-    const body = await response.json();
-    expect(body[0].result.data).toEqual({
-      message: "Email verified successfully!",
+    expect(result).toEqual({
+      message: "Email verified successfully! You can now log in.",
+      email: "user@example.com",
     });
   });
 
-  it("returns 401 for invalid token", async () => {
+  it("throws NOT_FOUND for invalid or expired token", async () => {
     server.use(
-      http.post(ENDPOINT, () =>
-        mockError("Invalid verification token", "UNAUTHORIZED", 401),
-      ),
+      trpcMsw.verifyEmail.mutation(async () => {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Invalid or expired verification token.",
+        });
+      }),
     );
 
-    const response = await verifyEmailRequest("invalid-token");
-
-    expect(response.status).toBe(401);
-    const body = await response.json();
-    expect(body[0].error.message).toBe("Invalid verification token");
+    await expect(
+      client.verifyEmail.mutate({ token: "invalid-token" }),
+    ).rejects.toMatchObject({
+      message: "Invalid or expired verification token.",
+      data: {
+        code: "NOT_FOUND",
+        httpStatus: 404,
+        path: "verifyEmail",
+      },
+    });
   });
 
-  it("returns 400 when email is already verified", async () => {
+  it("throws BAD_REQUEST when email is already verified", async () => {
     server.use(
-      http.post(ENDPOINT, () =>
-        mockError("Email already verified", "BAD_REQUEST", 400),
-      ),
+      trpcMsw.verifyEmail.mutation(async () => {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Email is already verified.",
+        });
+      }),
     );
 
-    const response = await verifyEmailRequest("valid-token");
+    await expect(
+      client.verifyEmail.mutate({ token: "already-used-token" }),
+    ).rejects.toMatchObject({
+      message: "Email is already verified.",
+      data: {
+        code: "BAD_REQUEST",
+        httpStatus: 400,
+        path: "verifyEmail",
+      },
+    });
+  });
 
-    expect(response.status).toBe(400);
-    const body = await response.json();
-    expect(body[0].error.message).toBe("Email already verified");
+  it("enforces UUID format validation via Zod", async () => {
+    await expect(
+      client.verifyEmail.mutate({ token: "not-a-uuid" }),
+    ).rejects.toMatchObject({
+      message: expect.stringContaining("Invalid verification token format"),
+      data: {
+        code: "BAD_REQUEST",
+        httpStatus: 400,
+        path: "verifyEmail",
+      },
+    });
+  });
+
+  it("handles already-used token with specific message", async () => {
+    server.use(
+      trpcMsw.verifyEmail.mutation(async () => {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "This verification link has already been used or the email is verified.",
+        });
+      }),
+    );
+
+    await expect(
+      client.verifyEmail.mutate({ token: "used-token" }),
+    ).rejects.toMatchObject({
+      message:
+        "This verification link has already been used or the email is verified.",
+      data: { code: "BAD_REQUEST" },
+    });
   });
 });

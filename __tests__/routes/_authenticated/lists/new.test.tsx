@@ -93,7 +93,9 @@ describe("Create New List Page (/_authenticated/lists/new)", () => {
 
     render(
       <trpc.Provider
-        client={trpc.createClient({ links: [httpLink({ url: "/trpc" })] })}
+        client={trpc.createClient({
+          links: [httpLink({ url: "http://localhost:8888/trpc" })],
+        })}
         queryClient={queryClient}
       >
         <QueryClientProvider client={queryClient}>

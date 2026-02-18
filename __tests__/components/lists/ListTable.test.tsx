@@ -35,20 +35,22 @@ vi.mock("@tanstack/react-router", async () => {
   const actual = await vi.importActual("@tanstack/react-router");
   return {
     ...actual,
-    Link: vi.fn(({ children, className, title, "aria-label": ariaLabel, ...props }) => (
-      <a
-        data-testid="mocked-link"
-        className={className}
-        data-to={props.to}
-        data-params={JSON.stringify(props.params || {})}
-        data-search={JSON.stringify(props.search || {})}
-        title={title}
-        aria-label={ariaLabel}
-        {...props}
-      >
-        {children}
-      </a>
-    )),
+    Link: vi.fn(
+      ({ children, className, title, "aria-label": ariaLabel, ...props }) => (
+        <a
+          data-testid="mocked-link"
+          className={className}
+          data-to={props.to}
+          data-params={JSON.stringify(props.params || {})}
+          data-search={JSON.stringify(props.search || {})}
+          title={title}
+          aria-label={ariaLabel}
+          {...props}
+        >
+          {children}
+        </a>
+      ),
+    ),
   };
 });
 
@@ -79,7 +81,7 @@ describe("ListsTable", () => {
       renderResult = render(
         <trpc.Provider
           client={trpc.createClient({
-            links: [httpLink({ url: "/trpc" })],
+            links: [httpLink({ url: "http://localhost:8888/trpc" })],
           })}
           queryClient={queryClient}
         >
@@ -165,16 +167,16 @@ describe("ListsTable", () => {
       { timeout: 5000 },
     );
 
-    const titleLinks = screen.getAllByTestId("mocked-link").filter(
-      (link) => link.getAttribute("data-to") === "/lists/$listId"
-    );
+    const titleLinks = screen
+      .getAllByTestId("mocked-link")
+      .filter((link) => link.getAttribute("data-to") === "/lists/$listId");
 
     expect(titleLinks.length).toBe(2);
 
     expect(titleLinks[0]).toHaveTextContent("Groceries");
     expect(titleLinks[0]).toHaveAttribute(
       "data-params",
-      expect.stringContaining('"listId":"l1"')
+      expect.stringContaining('"listId":"l1"'),
     );
   });
 
@@ -193,7 +195,7 @@ describe("ListsTable", () => {
 
     // Filter to delete links (they point to "/lists/$listId/delete")
     const deleteLinks = allLinks.filter(
-      (link) => link.getAttribute("data-to") === "/lists/$listId/delete"
+      (link) => link.getAttribute("data-to") === "/lists/$listId/delete",
     );
 
     expect(deleteLinks.length).toBe(2); // one per list
@@ -201,12 +203,12 @@ describe("ListsTable", () => {
     // Check first delete link (Groceries / l1)
     expect(deleteLinks[0]).toHaveAttribute(
       "data-params",
-      expect.stringContaining('"listId":"l1"')
+      expect.stringContaining('"listId":"l1"'),
     );
-    expect(deleteLinks[0]).toHaveAttribute("title", 'Delete list');
+    expect(deleteLinks[0]).toHaveAttribute("title", "Delete list");
     expect(deleteLinks[0]).toHaveAttribute(
       "aria-label",
-      expect.stringContaining("Delete list")
+      expect.stringContaining("Delete list"),
     );
     expect(deleteLinks[0].querySelector("svg")).toBeInTheDocument(); // has Trash2 icon
 

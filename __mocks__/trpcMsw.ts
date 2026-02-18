@@ -4,5 +4,5 @@ import { createTRPCMsw, httpLink } from "msw-trpc";
 import type { AppRouter } from "../server/trpc";
 
 export const trpcMsw = createTRPCMsw<AppRouter>({
-  links: [httpLink({ url: "/trpc" })],
+  links: [httpLink({ url: "http://localhost:8888/trpc" })],
 });

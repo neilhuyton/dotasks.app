@@ -17,7 +17,11 @@ import { trpc } from "../../src/trpc";
 import { server } from "../../__mocks__/server";
 import "@testing-library/jest-dom";
 
-import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
+import {
+  createMemoryHistory,
+  createRouter,
+  RouterProvider,
+} from "@tanstack/react-router";
 import { router } from "../../src/router/router";
 import { registerHandler } from "../../__mocks__/handlers/register";
 import { suppressActWarnings } from "../act-suppress";
@@ -61,7 +65,7 @@ describe("RegisterPage", () => {
       context: {
         queryClient,
         trpcClient: trpc.createClient({
-          links: [httpLink({ url: "/trpc" })],
+          links: [httpLink({ url: "http://localhost:8888/trpc" })],
         }),
       },
       defaultPreload: "intent",
@@ -69,13 +73,15 @@ describe("RegisterPage", () => {
 
     render(
       <trpc.Provider
-        client={trpc.createClient({ links: [httpLink({ url: "/trpc" })] })}
+        client={trpc.createClient({
+          links: [httpLink({ url: "http://localhost:8888/trpc" })],
+        })}
         queryClient={queryClient}
       >
         <QueryClientProvider client={queryClient}>
           <RouterProvider router={testRouter} />
         </QueryClientProvider>
-      </trpc.Provider>
+      </trpc.Provider>,
     );
 
     return { testRouter, history };
@@ -84,12 +90,15 @@ describe("RegisterPage", () => {
   it("renders form fields, register button and login link", async () => {
     renderRegister();
 
-    await waitFor(() => {
-      expect(screen.getByTestId("email-input")).toBeInTheDocument();
-      expect(screen.getByTestId("password-input")).toBeInTheDocument();
-      expect(screen.getByTestId("register-button")).toBeInTheDocument();
-      expect(screen.getByTestId("login-link")).toBeInTheDocument();
-    }, { timeout: 2000 });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("email-input")).toBeInTheDocument();
+        expect(screen.getByTestId("password-input")).toBeInTheDocument();
+        expect(screen.getByTestId("register-button")).toBeInTheDocument();
+        expect(screen.getByTestId("login-link")).toBeInTheDocument();
+      },
+      { timeout: 2000 },
+    );
   });
 
   it("submits valid registration and shows success message", async () => {
@@ -97,20 +106,29 @@ describe("RegisterPage", () => {
 
     await waitFor(() => screen.getByTestId("email-input"));
 
-    await userEvent.type(screen.getByTestId("email-input"), "newuser@example.com");
-    await userEvent.type(screen.getByTestId("password-input"), "StrongPass123!");
+    await userEvent.type(
+      screen.getByTestId("email-input"),
+      "newuser@example.com",
+    );
+    await userEvent.type(
+      screen.getByTestId("password-input"),
+      "StrongPass123!",
+    );
 
     const form = screen.getByTestId("register-form");
     fireEvent.submit(form);
 
-    await waitFor(() => {
-      const message = screen.getByTestId("register-message");
-      expect(message).toBeInTheDocument();
-      expect(message).toHaveTextContent(
-        "Registration successful! Please check your email to verify your account."
-      );
-      expect(message).toHaveClass("text-green-500");
-    }, { timeout: 8000 });
+    await waitFor(
+      () => {
+        const message = screen.getByTestId("register-message");
+        expect(message).toBeInTheDocument();
+        expect(message).toHaveTextContent(
+          "Registration successful! Please check your email to verify your account.",
+        );
+        expect(message).toHaveClass("text-green-500");
+      },
+      { timeout: 8000 },
+    );
   });
 
   it("shows loading spinner during registration", async () => {
@@ -124,9 +142,12 @@ describe("RegisterPage", () => {
     const form = screen.getByTestId("register-form");
     fireEvent.submit(form);
 
-    await waitFor(() => {
-      expect(screen.getByTestId("register-loading")).toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("register-loading")).toBeInTheDocument();
+      },
+      { timeout: 5000 },
+    );
   });
 
   it("disables button during registration", async () => {
@@ -149,7 +170,7 @@ describe("RegisterPage", () => {
         expect(btn).toHaveTextContent("Registering...");
         expect(btn).toBeDisabled();
       },
-      { timeout: 5000 }
+      { timeout: 5000 },
     );
   });
 
@@ -161,12 +182,9 @@ describe("RegisterPage", () => {
     // FIRST ATTEMPT – success
     await userEvent.type(
       screen.getByTestId("email-input"),
-      "duplicate@example.com"
+      "duplicate@example.com",
     );
-    await userEvent.type(
-      screen.getByTestId("password-input"),
-      "password123"
-    );
+    await userEvent.type(screen.getByTestId("password-input"), "password123");
 
     fireEvent.submit(screen.getByTestId("register-form"));
 
@@ -175,11 +193,11 @@ describe("RegisterPage", () => {
         const messageEl = screen.getByTestId("register-message");
         expect(messageEl).toBeInTheDocument();
         expect(messageEl).toHaveTextContent(
-          "Registration successful! Please check your email to verify your account."
+          "Registration successful! Please check your email to verify your account.",
         );
         expect(messageEl).toHaveClass("text-green-500");
       },
-      { timeout: 8000 }
+      { timeout: 8000 },
     );
 
     await new Promise((r) => setTimeout(r, 100));
@@ -203,7 +221,7 @@ describe("RegisterPage", () => {
         expect(messageEl).toHaveTextContent("Email already exists");
         expect(messageEl).toHaveClass("text-red-500");
       },
-      { timeout: 8000 }
+      { timeout: 8000 },
     );
   }, 15000);
 

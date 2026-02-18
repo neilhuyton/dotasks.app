@@ -1,113 +1,145 @@
 // __tests__/server/routers/register.test.ts
 
-import { describe, it, expect } from "vitest";
-import { http, HttpResponse } from "msw";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { server } from "../../../__mocks__/server";
-import { setupMSW } from "../../../__tests__/setupTests";
+import { trpcMsw } from "../../../__mocks__/trpcMsw";
+import { createTRPCClient, httpLink } from "@trpc/client";
+import type { AppRouter } from "@/../../server/trpc"; // adjust path to match your alias/setup
+import { TRPCError } from "@trpc/server";
+import { setupMSW } from "../../setupTests"; // adjust path if needed
+import crypto from "node:crypto";
 
-describe("register", () => {
+describe("register procedure", () => {
   setupMSW();
 
-  const ENDPOINT = "/trpc/register";
-  const HEADERS = { "content-type": "application/json" } as const;
+  const client = createTRPCClient<AppRouter>({
+    links: [
+      httpLink({
+        url: "http://localhost:8888/trpc",
+      }),
+    ],
+  });
 
-  const mockSuccess = (data: Record<string, unknown>) =>
-    HttpResponse.json([{ id: 0, result: { data } }]);
+  beforeEach(() => {
+    server.resetHandlers();
+  });
 
-  const mockError = (message: string, code: string, status: number) =>
-    HttpResponse.json(
-      [
-        {
-          id: 0,
-          error: {
-            message,
-            code: -32001,
-            data: { code, httpStatus: status, path: "register" },
-          },
-        },
-      ],
-      { status },
-    );
-
-  const registerRequest = (payload: { email: string; password: string }) =>
-    fetch(ENDPOINT, {
-      method: "POST",
-      headers: HEADERS,
-      body: JSON.stringify([{ id: 0, json: payload }]),
-    });
+  afterEach(() => {
+    server.resetHandlers();
+  });
 
   it("registers a new user successfully", async () => {
-    const successData = {
-      id: "new-user-id",
-      email: "newuser@example.com",
-      message:
-        "Registration successful! Please check your email to verify your account.",
-    };
+    server.use(
+      trpcMsw.register.mutation(async ({ input }) => {
+        // Optional light input validation in test
+        expect(input).toMatchObject({
+          email: expect.any(String),
+          password: expect.any(String),
+        });
+        expect(input.email).toContain("@");
 
-    server.use(http.post(ENDPOINT, () => mockSuccess(successData)));
+        return {
+          user: {
+            id: "mock-user-id-123",
+            email: input.email,
+          },
+          accessToken: "mock-jwt-access-token.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+          refreshToken: crypto.randomUUID(),
+          message: "Registration successful! Please check your email to verify your account.",
+        };
+      }),
+    );
 
-    const response = await registerRequest({
+    const result = await client.register.mutate({
       email: "newuser@example.com",
       password: "password123",
     });
 
-    expect(response.status).toBe(200);
-    const body = (await response.json()) as [
-      { result: { data: typeof successData } },
-    ];
-    expect(body[0].result.data).toEqual(successData);
+    expect(result).toMatchObject({
+      user: {
+        id: expect.any(String),
+        email: "newuser@example.com",
+      },
+      accessToken: expect.any(String),
+      refreshToken: expect.stringMatching(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      ),
+      message: "Registration successful! Please check your email to verify your account.",
+    });
   });
 
-  it("returns 400 for invalid email format", async () => {
+  it("throws BAD_REQUEST for invalid email format", async () => {
     server.use(
-      http.post(ENDPOINT, () =>
-        mockError("Invalid email address", "BAD_REQUEST", 400),
-      ),
+      trpcMsw.register.mutation(async () => {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid email address",
+        });
+      }),
     );
 
-    const response = await registerRequest({
-      email: "invalid-email",
-      password: "password123",
+    await expect(
+      client.register.mutate({
+        email: "not-an-email",
+        password: "password123",
+      }),
+    ).rejects.toMatchObject({
+      message: "Invalid email address",
+      data: {
+        code: "BAD_REQUEST",
+        httpStatus: 400,
+        path: "register",
+      },
     });
-
-    expect(response.status).toBe(400);
-    const body = (await response.json()) as [{ error: { message: string } }];
-    expect(body[0].error.message).toBe("Invalid email address");
   });
 
-  it("returns 400 for password too short", async () => {
+  it("throws BAD_REQUEST for password too short", async () => {
     server.use(
-      http.post(ENDPOINT, () =>
-        mockError("Password must be at least 8 characters", "BAD_REQUEST", 400),
-      ),
+      trpcMsw.register.mutation(async () => {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Password must be at least 8 characters",
+        });
+      }),
     );
 
-    const response = await registerRequest({
-      email: "newuser@example.com",
-      password: "short",
+    await expect(
+      client.register.mutate({
+        email: "newuser@example.com",
+        password: "short",
+      }),
+    ).rejects.toMatchObject({
+      message: "Password must be at least 8 characters",
+      data: {
+        code: "BAD_REQUEST",
+        httpStatus: 400,
+        path: "register",
+      },
     });
-
-    expect(response.status).toBe(400);
-    const body = (await response.json()) as [{ error: { message: string } }];
-    expect(body[0].error.message).toBe(
-      "Password must be at least 8 characters",
-    );
   });
 
-  it("returns 400 when email is already registered", async () => {
+  it("throws CONFLICT when email is already registered", async () => {
     server.use(
-      http.post(ENDPOINT, () =>
-        mockError("Email already registered", "BAD_REQUEST", 400),
-      ),
+      trpcMsw.register.mutation(async () => {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "This email is already registered",
+        });
+      }),
     );
 
-    const response = await registerRequest({
-      email: "neil.huyton@gmail.com",
-      password: "password123",
+    await expect(
+      client.register.mutate({
+        email: "existing@example.com",
+        password: "password123",
+      }),
+    ).rejects.toMatchObject({
+      message: "This email is already registered",
+      data: {
+        code: "CONFLICT",
+        httpStatus: 409,
+        path: "register",
+      },
     });
-
-    expect(response.status).toBe(400);
-    const body = (await response.json()) as [{ error: { message: string } }];
-    expect(body[0].error.message).toBe("Email already registered");
   });
 });

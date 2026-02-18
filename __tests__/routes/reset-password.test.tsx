@@ -1,6 +1,14 @@
 // __tests__/routes/reset-password.test.tsx
 
-import { describe, it, expect, beforeAll, afterEach, afterAll, vi } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterEach,
+  afterAll,
+  vi,
+} from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -53,7 +61,9 @@ describe("Reset Password Route (/reset-password)", () => {
   });
 
   const renderResetPassword = () => {
-    const history = createMemoryHistory({ initialEntries: ["/reset-password"] });
+    const history = createMemoryHistory({
+      initialEntries: ["/reset-password"],
+    });
 
     const testRouter = createRouter({
       routeTree: router.routeTree,
@@ -61,7 +71,7 @@ describe("Reset Password Route (/reset-password)", () => {
       context: {
         queryClient,
         trpcClient: trpc.createClient({
-          links: [httpLink({ url: "/trpc" })],
+          links: [httpLink({ url: "http://localhost:8888/trpc" })],
         }),
       },
       defaultPreload: "intent",
@@ -69,13 +79,15 @@ describe("Reset Password Route (/reset-password)", () => {
 
     render(
       <trpc.Provider
-        client={trpc.createClient({ links: [httpLink({ url: "/trpc" })] })}
+        client={trpc.createClient({
+          links: [httpLink({ url: "http://localhost:8888/trpc" })],
+        })}
         queryClient={queryClient}
       >
         <QueryClientProvider client={queryClient}>
           <RouterProvider router={testRouter} />
         </QueryClientProvider>
-      </trpc.Provider>
+      </trpc.Provider>,
     );
 
     return { testRouter, history };
@@ -84,12 +96,15 @@ describe("Reset Password Route (/reset-password)", () => {
   it("renders email input, submit button, and back-to-login link", async () => {
     renderResetPassword();
 
-    await waitFor(() => {
-      expect(screen.getByTestId("email-input")).toBeInTheDocument();
-      expect(screen.getByTestId("submit-button")).toBeInTheDocument();
-      expect(screen.getByTestId("back-to-login-link")).toBeInTheDocument();
-      expect(screen.getByText(/reset your password/i)).toBeInTheDocument();
-    }, { timeout: 2000 });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("email-input")).toBeInTheDocument();
+        expect(screen.getByTestId("submit-button")).toBeInTheDocument();
+        expect(screen.getByTestId("back-to-login-link")).toBeInTheDocument();
+        expect(screen.getByText(/reset your password/i)).toBeInTheDocument();
+      },
+      { timeout: 2000 },
+    );
   });
 
   it("submits valid email → shows success message and clears input", async () => {
@@ -107,12 +122,12 @@ describe("Reset Password Route (/reset-password)", () => {
         const message = screen.getByTestId("reset-password-message");
         expect(message).toBeInTheDocument();
         expect(message).toHaveTextContent(
-          "If the email exists, a reset link has been sent."
+          "If the email exists, a reset link has been sent.",
         );
         expect(message).toHaveClass("text-green-500");
         expect(screen.getByTestId("email-input")).toHaveValue("");
       },
-      { timeout: 6000 }
+      { timeout: 6000 },
     );
   });
 
@@ -126,14 +141,19 @@ describe("Reset Password Route (/reset-password)", () => {
     const form = screen.getByTestId("reset-password-form");
     fireEvent.submit(form);
 
-    await waitFor(() => {
-      // Assuming <FormMessage /> renders the Zod error
-      const error = screen.getByText(/valid email/i);
-      expect(error).toBeInTheDocument();
-      // Adjust class name if your shadcn/tailwind setup uses something else
-      expect(error).toHaveClass("text-destructive");
-      expect(screen.queryByTestId("reset-password-message")).not.toBeInTheDocument();
-    }, { timeout: 3000 });
+    await waitFor(
+      () => {
+        // Assuming <FormMessage /> renders the Zod error
+        const error = screen.getByText(/valid email/i);
+        expect(error).toBeInTheDocument();
+        // Adjust class name if your shadcn/tailwind setup uses something else
+        expect(error).toHaveClass("text-destructive");
+        expect(
+          screen.queryByTestId("reset-password-message"),
+        ).not.toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
   });
 
   it("disables button and shows loading spinner during submission", async () => {
@@ -155,16 +175,17 @@ describe("Reset Password Route (/reset-password)", () => {
       () => {
         expect(submitBtn).toBeDisabled();
         expect(submitBtn).toHaveTextContent("Sending...");
-        expect(screen.getByTestId("reset-password-loading")).toBeInTheDocument();
+        expect(
+          screen.getByTestId("reset-password-loading"),
+        ).toBeInTheDocument();
       },
-      { timeout: 2500 }
+      { timeout: 2500 },
     );
 
     // Optional: wait for completion to clean up
-    await waitFor(
-      () => expect(submitBtn).not.toBeDisabled(),
-      { timeout: 4000 }
-    );
+    await waitFor(() => expect(submitBtn).not.toBeDisabled(), {
+      timeout: 4000,
+    });
   });
 
   it("shows error message when server returns failure", async () => {
@@ -185,7 +206,7 @@ describe("Reset Password Route (/reset-password)", () => {
         expect(message).toHaveTextContent(/failed|error|try again/i);
         expect(message).toHaveClass("text-red-500");
       },
-      { timeout: 5000 }
+      { timeout: 5000 },
     );
   });
 
@@ -196,9 +217,12 @@ describe("Reset Password Route (/reset-password)", () => {
 
     await userEvent.click(screen.getByTestId("back-to-login-link"));
 
-    await waitFor(() => {
-      expect(history.location.pathname).toBe("/login");
-    }, { timeout: 2000 });
+    await waitFor(
+      () => {
+        expect(history.location.pathname).toBe("/login");
+      },
+      { timeout: 2000 },
+    );
   });
 
   // Optional future tests:
