@@ -1,19 +1,19 @@
 // __tests__/setupTests.ts
 
-import '@testing-library/jest-dom';
-import { vi, beforeAll, afterEach, afterAll } from 'vitest';
-import { server } from '../__mocks__/server';
-import fetch, { Request } from 'node-fetch';
+import "@testing-library/jest-dom";
+import { vi, beforeAll, afterEach, afterAll } from "vitest";
+import { server } from "../__mocks__/server";
+import fetch, { Request } from "node-fetch";
 
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;   
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 // Polyfill fetch and Request globals
-Object.defineProperty(global, 'fetch', {
+Object.defineProperty(global, "fetch", {
   writable: true,
   value: fetch,
 });
 
-Object.defineProperty(global, 'Request', {
+Object.defineProperty(global, "Request", {
   writable: false,
   value: Request,
 });
@@ -35,35 +35,35 @@ const localStorageMock = (() => {
     clear: () => (store = {}),
   };
 })();
-Object.defineProperty(window, 'localStorage', { value: localStorageMock });
+Object.defineProperty(window, "localStorage", { value: localStorageMock });
 
 // Mock sessionStorage (optional, include if used in your app)
-Object.defineProperty(window, 'sessionStorage', { value: localStorageMock });
+Object.defineProperty(window, "sessionStorage", { value: localStorageMock });
 
 // Mock matchMedia
 const matchMediaMock = (matchesDark: boolean) =>
   ({
     matches: matchesDark,
-    media: '(prefers-color-scheme: dark)',
+    media: "(prefers-color-scheme: dark)",
     onchange: null,
     addListener: vi.fn(),
     removeListener: vi.fn(),
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(() => true),
-  } as MediaQueryList);
+  }) as MediaQueryList;
 
-Object.defineProperty(window, 'matchMedia', {
+Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: vi
     .fn()
     .mockImplementation((query: string) =>
-      matchMediaMock(query === '(prefers-color-scheme: dark)')
+      matchMediaMock(query === "(prefers-color-scheme: dark)"),
     ),
 });
 
 // Polyfill PointerEvent for jsdom to support @radix-ui/react-select
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   window.PointerEvent = class PointerEvent extends Event {
     public pointerId: number;
     public clientX: number;
@@ -79,7 +79,7 @@ if (typeof window !== 'undefined') {
       this.clientX = init?.clientX ?? 0;
       this.clientY = init?.clientY ?? 0;
       this.isPrimary = init?.isPrimary ?? true;
-      this.pointerType = init?.pointerType ?? 'mouse';
+      this.pointerType = init?.pointerType ?? "mouse";
       this.button = init?.button ?? 0;
       this.buttons = init?.buttons ?? 0;
     }
@@ -97,7 +97,22 @@ if (typeof window !== 'undefined') {
 
 // MSW setup for server tests
 export const setupMSW = () => {
-  beforeAll(() => server.listen({ onUnhandledRequest: 'warn' }));
+  beforeAll(() => {
+    server.listen({
+      // Custom handler: silence warnings ONLY for tRPC paths (expected in Zod client validation tests)
+      onUnhandledRequest(request, print) {
+        const url = new URL(request.url);
+
+        if (url.pathname.startsWith("/trpc")) {
+          return; // ← silent bypass: no warning, request proceeds normally
+        }
+
+        // For any other unhandled request → warn (helps catch real bugs)
+        print.warning();
+      },
+    });
+  });
+
   afterEach(() => server.resetHandlers());
   afterAll(() => server.close());
 };
