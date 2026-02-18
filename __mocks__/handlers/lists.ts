@@ -69,6 +69,57 @@ export function getMockLists() {
   return [...mockLists];
 }
 
+// ──────────────────────────────────────────────
+// Preset for $listId detail page tests
+// ──────────────────────────────────────────────
+
+export const TEST_LIST_DETAIL_ID = "list-abc-123";
+
+export const detailPageListPreset = {
+  id: TEST_LIST_DETAIL_ID,
+  userId: "test-user-123",
+  title: "My Important Projects",
+  description: "Work-related stuff I must finish this month",
+  color: null,
+  icon: null,
+  isArchived: false,
+};
+
+export function prepareDetailPageTestList() {
+  resetMockLists(); // Start clean – remove the default l1/l2 if you want isolation
+
+  const now = new Date();
+  mockLists.push({
+    ...detailPageListPreset,
+    createdAt: now,
+    updatedAt: now,
+  });
+}
+
+// Encapsulated handler using the preset (recommended for detail tests)
+export const listGetOneDetailPagePreset = trpcMsw.list.getOne.query(() => {
+  prepareDetailPageTestList(); // Ensure data exists
+  const found = mockLists.find((l) => l.id === TEST_LIST_DETAIL_ID);
+  if (!found) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "List not found" });
+  }
+  return {
+    id: found.id,
+    userId: found.userId,
+    title: found.title,
+    description: found.description,
+    color: found.color,
+    icon: found.icon,
+    isArchived: found.isArchived,
+    createdAt: found.createdAt.toISOString(),
+    updatedAt: found.updatedAt.toISOString(),
+  };
+});
+
+// ──────────────────────────────────────────────
+// Core CRUD & list handlers (original + extended)
+// ──────────────────────────────────────────────
+
 export const deleteListResolver = ({ input }: { input: { id: string } }) => {
   const { id } = input;
 
@@ -100,7 +151,7 @@ export const deleteListResolver = ({ input }: { input: { id: string } }) => {
 export const listDeleteHandler = trpcMsw.list.delete.mutation(deleteListResolver);
 
 export const delayedListDeleteHandler = trpcMsw.list.delete.mutation(async (ctx) => {
-  await new Promise(resolve => setTimeout(resolve, 400));
+  await new Promise((resolve) => setTimeout(resolve, 400));
   return deleteListResolver(ctx);
 });
 
@@ -145,11 +196,11 @@ export const listCreateHandler = trpcMsw.list.create.mutation(({ input }) => {
 });
 
 // ──────────────────────────────────────────────
-// Handlers specifically for list.getOne (used in detail page tests)
+// Handlers specifically for list.getOne
 // ──────────────────────────────────────────────
 
 /**
- * Success handler for list.getOne – returns full list shape
+ * Success handler for list.getOne – uses current mockLists state
  */
 export const listGetOneSuccessHandler = trpcMsw.list.getOne.query(({ input }) => {
   const found = mockLists.find((l) => l.id === input.id);
@@ -170,11 +221,10 @@ export const listGetOneSuccessHandler = trpcMsw.list.getOne.query(({ input }) =>
 });
 
 /**
- * Loading handler: delays response to simulate slow fetch (full shape)
+ * Loading handler: delays response to simulate slow fetch
  */
 export const listLoadingHandler = trpcMsw.list.getOne.query(async ({ input }) => {
-  // Simulate slow network / loading state
-  await new Promise((resolve) => setTimeout(resolve, 1200)); // 1.2 seconds delay
+  await new Promise((resolve) => setTimeout(resolve, 1200));
 
   const found = mockLists.find((l) => l.id === input.id);
   if (!found) {
@@ -194,7 +244,7 @@ export const listLoadingHandler = trpcMsw.list.getOne.query(async ({ input }) =>
 });
 
 /**
- * Not-found handler: always throws NOT_FOUND (no data returned)
+ * Not-found handler: always throws NOT_FOUND
  */
 export const getListNotFoundHandler = trpcMsw.list.getOne.query(() => {
   throw new TRPCError({
@@ -207,6 +257,5 @@ export const listHandlers = [
   listGetAllHandler,
   listCreateHandler,
   listDeleteHandler,
-  // You can optionally include one as global default, but better to control per-test
-  // listGetOneSuccessHandler,
+  // listGetOneSuccessHandler,    // ← usually controlled per-test, not global
 ];

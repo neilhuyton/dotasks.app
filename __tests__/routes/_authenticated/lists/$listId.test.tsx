@@ -23,23 +23,23 @@ import { httpLink } from "@trpc/client";
 import { server } from "../../../../__mocks__/server";
 import { routeTree } from "@/routeTree.gen";
 import { useAuthStore } from "@/store/authStore";
-import { trpcMsw } from "../../../../__mocks__/trpcMsw";
+
+
 import {
   listLoadingHandler,
   getListNotFoundHandler,
+  listGetOneDetailPagePreset,
 } from "../../../../__mocks__/handlers/lists";
+
 import {
   taskGetByListSuccess,
   taskGetByListLoading,
   taskDeleteSuccess,
 } from "../../../../__mocks__/handlers/tasks";
-import { TRPCError } from "@trpc/server";
 
 describe("List Detail Route (/_authenticated/lists/$listId)", () => {
   let queryClient: QueryClient;
   const user = userEvent.setup();
-
-  const TEST_LIST_ID = "list-abc-123";
 
   beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 
@@ -57,27 +57,7 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
 
     server.resetHandlers();
 
-    // Default: list exists
-    server.use(
-      trpcMsw.list.getOne.query(({ input }) => {
-        if (input.id === TEST_LIST_ID) {
-          return {
-            id: TEST_LIST_ID,
-            userId: "test-user-123",
-            title: "My Important Projects",
-            description: "Work-related stuff I must finish this month",
-            color: null,
-            icon: null,
-            isArchived: false,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
-        }
-        throw new TRPCError({ code: "NOT_FOUND" });
-      }),
-    );
-
-    // Default: tasks exist
+    server.use(listGetOneDetailPagePreset);
     server.use(taskGetByListSuccess);
 
     vi.spyOn(console, "error").mockImplementation(() => {});
@@ -100,7 +80,7 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
 
   const renderListDetail = async () => {
     const history = createMemoryHistory({
-      initialEntries: [`/lists/${TEST_LIST_ID}`],
+      initialEntries: [`/lists/${"list-abc-123"}`], // matches preset
     });
     const router = createRouter({ routeTree, history });
 
@@ -115,7 +95,6 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
       </trpc.Provider>,
     );
 
-    // Give React Query / TanStack Router a moment to settle
     await waitFor(() => {}, { timeout: 800 });
     return { history };
   };
@@ -141,9 +120,9 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
   it("renders 'Add Task' link with correct navigation target", async () => {
     const { history } = await renderListDetail();
     const link = await screen.findByRole("link", { name: /add task/i });
-    expect(link).toHaveAttribute("href", `/lists/${TEST_LIST_ID}/tasks/new`);
+    expect(link).toHaveAttribute("href", `/lists/list-abc-123/tasks/new`);
     await user.click(link);
-    expect(history.location.pathname).toBe(`/lists/${TEST_LIST_ID}/tasks/new`);
+    expect(history.location.pathname).toBe(`/lists/list-abc-123/tasks/new`);
   });
 
   it("renders TaskList component with tasks", async () => {
@@ -168,10 +147,8 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
 
     const { history } = await renderListDetail();
 
-    // Wait for tasks to appear
     await screen.findByText("Finish report");
 
-    // Find the delete button using its aria-label (most reliable in your current component)
     const deleteButton = await screen.findByRole("button", {
       name: /delete task: Finish report/i,
     });
@@ -179,23 +156,32 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
     expect(deleteButton).toBeInTheDocument();
     expect(deleteButton).toHaveAttribute("title", "Delete task");
 
-    // Act: click delete → should navigate to delete confirmation route
     await user.click(deleteButton);
 
-    // Assert: navigation occurred to the expected delete route
     await waitFor(
       () => {
         expect(history.location.pathname).toMatch(
-          new RegExp(`/lists/${TEST_LIST_ID}/tasks/[^/]+/delete$`),
+          /\/lists\/list-abc-123\/tasks\/[^/]+\/delete$/,
         );
       },
       { timeout: 1500 },
     );
+  });
 
-    // Bonus: if your delete handler eventually removes the task from the list,
-    // you could also assert the task disappears (after mutation succeeds):
-    // await waitFor(() => {
-    //   expect(screen.queryByText("Finish report")).not.toBeInTheDocument();
-    // });
+  it("displays the Active Tasks counter with correct count", async () => {
+    server.use(taskGetByListSuccess);
+    await renderListDetail();
+
+    const activeHeading = await screen.findByRole("heading", {
+      level: 3,
+      name: /Active/i,
+    });
+
+    expect(activeHeading).toBeInTheDocument();
+    expect(activeHeading).toHaveTextContent("Active(1)");
+
+    const text = activeHeading.textContent || "";
+    const match = text.match(/\((\d+)\)/);
+    expect(Number(match?.[1] ?? "0")).toBe(1);
   });
 });
