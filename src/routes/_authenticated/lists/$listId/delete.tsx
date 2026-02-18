@@ -1,14 +1,14 @@
 // src/routes/_authenticated/lists/$listId/delete.tsx
 
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { trpc } from "@/trpc";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute('/_authenticated/lists/$listId/delete')({
+export const Route = createFileRoute("/_authenticated/lists/$listId/delete")({
   component: DeleteListConfirmPage,
-})
+});
 
 function DeleteListConfirmPage() {
   const { listId } = Route.useParams();
@@ -18,7 +18,7 @@ function DeleteListConfirmPage() {
 
   const { data: list } = trpc.list.getOne.useQuery(
     { id: listId },
-    { staleTime: 1000 * 60 * 5 }
+    { staleTime: 1000 * 60 * 5 },
   );
 
   const mutation = trpc.list.delete.useMutation({
@@ -26,7 +26,7 @@ function DeleteListConfirmPage() {
       await utils.list.getAll.cancel();
       const previousLists = utils.list.getAll.getData();
       utils.list.getAll.setData(undefined, (old = []) =>
-        old.filter((l) => l.id !== id)
+        old.filter((l) => l.id !== id),
       );
       return { previousLists };
     },
@@ -61,7 +61,7 @@ function DeleteListConfirmPage() {
         "h-dvh w-dvw max-h-none max-w-none",
         "m-0 p-0 left-0 top-0 right-0 bottom-0 translate-x-0 translate-y-0",
         "rounded-none border-0 shadow-none",
-        "bg-background overscroll-none touch-none"
+        "bg-background overscroll-none touch-none",
       )}
     >
       <div className="relative flex min-h-full flex-col px-6 pb-20 pt-20">
@@ -84,7 +84,8 @@ function DeleteListConfirmPage() {
             </h1>
 
             <p className="text-lg text-muted-foreground">
-              This action cannot be undone. Tasks in this list will no longer be associated with any list.
+              This action cannot be undone. Tasks in this list will no longer be
+              associated with any list.
             </p>
           </div>
         </div>
@@ -92,6 +93,7 @@ function DeleteListConfirmPage() {
         {/* Buttons at bottom */}
         <form
           onSubmit={handleSubmit}
+          aria-label="Delete list confirmation"
           className="mt-auto flex flex-col gap-4 sm:flex-row sm:justify-center w-full max-w-sm mx-auto pb-10"
         >
           <Button

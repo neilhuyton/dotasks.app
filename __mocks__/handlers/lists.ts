@@ -259,3 +259,29 @@ export const listHandlers = [
   listDeleteHandler,
   // listGetOneSuccessHandler,    // ← usually controlled per-test, not global
 ];
+
+export const delayedListCreateHandler = trpcMsw.list.create.mutation(async ({ input }) => {
+  await new Promise((resolve) => setTimeout(resolve, 800)); // or 1200, etc.
+  
+  const now = new Date();
+
+  const newList = {
+    id: `list-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    userId: "test-user-123",  // match test user
+    title: input.title,
+    description: input.description ?? null,
+    color: input.color ?? null,
+    icon: input.icon ?? null,
+    isArchived: false,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  mockLists.push(newList);
+
+  return {
+    ...newList,
+    createdAt: newList.createdAt.toISOString(),
+    updatedAt: newList.updatedAt.toISOString(),
+  };
+});
