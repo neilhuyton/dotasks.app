@@ -5,6 +5,7 @@ import { useAuthStore } from "@/store/authStore";
 import Navigation from "@/components/Navigation";
 import ProfileIcon from "@/components/ProfileIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ColorThemeToggle } from "@/components/ColorThemeToggle";
 
 // Detect test environment to skip redirect
 const isTestEnv = import.meta.env.MODE === "test" || process.env.NODE_ENV === "test";
@@ -30,6 +31,7 @@ export const Route = createFileRoute("/_authenticated")({
           <div />
           <div className="flex items-center gap-3 sm:gap-4">
             <ThemeToggle />
+            <ColorThemeToggle />
             <ProfileIcon />
           </div>
         </header>

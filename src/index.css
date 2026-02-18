@@ -75,6 +75,12 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+    --background: oklch(0.99 0.002 260);     /* pale cool gray – prevents stark white */
+  --card: oklch(0.995 0.001 260);          /* near-white with tiny softness */
+  --muted: oklch(0.965 0.003 260);         /* classic shadcn muted – light gray */
+  --border: oklch(0.90 0.005 260);         /* softer, more visible border gray */
+  --muted-foreground: oklch(0.55 0.02 260); /* keep or adjust slightly for text */
 }
 
 .dark {
@@ -109,6 +115,14 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+
+    --background: oklch(0.145 0 0);       /* good — dark gray */
+  --card: oklch(0.205 0 0);             /* slightly lighter dark */
+  --muted: oklch(0.269 0 0);            /* muted dark gray */
+  --border: oklch(1 0 0 / 10%);         /* very light transparent border */
+  --muted-foreground: oklch(0.708 0 0);
+  --foreground: oklch(0.985 0 0);
+
 }
 
 @layer base {
