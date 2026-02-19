@@ -3,21 +3,21 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/trpc";
 
-export const Route = createFileRoute("/_authenticated/lists/$listId/tasks/new")(
-  {
-    component: NewTaskPage,
-  },
-);
+export const Route = createFileRoute("/_authenticated/lists/$listId/tasks/new")({
+  component: NewTaskPage,
+});
 
 function NewTaskPage() {
   const { listId } = Route.useParams();
 
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
 
   const navigate = Route.useNavigate();
   const utils = trpc.useUtils();
@@ -31,7 +31,7 @@ function NewTaskPage() {
       const optimisticTask = {
         id: `temp-${crypto.randomUUID()}`,
         title: input.title,
-        description: null,
+        description: input.description ?? null,
         listId: input.listId,
         dueDate: null,
         priority: null,
@@ -72,14 +72,19 @@ function NewTaskPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
+
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) return;
 
     mutation.mutate({
-      title: title.trim(),
+      title: trimmedTitle,
       listId,
+      description: description.trim() || undefined,  // send as undefined if empty
     });
 
+    // Reset form
     setTitle("");
+    setDescription("");
   };
 
   const handleCancel = () => {
@@ -89,6 +94,8 @@ function NewTaskPage() {
       replace: true,
     });
   };
+
+  const isPending = mutation.isPending;
 
   return (
     <div
@@ -108,6 +115,7 @@ function NewTaskPage() {
           className="absolute left-4 top-6 z-[10000]"
           aria-label="Back to list"
           onClick={handleCancel}
+          disabled={isPending}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -122,43 +130,61 @@ function NewTaskPage() {
               aria-labelledby="new-task-heading"
               className="space-y-8"
             >
-              <div className="space-y-3 text-left">
-                <label
-                  htmlFor="task-title"
-                  className="text-base font-medium block"
-                >
-                  What needs to be done?
-                </label>
-                <Input
-                  id="task-title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Enter task title..."
-                  autoFocus
-                  required
-                  disabled={mutation.isPending}
-                  className="h-14 text-lg"
-                />
+              <div className="space-y-6 text-left">
+                <div className="space-y-3">
+                  <label
+                    htmlFor="task-title"
+                    className="text-base font-medium block"
+                  >
+                    What needs to be done? <span className="text-destructive">*</span>
+                  </label>
+                  <Input
+                    id="task-title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Enter task title..."
+                    autoFocus
+                    required
+                    disabled={isPending}
+                    className="h-14 text-lg"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <label
+                    htmlFor="task-description"
+                    className="text-base font-medium block"
+                  >
+                    Notes / Details (optional)
+                  </label>
+                  <Textarea
+                    id="task-description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Add any notes, steps, links, or extra context..."
+                    rows={5}
+                    disabled={isPending}
+                    className="resize-none text-base"
+                  />
+                </div>
               </div>
 
               {/* Footer buttons */}
               <div className="flex flex-col gap-4 sm:flex-row sm:justify-center pt-8">
                 <Button
                   type="submit"
-                  disabled={mutation.isPending || !title.trim()}
+                  disabled={isPending || !title.trim()}
                   className="w-full sm:w-40"
                 >
-                  {mutation.isPending && (
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  )}
-                  {mutation.isPending ? "Creating..." : "Create Task"}
+                  {isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+                  {isPending ? "Creating..." : "Create Task"}
                 </Button>
 
                 <Button
                   type="button"
                   variant="outline"
                   onClick={handleCancel}
-                  disabled={mutation.isPending}
+                  disabled={isPending}
                   className="w-full sm:w-32"
                 >
                   Cancel

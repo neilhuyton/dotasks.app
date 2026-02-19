@@ -34,6 +34,7 @@ import {
   taskGetByListSuccess,
   taskCreateHandler,
   delayedTaskCreateHandler,
+  getMockTasks,
 } from "../../../../../../__mocks__/handlers/tasks";
 import { type Task } from "@/types/task";
 
@@ -113,25 +114,25 @@ describe("New Task Page (/_authenticated/lists/$listId/tasks/new)", () => {
     return { navigateSpy };
   };
 
-  it("renders title, input and buttons", async () => {
+  it("renders title, description input, and buttons", async () => {
     await renderNewTaskPage();
 
-    expect(
-      screen.getByRole("heading", { name: "New Task" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByPlaceholderText("Enter task title..."),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "New Task" })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Enter task title...")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Add any notes, steps, links, or extra context.../i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Create Task" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create Task" })).toBeInTheDocument();
   });
 
-  it("disables submit button when title is empty", async () => {
+  it("disables submit button when title is empty (even if description filled)", async () => {
     await renderNewTaskPage();
 
     const createButton = screen.getByRole("button", { name: "Create Task" });
+    expect(createButton).toBeDisabled();
+
+    const descInput = screen.getByPlaceholderText(/Add any notes/i);
+    await user.type(descInput, "Some very important notes here");
+
     expect(createButton).toBeDisabled();
   });
 
@@ -150,8 +151,8 @@ describe("New Task Page (/_authenticated/lists/$listId/tasks/new)", () => {
 
     await renderNewTaskPage();
 
-    const input = screen.getByPlaceholderText("Enter task title...");
-    await user.type(input, "Test task");
+    const titleInput = screen.getByPlaceholderText("Enter task title...");
+    await user.type(titleInput, "Test task");
 
     fireEvent.click(screen.getByRole("button", { name: /^Create Task$/ }));
 
@@ -159,7 +160,6 @@ describe("New Task Page (/_authenticated/lists/$listId/tasks/new)", () => {
 
     const createButton = screen.getByRole("button", { name: "Creating..." });
     expect(createButton).toBeDisabled();
-
     expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
   });
 
@@ -191,17 +191,20 @@ describe("New Task Page (/_authenticated/lists/$listId/tasks/new)", () => {
     );
   });
 
-  it("creates task with optimistic update and navigates on success", async () => {
+  it("creates task with title + description, optimistic update, and navigates on success", async () => {
     server.use(taskCreateHandler);
 
     const { navigateSpy } = await renderNewTaskPage();
 
-    const input = screen.getByPlaceholderText("Enter task title...");
-    await user.type(input, "Optimistic task");
+    const titleInput = screen.getByPlaceholderText("Enter task title...");
+    const descInput = screen.getByPlaceholderText(/Add any notes/i);
+
+    await user.type(titleInput, "Buy groceries");
+    await user.type(descInput, "Milk, eggs, bread, and some fruit");
 
     fireEvent.click(screen.getByRole("button", { name: /^Create Task$/ }));
 
-    // Verify optimistic update (during pending)
+    // Check optimistic update (title + description present)
     await waitFor(
       () => {
         const cachedTasks = queryClient.getQueryData<Task[]>([
@@ -212,10 +215,9 @@ describe("New Task Page (/_authenticated/lists/$listId/tasks/new)", () => {
         expect(cachedTasks).toBeDefined();
         expect(cachedTasks!.length).toBeGreaterThan(2); // original 2 + 1 optimistic
 
-        const optimistic = cachedTasks!.find(
-          (t) => t.title === "Optimistic task",
-        );
+        const optimistic = cachedTasks!.find((t) => t.title === "Buy groceries");
         expect(optimistic).toBeDefined();
+        expect(optimistic!.description).toBe("Milk, eggs, bread, and some fruit");
         expect(optimistic!.id).toMatch(/^temp-/);
       },
       { timeout: 1500 },
@@ -235,14 +237,48 @@ describe("New Task Page (/_authenticated/lists/$listId/tasks/new)", () => {
       { timeout: 4000 },
     );
 
-    // Optional: after success, task exists with real ID
-    const finalTasks = queryClient.getQueryData<Task[]>([
-      ["task", "getByList"],
-      { input: { listId: TEST_LIST_ID }, type: "query" },
-    ]);
+    // After success: real task exists (no temp- id), description preserved
+    const finalTasks = getMockTasks(); // from your mock storage
+    const created = finalTasks.find((t) => t.title === "Buy groceries");
+    expect(created).toBeDefined();
+    expect(created!.description).toBe("Milk, eggs, bread, and some fruit");
+    expect(created!.id).not.toMatch(/^temp-/);
+  });
 
-    expect(finalTasks).toBeDefined();
-    expect(finalTasks!.some((t) => t.title === "Optimistic task")).toBe(true);
-    expect(finalTasks!.some((t) => t.id.startsWith("temp-"))).toBe(false);
+  it("resets form after successful creation (title and description cleared)", async () => {
+    await renderNewTaskPage();
+
+    const titleInput = screen.getByPlaceholderText("Enter task title...");
+    const descInput = screen.getByPlaceholderText(/Add any notes/i);
+
+    await user.type(titleInput, "Quick task");
+    await user.type(descInput, "Remember to test this");
+
+    fireEvent.click(screen.getByRole("button", { name: /^Create Task$/ }));
+
+    await waitFor(() => {
+      expect(titleInput).toHaveValue("");
+      expect(descInput).toHaveValue("");
+    });
+  });
+
+  it("does not create task when title is empty (prevents mutation)", async () => {
+    await renderNewTaskPage();
+
+    const initialTasks = getMockTasks().length;
+
+    const descInput = screen.getByPlaceholderText(/Add any notes/i);
+    await user.type(descInput, "This should not be saved");
+
+    const createButton = screen.getByRole("button", { name: "Create Task" });
+    expect(createButton).toBeDisabled();
+
+    // Try programmatic submit anyway (edge case)
+    const form = screen.getByRole("form");
+    fireEvent.submit(form);
+
+    // No new task added
+    await new Promise((r) => setTimeout(r, 800));
+    expect(getMockTasks().length).toBe(initialTasks);
   });
 });
