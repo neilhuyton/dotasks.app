@@ -16,15 +16,19 @@ function DeleteListConfirmPage() {
   const navigate = Route.useNavigate();
   const utils = trpc.useUtils();
 
-  const { data: list } = trpc.list.getOne.useQuery(
+  const { data: list, isLoading: isListLoading } = trpc.list.getOne.useQuery(
     { id: listId },
-    { staleTime: 1000 * 60 * 5 },
+    {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      // Optional: keep showing previous data while refetching
+      placeholderData: (prev) => prev,
+    },
   );
 
   const mutation = trpc.list.delete.useMutation({
     onMutate: async ({ id }) => {
       await utils.list.getAll.cancel();
-      const previousLists = utils.list.getAll.getData();
+      const previousLists = utils.list.getAll.getData() ?? [];
       utils.list.getAll.setData(undefined, (old = []) =>
         old.filter((l) => l.id !== id),
       );
@@ -53,10 +57,12 @@ function DeleteListConfirmPage() {
     mutation.mutate({ id: listId });
   };
 
+  // Use cached/fallback title
+  const listTitle = list?.title ?? "this list";
+
   return (
     <div
       className={cn(
-        // Force full coverage - highest priority
         "fixed inset-0 z-[9999] isolate pointer-events-auto",
         "h-dvh w-dvw max-h-none max-w-none",
         "m-0 p-0 left-0 top-0 right-0 bottom-0 translate-x-0 translate-y-0",
@@ -65,7 +71,7 @@ function DeleteListConfirmPage() {
       )}
     >
       <div className="relative flex min-h-full flex-col px-6 pb-20 pt-20">
-        {/* Back button – top-left */}
+        {/* Back button */}
         <Button
           variant="outline"
           size="icon"
@@ -79,18 +85,29 @@ function DeleteListConfirmPage() {
         {/* Centered content */}
         <div className="flex flex-1 flex-col items-center justify-center text-center">
           <div className="space-y-6 max-w-md">
-            <h1 className="text-3xl font-bold tracking-tight">
-              Delete List{list?.title ? ` "${list.title}"` : "?"}
-            </h1>
+            {isListLoading ? (
+              <div className="flex items-center justify-center gap-3">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <h1 className="text-3xl font-bold tracking-tight">
+                  Loading list...
+                </h1>
+              </div>
+            ) : (
+              <>
+                <h1 className="text-3xl font-bold tracking-tight">
+                  Delete "{listTitle}"?
+                </h1>
 
-            <p className="text-lg text-muted-foreground">
-              This action cannot be undone. Tasks in this list will no longer be
-              associated with any list.
-            </p>
+                <p className="text-lg text-muted-foreground">
+                  This action cannot be undone. All tasks in this list will be
+                  permanently deleted.
+                </p>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Buttons at bottom */}
+        {/* Action buttons */}
         <form
           onSubmit={handleSubmit}
           aria-label="Delete list confirmation"
@@ -100,7 +117,7 @@ function DeleteListConfirmPage() {
             type="button"
             variant="outline"
             onClick={handleCancel}
-            disabled={mutation.isPending}
+            disabled={mutation.isPending || isListLoading}
             className="w-full sm:w-32"
           >
             Cancel
@@ -109,7 +126,7 @@ function DeleteListConfirmPage() {
           <Button
             type="submit"
             variant="destructive"
-            disabled={mutation.isPending}
+            disabled={mutation.isPending || isListLoading || !list}
             className="w-full sm:w-40"
           >
             {mutation.isPending && (

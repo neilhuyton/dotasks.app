@@ -45,6 +45,7 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
 
   const TEST_LIST_ID = "list-abc-123";
   const TEST_TASK_ID = "t-real-1";
+  const TEST_TASK_TITLE = "Finish report"; // matches your mock data
 
   let history: ReturnType<typeof createMemoryHistory>;
 
@@ -111,21 +112,22 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
       </trpc.Provider>,
     );
 
-    await screen.findByRole("heading", { name: /Delete Task/i });
+    await screen.findByRole("heading", { name: /Delete/i });
 
     return { navigateSpy };
   };
 
-  it("renders confirmation message and buttons", async () => {
+  it("renders confirmation message, task title, and buttons", async () => {
     await renderDeleteTaskPage();
 
     expect(
-      await screen.findByRole("heading", { name: "Delete Task?" }),
+      screen.getByRole("heading", {
+        name: new RegExp(`Delete "${TEST_TASK_TITLE}"\\?`, "i"),
+      }),
     ).toBeInTheDocument();
 
-    // Fixed: use findByText with partial match (waits for it)
     expect(
-      await screen.findByText(/This action cannot be undone/i),
+      screen.getByText(/This action cannot be undone/i),
     ).toBeInTheDocument();
 
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
@@ -240,5 +242,34 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
         replace: true,
       }),
     );
+  });
+
+  it("renders generic title when task title is missing", async () => {
+    server.use(
+      trpcMsw.task.getByList.query(() => [
+        {
+          id: TEST_TASK_ID,
+          title: "", // empty string → renders Delete ""?
+          description: null,
+          listId: TEST_LIST_ID,
+          dueDate: null,
+          priority: null,
+          order: 0,
+          isCompleted: false,
+          isCurrent: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        } as Task,
+      ])
+    );
+
+    await renderDeleteTaskPage();
+
+    // Matches current behavior when title is empty string
+    expect(
+      screen.getByRole("heading", {
+        name: /Delete ""\?/i,
+      }),
+    ).toBeInTheDocument();
   });
 });

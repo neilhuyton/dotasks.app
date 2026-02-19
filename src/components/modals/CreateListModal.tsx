@@ -117,7 +117,7 @@ export default function CreateListModal({
             </DialogClose>
 
             <DialogTitle className="text-3xl font-bold tracking-tight text-center">
-              Create New List
+              Create New Listbbb
             </DialogTitle>
 
             <VisuallyHidden.Root>
@@ -180,7 +180,7 @@ export default function CreateListModal({
                   disabled={mutation.isPending}
                   className="w-full sm:w-auto"
                 >
-                  Cancel
+                  Cancelss
                 </Button>
 
                 <Button

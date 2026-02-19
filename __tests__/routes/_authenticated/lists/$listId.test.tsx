@@ -148,11 +148,8 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
 
     const { history } = await renderListDetail();
 
-    // Wait for the task to appear
     await screen.findByText("Finish report");
 
-    // Find delete button using the actual aria-label from TaskItem
-    // Current aria-label = `Delete ${task.title}` → "Delete Finish report"
     const deleteButton = await screen.findByRole("button", {
       name: /delete finish report/i,
     });
@@ -160,10 +157,8 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
     expect(deleteButton).toBeInTheDocument();
     expect(deleteButton).toHaveAttribute("title", "Delete task");
 
-    // Click it
     await user.click(deleteButton);
 
-    // Wait for navigation to the delete confirmation route
     await waitFor(
       () => {
         expect(history.location.pathname).toMatch(
@@ -185,8 +180,5 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
 
     expect(activeHeading).toBeInTheDocument();
     expect(activeHeading).toHaveTextContent("Active(1)");
-
-    const match = activeHeading.textContent?.match(/\((\d+)\)/);
-    expect(Number(match?.[1] ?? "0")).toBe(1);
   });
 });

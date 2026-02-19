@@ -109,7 +109,7 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
       </trpc.Provider>,
     );
 
-    await screen.findByRole("heading", { name: /Delete List/i });
+    await screen.findByRole("heading", { name: /Delete/i });
 
     return { navigateSpy };
   };
@@ -119,13 +119,13 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
 
     expect(
       screen.getByRole("heading", {
-        name: /Delete List "My Important Projects"/i,
+        name: /Delete "My Important Projects"\?/i,
       }),
     ).toBeInTheDocument();
 
     expect(
       screen.getByText(
-        "This action cannot be undone. Tasks in this list will no longer be associated with any list.",
+        "This action cannot be undone. All tasks in this list will be permanently deleted."
       ),
     ).toBeInTheDocument();
 

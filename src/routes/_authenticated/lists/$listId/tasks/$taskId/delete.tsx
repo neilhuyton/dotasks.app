@@ -16,6 +16,13 @@ function DeleteTaskConfirmPage() {
   const navigate = Route.useNavigate()
   const utils = trpc.useUtils()
 
+  // Try to get the task title from the existing list cache (usually instant)
+  const tasks = utils.task.getByList.getData({ listId }) ?? []
+  const cachedTask = tasks.find(t => t.id === taskId)
+
+  // Fallback title if somehow not in cache (very rare in normal navigation flow)
+  const taskTitle = cachedTask?.title ?? "this task"
+
   const mutation = trpc.task.delete.useMutation({
     onMutate: async ({ id }) => {
       await utils.task.getByList.cancel({ listId })
@@ -65,7 +72,7 @@ function DeleteTaskConfirmPage() {
   return (
     <div
       className={cn(
-        "fixed inset-0 z-[9999] isolate pointer-events-auto",
+        "fixed inset-0 z-9999 isolate pointer-events-auto",
         "h-dvh w-dvw max-h-none max-w-none",
         "m-0 p-0 left-0 top-0 right-0 bottom-0 translate-x-0 translate-y-0",
         "rounded-none border-0 shadow-none",
@@ -73,31 +80,31 @@ function DeleteTaskConfirmPage() {
       )}
     >
       <div className="relative flex min-h-full flex-col px-6 pb-20 pt-20">
-        {/* Back button – top-left */}
+        {/* Back button */}
         <Button
           variant="outline"
           size="icon"
-          className="absolute left-4 top-6 z-[10000]"
+          className="absolute left-4 top-6 z-10000"
           aria-label="Back to list"
           onClick={handleCancel}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
 
-        {/* Centered content */}
+        {/* Main content */}
         <div className="flex flex-1 flex-col items-center justify-center text-center">
           <div className="space-y-6 max-w-md">
             <h1 className="text-3xl font-bold tracking-tight">
-              Delete Task?
+              Delete "{taskTitle}"?
             </h1>
 
             <p className="text-lg text-muted-foreground">
-              This action cannot be undone..
+              This action cannot be undone.
             </p>
           </div>
         </div>
 
-        {/* Buttons at bottom */}
+        {/* Action buttons */}
         <form
           onSubmit={handleSubmit}
           className="mt-auto flex flex-col gap-4 sm:flex-row sm:justify-center w-full max-w-sm mx-auto pb-10"

@@ -144,16 +144,6 @@ function NewTaskPage() {
               {/* Footer buttons */}
               <div className="flex flex-col gap-4 sm:flex-row sm:justify-center pt-8">
                 <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleCancel}
-                  disabled={mutation.isPending}
-                  className="w-full sm:w-32"
-                >
-                  Cancel
-                </Button>
-
-                <Button
                   type="submit"
                   disabled={mutation.isPending || !title.trim()}
                   className="w-full sm:w-40"
@@ -162,6 +152,16 @@ function NewTaskPage() {
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   )}
                   {mutation.isPending ? "Creating..." : "Create Task"}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCancel}
+                  disabled={mutation.isPending}
+                  className="w-full sm:w-32"
+                >
+                  Cancel
                 </Button>
               </div>
             </form>
