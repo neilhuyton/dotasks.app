@@ -20,6 +20,7 @@ import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedListsIndexRouteImport } from './routes/_authenticated/lists/index'
 import { Route as AuthenticatedListsNewRouteImport } from './routes/_authenticated/lists/new'
 import { Route as AuthenticatedListsListIdRouteImport } from './routes/_authenticated/lists/$listId'
+import { Route as AuthenticatedListsListIdEditRouteImport } from './routes/_authenticated/lists/$listId/edit'
 import { Route as AuthenticatedListsListIdDeleteRouteImport } from './routes/_authenticated/lists/$listId/delete'
 import { Route as AuthenticatedListsListIdTasksNewRouteImport } from './routes/_authenticated/lists/$listId/tasks/new'
 import { Route as AuthenticatedListsListIdTasksTaskIdDeleteRouteImport } from './routes/_authenticated/lists/$listId/tasks/$taskId/delete'
@@ -79,6 +80,12 @@ const AuthenticatedListsListIdRoute =
     path: '/lists/$listId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedListsListIdEditRoute =
+  AuthenticatedListsListIdEditRouteImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => AuthenticatedListsListIdRoute,
+  } as any)
 const AuthenticatedListsListIdDeleteRoute =
   AuthenticatedListsListIdDeleteRouteImport.update({
     id: '/delete',
@@ -110,6 +117,7 @@ export interface FileRoutesByFullPath {
   '/lists/new': typeof AuthenticatedListsNewRoute
   '/lists/': typeof AuthenticatedListsIndexRoute
   '/lists/$listId/delete': typeof AuthenticatedListsListIdDeleteRoute
+  '/lists/$listId/edit': typeof AuthenticatedListsListIdEditRoute
   '/lists/$listId/tasks/new': typeof AuthenticatedListsListIdTasksNewRoute
   '/lists/$listId/tasks/$taskId/delete': typeof AuthenticatedListsListIdTasksTaskIdDeleteRoute
 }
@@ -125,6 +133,7 @@ export interface FileRoutesByTo {
   '/lists/new': typeof AuthenticatedListsNewRoute
   '/lists': typeof AuthenticatedListsIndexRoute
   '/lists/$listId/delete': typeof AuthenticatedListsListIdDeleteRoute
+  '/lists/$listId/edit': typeof AuthenticatedListsListIdEditRoute
   '/lists/$listId/tasks/new': typeof AuthenticatedListsListIdTasksNewRoute
   '/lists/$listId/tasks/$taskId/delete': typeof AuthenticatedListsListIdTasksTaskIdDeleteRoute
 }
@@ -142,6 +151,7 @@ export interface FileRoutesById {
   '/_authenticated/lists/new': typeof AuthenticatedListsNewRoute
   '/_authenticated/lists/': typeof AuthenticatedListsIndexRoute
   '/_authenticated/lists/$listId/delete': typeof AuthenticatedListsListIdDeleteRoute
+  '/_authenticated/lists/$listId/edit': typeof AuthenticatedListsListIdEditRoute
   '/_authenticated/lists/$listId/tasks/new': typeof AuthenticatedListsListIdTasksNewRoute
   '/_authenticated/lists/$listId/tasks/$taskId/delete': typeof AuthenticatedListsListIdTasksTaskIdDeleteRoute
 }
@@ -159,6 +169,7 @@ export interface FileRouteTypes {
     | '/lists/new'
     | '/lists/'
     | '/lists/$listId/delete'
+    | '/lists/$listId/edit'
     | '/lists/$listId/tasks/new'
     | '/lists/$listId/tasks/$taskId/delete'
   fileRoutesByTo: FileRoutesByTo
@@ -174,6 +185,7 @@ export interface FileRouteTypes {
     | '/lists/new'
     | '/lists'
     | '/lists/$listId/delete'
+    | '/lists/$listId/edit'
     | '/lists/$listId/tasks/new'
     | '/lists/$listId/tasks/$taskId/delete'
   id:
@@ -190,6 +202,7 @@ export interface FileRouteTypes {
     | '/_authenticated/lists/new'
     | '/_authenticated/lists/'
     | '/_authenticated/lists/$listId/delete'
+    | '/_authenticated/lists/$listId/edit'
     | '/_authenticated/lists/$listId/tasks/new'
     | '/_authenticated/lists/$listId/tasks/$taskId/delete'
   fileRoutesById: FileRoutesById
@@ -283,6 +296,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedListsListIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/lists/$listId/edit': {
+      id: '/_authenticated/lists/$listId/edit'
+      path: '/edit'
+      fullPath: '/lists/$listId/edit'
+      preLoaderRoute: typeof AuthenticatedListsListIdEditRouteImport
+      parentRoute: typeof AuthenticatedListsListIdRoute
+    }
     '/_authenticated/lists/$listId/delete': {
       id: '/_authenticated/lists/$listId/delete'
       path: '/delete'
@@ -309,6 +329,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedListsListIdRouteChildren {
   AuthenticatedListsListIdDeleteRoute: typeof AuthenticatedListsListIdDeleteRoute
+  AuthenticatedListsListIdEditRoute: typeof AuthenticatedListsListIdEditRoute
   AuthenticatedListsListIdTasksNewRoute: typeof AuthenticatedListsListIdTasksNewRoute
   AuthenticatedListsListIdTasksTaskIdDeleteRoute: typeof AuthenticatedListsListIdTasksTaskIdDeleteRoute
 }
@@ -316,6 +337,7 @@ interface AuthenticatedListsListIdRouteChildren {
 const AuthenticatedListsListIdRouteChildren: AuthenticatedListsListIdRouteChildren =
   {
     AuthenticatedListsListIdDeleteRoute: AuthenticatedListsListIdDeleteRoute,
+    AuthenticatedListsListIdEditRoute: AuthenticatedListsListIdEditRoute,
     AuthenticatedListsListIdTasksNewRoute:
       AuthenticatedListsListIdTasksNewRoute,
     AuthenticatedListsListIdTasksTaskIdDeleteRoute:

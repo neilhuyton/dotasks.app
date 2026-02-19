@@ -70,7 +70,7 @@ export function getMockLists() {
 }
 
 // ──────────────────────────────────────────────
-// Preset for $listId detail page tests
+// Preset & helper for detail page tests ($listId)
 // ──────────────────────────────────────────────
 
 export const TEST_LIST_DETAIL_ID = "list-abc-123";
@@ -86,8 +86,7 @@ export const detailPageListPreset = {
 };
 
 export function prepareDetailPageTestList() {
-  resetMockLists(); // Start clean – remove the default l1/l2 if you want isolation
-
+  resetMockLists(); // isolation: remove default lists
   const now = new Date();
   mockLists.push({
     ...detailPageListPreset,
@@ -96,9 +95,8 @@ export function prepareDetailPageTestList() {
   });
 }
 
-// Encapsulated handler using the preset (recommended for detail tests)
 export const listGetOneDetailPagePreset = trpcMsw.list.getOne.query(() => {
-  prepareDetailPageTestList(); // Ensure data exists
+  prepareDetailPageTestList();
   const found = mockLists.find((l) => l.id === TEST_LIST_DETAIL_ID);
   if (!found) {
     throw new TRPCError({ code: "NOT_FOUND", message: "List not found" });
@@ -117,10 +115,139 @@ export const listGetOneDetailPagePreset = trpcMsw.list.getOne.query(() => {
 });
 
 // ──────────────────────────────────────────────
-// Core CRUD & list handlers (original + extended)
+// Input type for update (matches real Zod schema)
 // ──────────────────────────────────────────────
 
-export const deleteListResolver = ({ input }: { input: { id: string } }) => {
+type ListUpdateInput = {
+  id: string;
+  title: string;
+  description?: string | null;
+  color?: string | null;
+  icon?: string | null;
+};
+
+const updateListResolver = ({ input }: { input: ListUpdateInput }) => {
+  const { id, ...patch } = input;
+
+  const listIndex = mockLists.findIndex((l) => l.id === id);
+  if (listIndex === -1) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "List not found" });
+  }
+
+  const now = new Date();
+  const current = mockLists[listIndex];
+
+  mockLists[listIndex] = {
+    ...current,
+    ...patch,
+    updatedAt: now,
+  };
+
+  const updated = mockLists[listIndex];
+
+  return {
+    id: updated.id,
+    userId: updated.userId,
+    title: updated.title,
+    description: updated.description,
+    color: updated.color,
+    icon: updated.icon,
+    isArchived: updated.isArchived,
+    createdAt: updated.createdAt.toISOString(),
+    updatedAt: updated.updatedAt.toISOString(),
+  };
+};
+
+// ──────────────────────────────────────────────
+// CRUD Handlers – Queries
+// ──────────────────────────────────────────────
+
+export const listGetAllHandler = trpcMsw.list.getAll.query(() => {
+  return mockLists.map((list) => ({
+    id: list.id,
+    userId: list.userId,
+    title: list.title,
+    description: list.description,
+    color: list.color,
+    icon: list.icon,
+    isArchived: list.isArchived,
+    createdAt: list.createdAt.toISOString(),
+    updatedAt: list.updatedAt.toISOString(),
+  }));
+});
+
+export const listGetEmptyHandler = trpcMsw.list.getAll.query(() => []);
+
+// ──────────────────────────────────────────────
+// CRUD Handlers – Mutations: CREATE
+// ──────────────────────────────────────────────
+
+export const listCreateHandler = trpcMsw.list.create.mutation(({ input }) => {
+  const now = new Date();
+
+  const newList = {
+    id: `list-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    userId: "test-user-123", // match test auth store
+    title: input.title,
+    description: input.description ?? null,
+    color: input.color ?? null,
+    icon: input.icon ?? null,
+    isArchived: false,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  mockLists.push(newList);
+
+  return {
+    ...newList,
+    createdAt: newList.createdAt.toISOString(),
+    updatedAt: newList.updatedAt.toISOString(),
+  };
+});
+
+export const delayedListCreateHandler = trpcMsw.list.create.mutation(async ({ input }) => {
+  await new Promise((resolve) => setTimeout(resolve, 800)); // simulate loading
+
+  const now = new Date();
+
+  const newList = {
+    id: `list-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    userId: "test-user-123",
+    title: input.title,
+    description: input.description ?? null,
+    color: input.color ?? null,
+    icon: input.icon ?? null,
+    isArchived: false,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  mockLists.push(newList);
+
+  return {
+    ...newList,
+    createdAt: newList.createdAt.toISOString(),
+    updatedAt: newList.updatedAt.toISOString(),
+  };
+});
+
+// ──────────────────────────────────────────────
+// CRUD Handlers – Mutations: UPDATE
+// ──────────────────────────────────────────────
+
+export const listUpdateHandler = trpcMsw.list.update.mutation(updateListResolver);
+
+export const delayedListUpdateHandler = trpcMsw.list.update.mutation(async ({ input }) => {
+  await new Promise((resolve) => setTimeout(resolve, 900));
+  return updateListResolver({ input });
+});
+
+// ──────────────────────────────────────────────
+// CRUD Handlers – Mutations: DELETE
+// ──────────────────────────────────────────────
+
+const deleteListResolver = ({ input }: { input: { id: string } }) => {
   const { id } = input;
 
   const initialLength = mockLists.length;
@@ -155,53 +282,10 @@ export const delayedListDeleteHandler = trpcMsw.list.delete.mutation(async (ctx)
   return deleteListResolver(ctx);
 });
 
-export const listGetAllHandler = trpcMsw.list.getAll.query(() => {
-  return mockLists.map((list) => ({
-    id: list.id,
-    userId: list.userId,
-    title: list.title,
-    description: list.description,
-    color: list.color,
-    icon: list.icon,
-    isArchived: list.isArchived,
-    createdAt: list.createdAt.toISOString(),
-    updatedAt: list.updatedAt.toISOString(),
-  }));
-});
-
-export const listGetEmptyHandler = trpcMsw.list.getAll.query(() => []);
-
-export const listCreateHandler = trpcMsw.list.create.mutation(({ input }) => {
-  const now = new Date();
-
-  const newList = {
-    id: `list-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    userId: "test-user-id",
-    title: input.title,
-    description: input.description ?? null,
-    color: input.color ?? null,
-    icon: input.icon ?? null,
-    isArchived: false,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  mockLists.push(newList);
-
-  return {
-    ...newList,
-    createdAt: newList.createdAt.toISOString(),
-    updatedAt: newList.updatedAt.toISOString(),
-  };
-});
-
 // ──────────────────────────────────────────────
-// Handlers specifically for list.getOne
+// getOne variants (used in detail & other list tests)
 // ──────────────────────────────────────────────
 
-/**
- * Success handler for list.getOne – uses current mockLists state
- */
 export const listGetOneSuccessHandler = trpcMsw.list.getOne.query(({ input }) => {
   const found = mockLists.find((l) => l.id === input.id);
   if (!found) {
@@ -220,9 +304,6 @@ export const listGetOneSuccessHandler = trpcMsw.list.getOne.query(({ input }) =>
   };
 });
 
-/**
- * Loading handler: delays response to simulate slow fetch
- */
 export const listLoadingHandler = trpcMsw.list.getOne.query(async ({ input }) => {
   await new Promise((resolve) => setTimeout(resolve, 1200));
 
@@ -243,9 +324,6 @@ export const listLoadingHandler = trpcMsw.list.getOne.query(async ({ input }) =>
   };
 });
 
-/**
- * Not-found handler: always throws NOT_FOUND
- */
 export const getListNotFoundHandler = trpcMsw.list.getOne.query(() => {
   throw new TRPCError({
     code: "NOT_FOUND",
@@ -253,35 +331,10 @@ export const getListNotFoundHandler = trpcMsw.list.getOne.query(() => {
   });
 });
 
+// Optional: commonly used array for global setup (rarely needed)
 export const listHandlers = [
   listGetAllHandler,
   listCreateHandler,
+  listUpdateHandler,
   listDeleteHandler,
-  // listGetOneSuccessHandler,    // ← usually controlled per-test, not global
 ];
-
-export const delayedListCreateHandler = trpcMsw.list.create.mutation(async ({ input }) => {
-  await new Promise((resolve) => setTimeout(resolve, 800)); // or 1200, etc.
-  
-  const now = new Date();
-
-  const newList = {
-    id: `list-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    userId: "test-user-123",  // match test user
-    title: input.title,
-    description: input.description ?? null,
-    color: input.color ?? null,
-    icon: input.icon ?? null,
-    isArchived: false,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  mockLists.push(newList);
-
-  return {
-    ...newList,
-    createdAt: newList.createdAt.toISOString(),
-    updatedAt: newList.updatedAt.toISOString(),
-  };
-});

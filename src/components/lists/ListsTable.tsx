@@ -1,7 +1,7 @@
 // src/components/lists/ListsTable.tsx
 
 import { Link, linkOptions } from "@tanstack/react-router";
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { trpc } from "@/trpc";
 
@@ -138,6 +138,17 @@ export default function ListsTable() {
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                  <Link
+                    to="/lists/$listId/edit"
+                    params={{ listId: list.id }}
+                    className="text-gray-400 hover:text-blue-600 transition-colors p-1 rounded hover:bg-blue-50 mr-2"
+                    title="Edit list"
+                    aria-label={`Edit list: ${list.title}`}
+                  >
+                    <Pencil size={18} /> {/* import Pencil from lucide-react */}
+                  </Link>
+
+                  {/* existing delete link */}
                   <Link
                     to="/lists/$listId/delete"
                     params={{ listId: list.id }}
