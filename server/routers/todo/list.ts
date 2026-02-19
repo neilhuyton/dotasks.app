@@ -1,5 +1,3 @@
-// server/routers/todo/list.ts
-
 import { z } from "zod";
 import { router, protectedProcedure } from "../../trpc-base";
 import { TRPCError } from "@trpc/server";
@@ -23,7 +21,6 @@ export const listRouter = router({
       });
 
       if (!list || list.userId !== ctx.userId) {
-        // ← changed
         throw new TRPCError({ code: "NOT_FOUND" });
       }
 
@@ -43,7 +40,7 @@ export const listRouter = router({
       return ctx.prisma.todoList.create({
         data: {
           ...input,
-          userId: ctx.userId, // ← changed
+          userId: ctx.userId,
         },
       });
     }),
@@ -88,14 +85,16 @@ export const listRouter = router({
         throw new TRPCError({ code: "NOT_FOUND" });
       }
 
-      // Soft delete (recommended)
+      // Option A: Hard delete
+      return ctx.prisma.todoList.delete({
+        where: { id: input.id },
+      });
+
+      // Option B: Soft delete (uncomment if preferred)
       // return ctx.prisma.todoList.update({
       //   where: { id: input.id },
       //   data: { isArchived: true },
       // });
-
-      // OR hard delete:
-      return ctx.prisma.todoList.delete({ where: { id: input.id } });
     }),
 
   pin: protectedProcedure
@@ -112,7 +111,7 @@ export const listRouter = router({
 
       return ctx.prisma.todoList.update({
         where: { id: input.id },
-        data: { isPinned: !list.isPinned }, // toggle
+        data: { isPinned: !list.isPinned },
       });
     }),
 
@@ -121,10 +120,34 @@ export const listRouter = router({
       where: {
         userId: ctx.userId,
         isPinned: true,
-        isArchived: false, // optional: exclude archived
+        isArchived: false,
       },
-      orderBy: { updatedAt: "desc" }, // or createdAt, title, etc.
-      include: { tasks: { take: 3 } }, // optional: preview first few tasks
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        color: true,
+        icon: true,
+        isPinned: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            tasks: true,
+          },
+        },
+        tasks: {
+          where: { isCompleted: false },
+          orderBy: { order: "asc" },
+          take: 3,
+          select: {
+            id: true,
+            title: true,
+            isCompleted: true,
+          },
+        },
+      },
     });
   }),
 });
