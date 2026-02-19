@@ -14,6 +14,7 @@ let mockTasks: {
   priority: number | null;
   order: number;
   isCurrent: boolean;
+  isPinned: boolean;
   createdAt: Date;
   updatedAt: Date;
 }[] = [
@@ -27,6 +28,7 @@ let mockTasks: {
     priority: 1,
     order: 0,
     isCurrent: false,
+    isPinned: false,
     createdAt: new Date("2025-02-15T10:00:00Z"),
     updatedAt: new Date("2025-02-15T10:00:00Z"),
   },
@@ -40,6 +42,7 @@ let mockTasks: {
     priority: 2,
     order: 1,
     isCurrent: false,
+    isPinned: false,
     createdAt: new Date("2025-02-16T09:15:00Z"),
     updatedAt: new Date("2025-02-16T09:15:00Z"),
   },
@@ -57,6 +60,7 @@ export function resetMockTasks() {
       priority: 1,
       order: 0,
       isCurrent: false,
+      isPinned: false,
       createdAt: new Date("2025-02-15T10:00:00Z"),
       updatedAt: new Date("2025-02-15T10:00:00Z"),
     },
@@ -70,6 +74,7 @@ export function resetMockTasks() {
       priority: 2,
       order: 1,
       isCurrent: false,
+      isPinned: false,
       createdAt: new Date("2025-02-16T09:15:00Z"),
       updatedAt: new Date("2025-02-16T09:15:00Z"),
     },
@@ -80,8 +85,17 @@ export function getMockTasks() {
   return [...mockTasks];
 }
 
+// Helper to quickly pin/unpin a task for tests
+export function setTaskPinned(taskId: string, pinned: boolean = true) {
+  const task = mockTasks.find((t) => t.id === taskId);
+  if (task) {
+    task.isPinned = pinned;
+    task.updatedAt = new Date(); // simulate update
+  }
+}
+
 // ────────────────────────────────────────────────
-// Input shapes derived from your real Zod + Prisma schema
+// Input shapes (updated with isPinned)
 // ────────────────────────────────────────────────
 
 type TaskCreateInput = {
@@ -102,10 +116,15 @@ type TaskUpdateInput = {
   order?: number;
   isCompleted?: boolean;
   isCurrent?: boolean;
+  isPinned?: boolean;
+};
+
+type PinToggleInput = {
+  id: string;
 };
 
 // ────────────────────────────────────────────────
-// Shared resolver: CREATE task
+// Shared resolvers
 // ────────────────────────────────────────────────
 
 const createTaskResolver = ({ input }: { input: TaskCreateInput }) => {
@@ -121,6 +140,7 @@ const createTaskResolver = ({ input }: { input: TaskCreateInput }) => {
     order: input.order ?? 0,
     isCompleted: false,
     isCurrent: false,
+    isPinned: false,
     createdAt: now,
     updatedAt: now,
   };
@@ -137,24 +157,18 @@ const createTaskResolver = ({ input }: { input: TaskCreateInput }) => {
     order: newTask.order,
     isCompleted: newTask.isCompleted,
     isCurrent: newTask.isCurrent,
+    isPinned: newTask.isPinned,
     createdAt: newTask.createdAt.toISOString(),
     updatedAt: newTask.updatedAt.toISOString(),
   };
 };
-
-// ────────────────────────────────────────────────
-// Shared resolver: UPDATE task (partial update)
-// ────────────────────────────────────────────────
 
 const taskUpdateResolver = ({ input }: { input: TaskUpdateInput }) => {
   const { id, ...patch } = input;
 
   const taskIndex = mockTasks.findIndex((t) => t.id === id);
   if (taskIndex === -1) {
-    throw new TRPCError({
-      code: "NOT_FOUND",
-      message: "Task not found",
-    });
+    throw new TRPCError({ code: "NOT_FOUND", message: "Task not found" });
   }
 
   const now = new Date();
@@ -178,6 +192,44 @@ const taskUpdateResolver = ({ input }: { input: TaskUpdateInput }) => {
     order: updated.order,
     isCompleted: updated.isCompleted,
     isCurrent: updated.isCurrent,
+    isPinned: updated.isPinned,
+    createdAt: updated.createdAt.toISOString(),
+    updatedAt: updated.updatedAt.toISOString(),
+  };
+};
+
+const pinToggleResolver = ({ input }: { input: PinToggleInput }) => {
+  const { id } = input;
+
+  const taskIndex = mockTasks.findIndex((t) => t.id === id);
+  if (taskIndex === -1) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "Task not found" });
+  }
+
+  const now = new Date();
+  const current = mockTasks[taskIndex];
+
+  const newPinned = !current.isPinned;
+
+  mockTasks[taskIndex] = {
+    ...current,
+    isPinned: newPinned,
+    updatedAt: now,
+  };
+
+  const updated = mockTasks[taskIndex];
+
+  return {
+    id: updated.id,
+    listId: updated.listId,
+    title: updated.title,
+    description: updated.description,
+    dueDate: updated.dueDate?.toISOString() ?? null,
+    priority: updated.priority,
+    order: updated.order,
+    isCompleted: updated.isCompleted,
+    isCurrent: updated.isCurrent,
+    isPinned: updated.isPinned,
     createdAt: updated.createdAt.toISOString(),
     updatedAt: updated.updatedAt.toISOString(),
   };
@@ -214,10 +266,7 @@ const deleteTaskResolver = ({ input }: { input: { id: string } }) => {
 
   const deletedTask = mockTasks.find((t) => t.id === id);
   if (!deletedTask) {
-    throw new TRPCError({
-      code: "NOT_FOUND",
-      message: "Task not found",
-    });
+    throw new TRPCError({ code: "NOT_FOUND", message: "Task not found" });
   }
 
   mockTasks = mockTasks.filter((t) => t.id !== id);
@@ -232,6 +281,7 @@ const deleteTaskResolver = ({ input }: { input: { id: string } }) => {
     order: deletedTask.order,
     isCompleted: deletedTask.isCompleted,
     isCurrent: deletedTask.isCurrent,
+    isPinned: deletedTask.isPinned,
     createdAt: deletedTask.createdAt.toISOString(),
     updatedAt: deletedTask.updatedAt.toISOString(),
   };
@@ -263,6 +313,29 @@ export const taskGetByListSuccess = trpcMsw.task.getByList.query(({ input }) => 
       order: t.order,
       isCompleted: t.isCompleted,
       isCurrent: t.isCurrent,
+      isPinned: t.isPinned,
+      createdAt: t.createdAt.toISOString(),
+      updatedAt: t.updatedAt.toISOString(),
+    }));
+});
+
+export const taskGetByListPinnedFirst = trpcMsw.task.getByList.query(({ input }) => {
+  const { listId } = input;
+
+  return mockTasks
+    .filter((t) => t.listId === listId)
+    .sort((a, b) => Number(b.isPinned) - Number(a.isPinned)) // simulate orderBy isPinned desc
+    .map((t) => ({
+      id: t.id,
+      listId: t.listId,
+      title: t.title,
+      description: t.description,
+      dueDate: t.dueDate?.toISOString() ?? null,
+      priority: t.priority,
+      order: t.order,
+      isCompleted: t.isCompleted,
+      isCurrent: t.isCurrent,
+      isPinned: t.isPinned,
       createdAt: t.createdAt.toISOString(),
       updatedAt: t.updatedAt.toISOString(),
     }));
@@ -276,7 +349,25 @@ export const taskGetByListLoading = trpcMsw.task.getByList.query(async () => {
 });
 
 // ────────────────────────────────────────────────
-// Handler groups (optional – for convenience)
+// PIN TOGGLE handlers
+// ────────────────────────────────────────────────
+
+export const taskPinToggleSuccess = trpcMsw.task.pinToggle.mutation(pinToggleResolver);
+
+export const delayedTaskPinToggle = trpcMsw.task.pinToggle.mutation(async (ctx) => {
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  return pinToggleResolver(ctx);
+});
+
+export const taskPinToggleFailure = trpcMsw.task.pinToggle.mutation(() => {
+  throw new TRPCError({
+    code: "INTERNAL_SERVER_ERROR",
+    message: "Mock pin toggle failure",
+  });
+});
+
+// ────────────────────────────────────────────────
+// Handler groups (updated)
 // ────────────────────────────────────────────────
 
 export const taskHandlers = [
@@ -284,6 +375,8 @@ export const taskHandlers = [
   taskCreateHandler,
   taskUpdateHandler,
   taskDeleteSuccess,
+  taskPinToggleSuccess,
+  taskPinToggleFailure,
 ];
 
 export const emptyTaskHandlers = [
@@ -291,4 +384,6 @@ export const emptyTaskHandlers = [
   taskCreateHandler,
   taskUpdateHandler,
   taskDeleteSuccess,
+  taskPinToggleSuccess,
+  taskPinToggleFailure,
 ];
