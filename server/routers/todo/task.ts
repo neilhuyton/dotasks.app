@@ -52,6 +52,48 @@ export const taskRouter = router({
       });
     }),
 
+  update: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        title: z.string().min(1).max(200).optional(),
+        description: z.string().optional().nullable(),
+        dueDate: z.date().optional().nullable(),
+        priority: z.number().int().min(0).max(5).optional().nullable(),
+        order: z.number().int().optional(),
+        isCompleted: z.boolean().optional(),
+        isCurrent: z.boolean().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...data } = input;
+
+      // Find task and check ownership via list
+      const task = await ctx.prisma.task.findUnique({
+        where: { id },
+        select: { listId: true },
+      });
+
+      if (!task) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Task not found" });
+      }
+
+      const list = await ctx.prisma.todoList.findUnique({
+        where: { id: task.listId },
+        select: { userId: true },
+      });
+
+      if (!list || list.userId !== ctx.userId) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      // Perform the partial update
+      return ctx.prisma.task.update({
+        where: { id },
+        data,
+      });
+    }),
+
   toggle: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
