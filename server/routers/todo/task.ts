@@ -18,7 +18,11 @@ export const taskRouter = router({
 
       return ctx.prisma.task.findMany({
         where: { listId: input.listId },
-        orderBy: { order: "asc" },
+
+        orderBy: [
+          { isPinned: "desc" }, // pinned tasks first
+          { order: "asc" }, // then by your drag-drop order
+        ],
       });
     }),
 
@@ -241,5 +245,41 @@ export const taskRouter = router({
 
       // Return something simple (no single updated task)
       return { success: true };
+    }),
+
+  pinToggle: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const task = await ctx.prisma.task.findUnique({
+        where: { id: input.id },
+        select: { listId: true },
+      });
+
+      if (!task) {
+        throw new TRPCError({ code: "NOT_FOUND" });
+      }
+
+      const list = await ctx.prisma.todoList.findUnique({
+        where: { id: task.listId },
+        select: { userId: true },
+      });
+
+      if (!list || list.userId !== ctx.userId) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      const updatedTask = await ctx.prisma.task.findUnique({
+        where: { id: input.id },
+        select: { isPinned: true },
+      });
+
+      return ctx.prisma.task.update({
+        where: { id: input.id },
+        data: { isPinned: !updatedTask!.isPinned },
+      });
     }),
 });

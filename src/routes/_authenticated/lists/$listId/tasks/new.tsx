@@ -9,9 +9,11 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/trpc";
 
-export const Route = createFileRoute("/_authenticated/lists/$listId/tasks/new")({
-  component: NewTaskPage,
-});
+export const Route = createFileRoute("/_authenticated/lists/$listId/tasks/new")(
+  {
+    component: NewTaskPage,
+  },
+);
 
 function NewTaskPage() {
   const { listId } = Route.useParams();
@@ -38,6 +40,7 @@ function NewTaskPage() {
         order: previousTasks.length,
         isCompleted: false,
         isCurrent: false,
+        isPinned: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -79,7 +82,7 @@ function NewTaskPage() {
     mutation.mutate({
       title: trimmedTitle,
       listId,
-      description: description.trim() || undefined,  // send as undefined if empty
+      description: description.trim() || undefined, // send as undefined if empty
     });
 
     // Reset form
@@ -136,7 +139,8 @@ function NewTaskPage() {
                     htmlFor="task-title"
                     className="text-base font-medium block"
                   >
-                    What needs to be done? <span className="text-destructive">*</span>
+                    What needs to be done?{" "}
+                    <span className="text-destructive">*</span>
                   </label>
                   <Input
                     id="task-title"
@@ -176,7 +180,9 @@ function NewTaskPage() {
                   disabled={isPending || !title.trim()}
                   className="w-full sm:w-40"
                 >
-                  {isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+                  {isPending && (
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  )}
                   {isPending ? "Creating..." : "Create Task"}
                 </Button>
 

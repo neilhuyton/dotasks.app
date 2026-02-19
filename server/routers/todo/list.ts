@@ -7,8 +7,11 @@ import { TRPCError } from "@trpc/server";
 export const listRouter = router({
   getAll: protectedProcedure.query(async ({ ctx }) => {
     return ctx.prisma.todoList.findMany({
-      where: { userId: ctx.userId }, // ← changed from ctx.user.id
-      orderBy: { createdAt: "desc" },
+      where: { userId: ctx.userId },
+      orderBy: [
+        { isPinned: "desc" },
+        { createdAt: "desc" },
+      ],
     });
   }),
 
@@ -94,4 +97,34 @@ export const listRouter = router({
       // OR hard delete:
       return ctx.prisma.todoList.delete({ where: { id: input.id } });
     }),
+
+  pin: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const list = await ctx.prisma.todoList.findUnique({
+        where: { id: input.id },
+        select: { userId: true, isPinned: true },
+      });
+
+      if (!list || list.userId !== ctx.userId) {
+        throw new TRPCError({ code: "NOT_FOUND" });
+      }
+
+      return ctx.prisma.todoList.update({
+        where: { id: input.id },
+        data: { isPinned: !list.isPinned }, // toggle
+      });
+    }),
+
+  getPinned: protectedProcedure.query(async ({ ctx }) => {
+    return ctx.prisma.todoList.findMany({
+      where: {
+        userId: ctx.userId,
+        isPinned: true,
+        isArchived: false, // optional: exclude archived
+      },
+      orderBy: { updatedAt: "desc" }, // or createdAt, title, etc.
+      include: { tasks: { take: 3 } }, // optional: preview first few tasks
+    });
+  }),
 });

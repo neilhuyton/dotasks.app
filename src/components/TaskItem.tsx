@@ -1,5 +1,5 @@
 // src/components/TaskItem.tsx
-import { Star, Trash2, Pencil } from "lucide-react";
+import { Star, Trash2, Pencil, Pin, PinOff } from "lucide-react";
 import { type Task } from "@/hooks/useListTasks";
 import { Link } from "@tanstack/react-router";
 
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/item";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/trpc";
 
 interface TaskItemProps {
   task: Task;
@@ -39,7 +40,38 @@ export function TaskItem({
   clearCurrentTaskPending,
   listId,
 }: TaskItemProps) {
-  const isPending = isSettingCurrent || clearCurrentTaskPending;
+  const isPending = isSettingCurrent || clearCurrentTaskPending || isDeleting || isToggling;
+
+  const utils = trpc.useUtils();
+
+  const togglePinMutation = trpc.task.pinToggle.useMutation({
+    onMutate: async ({ id }) => {
+      // Cancel outgoing refetches
+      await utils.task.getByList.cancel({ listId });
+
+      // Snapshot previous value
+      const previousTasks = utils.task.getByList.getData({ listId }) ?? [];
+
+      // Optimistically flip isPinned
+      utils.task.getByList.setData({ listId }, (old = []) =>
+        old.map((t) => (t.id === id ? { ...t, isPinned: !t.isPinned } : t))
+      );
+
+      return { previousTasks };
+    },
+
+    onError: (_, __, context) => {
+      // Rollback on error
+      if (context?.previousTasks) {
+        utils.task.getByList.setData({ listId }, context.previousTasks);
+      }
+    },
+
+    onSettled: () => {
+      // Refetch to sync with server
+      utils.task.getByList.invalidate({ listId });
+    },
+  });
 
   const handleToggleCurrent = () => {
     if (task.isCompleted || isPending) return;
@@ -49,6 +81,11 @@ export function TaskItem({
     } else {
       setCurrentTask({ id: task.id, listId });
     }
+  };
+
+  const handleTogglePin = () => {
+    if (isPending) return;
+    togglePinMutation.mutate({ id: task.id });
   };
 
   return (
@@ -62,6 +99,8 @@ export function TaskItem({
         task.isCompleted && "opacity-60 dark:opacity-50",
         task.isCurrent &&
           "bg-primary/10 border-primary/40 dark:bg-primary/15 shadow-sm",
+        task.isPinned &&
+          "bg-amber-50/60 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800",
         "hover:bg-muted/20 dark:hover:bg-muted/40",
       )}
     >
@@ -97,6 +136,26 @@ export function TaskItem({
       </ItemContent>
 
       <ItemActions className="items-center gap-0.5">
+        {/* Pin button – new */}
+        <button
+          type="button"
+          onClick={handleTogglePin}
+          disabled={togglePinMutation.isPending || isPending}
+          className={cn(
+            "rounded p-1.5 text-muted-foreground hover:text-amber-600 hover:bg-amber-50/70 transition-colors",
+            task.isPinned && "text-amber-600 hover:text-amber-700",
+            (togglePinMutation.isPending || isPending) && "opacity-50 pointer-events-none",
+          )}
+          title={task.isPinned ? "Unpin task" : "Pin task to top"}
+          aria-label={task.isPinned ? `Unpin ${task.title}` : `Pin ${task.title}`}
+        >
+          {task.isPinned ? (
+            <Pin className="h-4 w-4 fill-amber-500 text-amber-600" />
+          ) : (
+            <PinOff className="h-4 w-4" />
+          )}
+        </button>
+
         {!task.isCompleted && (
           <button
             type="button"
@@ -114,13 +173,12 @@ export function TaskItem({
           </button>
         )}
 
-        {/* Edit button – links to the edit route */}
+        {/* Edit button */}
         <Link
           to="/lists/$listId/tasks/$taskId/edit"
           params={{ listId, taskId: task.id }}
           className={cn(
             "rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors",
-            // Optional: lighter style during delete pending (still clickable)
             isDeleting && "opacity-60",
           )}
           title="Edit task"

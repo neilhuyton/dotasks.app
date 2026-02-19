@@ -1,9 +1,11 @@
 // src/components/lists/ListsTable.tsx
 
 import { Link, linkOptions } from "@tanstack/react-router";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Pin, PinOff } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { trpc } from "@/trpc";
+import { Button } from "@/components/ui/button"; // assuming shadcn/ui Button
+import { cn } from "@/lib/utils"; // assuming you have this utility
 
 export default function ListsTable() {
   const { userId } = useAuthStore();
@@ -14,6 +16,40 @@ export default function ListsTable() {
     error,
   } = trpc.list.getAll.useQuery(undefined, {
     enabled: !!userId,
+  });
+
+  const utils = trpc.useUtils();
+
+  const togglePinMutation = trpc.list.pin.useMutation({
+    onMutate: async ({ id }) => {
+      // Cancel any outgoing refetches
+      await utils.list.getAll.cancel();
+
+      // Snapshot previous value
+      const previousLists = utils.list.getAll.getData() ?? [];
+
+      // Optimistically update
+      utils.list.getAll.setData(undefined, (old = []) =>
+        old.map((list) =>
+          list.id === id ? { ...list, isPinned: !list.isPinned } : list
+        )
+      );
+
+      return { previousLists };
+    },
+
+    onError: (err, newValue, context) => {
+      // Rollback on error
+      if (context?.previousLists) {
+        utils.list.getAll.setData(undefined, context.previousLists);
+      }
+      console.error("Failed to toggle pin:", err);
+    },
+
+    onSettled: () => {
+      // Refetch to be sure (also catches server-side changes)
+      utils.list.getAll.invalidate();
+    },
   });
 
   if (isLoading) {
@@ -86,7 +122,7 @@ export default function ListsTable() {
     );
   }
 
-  // When there are lists → show the table
+  // Actual table with pin button
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       <div className="overflow-x-auto">
@@ -117,9 +153,32 @@ export default function ListsTable() {
             {lists.map((list) => (
               <tr
                 key={list.id}
-                className="hover:bg-gray-50 transition-colors group"
+                className={cn(
+                  "hover:bg-gray-50 transition-colors group",
+                  list.isPinned && "bg-indigo-50/40 hover:bg-indigo-50/60"
+                )}
               >
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-6 py-4 whitespace-nowrap flex items-center gap-3">
+                  {/* Pin toggle button */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      "text-gray-400 hover:text-amber-600 -ml-2",
+                      togglePinMutation.isPending && "opacity-50 cursor-wait"
+                    )}
+                    onClick={() => togglePinMutation.mutate({ id: list.id })}
+                    disabled={togglePinMutation.isPending}
+                    title={list.isPinned ? "Unpin list" : "Pin list to top"}
+                    aria-label={list.isPinned ? `Unpin ${list.title}` : `Pin ${list.title}`}
+                  >
+                    {list.isPinned ? (
+                      <Pin className="h-5 w-5 fill-amber-500 text-amber-600" />
+                    ) : (
+                      <PinOff className="h-5 w-5" />
+                    )}
+                  </Button>
+
                   <Link
                     {...linkOptions({
                       to: "/lists/$listId",
@@ -130,6 +189,7 @@ export default function ListsTable() {
                     {list.title}
                   </Link>
                 </td>
+
                 <td className="px-6 py-4 text-sm text-gray-600 hidden md:table-cell max-w-md">
                   {list.description ? (
                     <div className="line-clamp-2">{list.description}</div>
@@ -137,6 +197,7 @@ export default function ListsTable() {
                     <span className="text-gray-400 italic">No description</span>
                   )}
                 </td>
+
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                   <Link
                     to="/lists/$listId/edit"
@@ -145,10 +206,9 @@ export default function ListsTable() {
                     title="Edit list"
                     aria-label={`Edit list: ${list.title}`}
                   >
-                    <Pencil size={18} /> {/* import Pencil from lucide-react */}
+                    <Pencil size={18} />
                   </Link>
 
-                  {/* existing delete link */}
                   <Link
                     to="/lists/$listId/delete"
                     params={{ listId: list.id }}
