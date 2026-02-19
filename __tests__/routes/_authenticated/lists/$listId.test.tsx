@@ -1,5 +1,3 @@
-// __tests__/routes/_authenticated/lists/$listId.test.tsx
-
 import {
   describe,
   it,
@@ -95,7 +93,6 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
       </trpc.Provider>,
     );
 
-    // Give React Query / Router time to settle
     await waitFor(() => {}, { timeout: 800 });
     return { history };
   };
@@ -143,7 +140,6 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
   });
 
   it("triggers delete action with correct task ID when delete button is clicked", async () => {
-    server.use(taskGetByListSuccess);
     server.use(taskDeleteSuccess);
 
     const { history } = await renderListDetail();
@@ -151,7 +147,7 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
     await screen.findByText("Finish report");
 
     const deleteButton = await screen.findByRole("button", {
-      name: /delete finish report/i,
+      name: "Delete Finish report",
     });
 
     expect(deleteButton).toBeInTheDocument();
@@ -161,8 +157,8 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
 
     await waitFor(
       () => {
-        expect(history.location.pathname).toMatch(
-          /\/lists\/list-abc-123\/tasks\/[^/]+\/delete$/,
+        expect(history.location.pathname).toBe(
+          "/lists/list-abc-123/tasks/t-real-1/delete"
         );
       },
       { timeout: 1500 },
@@ -170,7 +166,6 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
   });
 
   it("displays the Active Tasks counter with correct count", async () => {
-    server.use(taskGetByListSuccess);
     await renderListDetail();
 
     const activeHeading = await screen.findByRole("heading", {
@@ -180,5 +175,62 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
 
     expect(activeHeading).toBeInTheDocument();
     expect(activeHeading).toHaveTextContent("Active(1)");
+  });
+
+  it("renders edit (pencil) button for each task", async () => {
+    await renderListDetail();
+
+    const editLinks = await screen.findAllByRole("link", {
+      name: /edit task/i,
+    });
+
+    expect(editLinks).toHaveLength(2);
+
+    expect(editLinks[0]).toHaveAttribute(
+      "aria-label",
+      "Edit task: Finish report"
+    );
+    expect(editLinks[0]).toHaveAttribute(
+      "href",
+      "/lists/list-abc-123/tasks/t-real-1/edit"
+    );
+  });
+
+  it("navigates to task edit page when edit button is clicked", async () => {
+    const { history } = await renderListDetail();
+
+    await screen.findByText("Finish report");
+
+    const editButton = await screen.findByRole("link", {
+      name: "Edit task: Finish report",
+    });
+
+    expect(editButton).toBeInTheDocument();
+    expect(editButton).toHaveAttribute("title", "Edit task");
+
+    await user.click(editButton);
+
+    await waitFor(
+      () => {
+        expect(history.location.pathname).toBe(
+          "/lists/list-abc-123/tasks/t-real-1/edit"
+        );
+      },
+      { timeout: 1000 },
+    );
+  });
+
+  it("renders edit button even for completed tasks", async () => {
+    await renderListDetail();
+
+    const completedEditButton = await screen.findByRole("link", {
+      name: "Edit task: Call client",
+    });
+
+    expect(completedEditButton).toBeInTheDocument();
+    expect(completedEditButton).toHaveAttribute(
+      "href",
+      "/lists/list-abc-123/tasks/t-real-2/edit"
+    );
   });
 });

@@ -1,3 +1,5 @@
+// src/routes/_authenticated/lists/$listId/edit.tsx
+
 import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

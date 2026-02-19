@@ -5,16 +5,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Loader2, ArrowLeft } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { trpc } from "@/trpc"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
-
-const taskSchema = z.object({
-  title: z.string().trim().min(1, "Title is required"),
-  description: z.string().max(1000).optional(),
-})
-
-type TaskFormValues = z.infer<typeof taskSchema>
+import { useState, useEffect } from "react"
 
 export const Route = createFileRoute('/_authenticated/lists/$listId/tasks/$taskId/edit')({
   component: EditTaskPage,
@@ -28,8 +19,24 @@ function EditTaskPage() {
   const tasks = utils.task.getByList.getData({ listId }) ?? []
   const cachedTask = tasks.find(t => t.id === taskId)
 
+  const [title, setTitle] = useState("")
+  const [description, setDescription] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Set initial values once we have the cached task
+  useEffect(() => {
+    if (cachedTask) {
+      setTitle(cachedTask.title ?? "")
+      setDescription(cachedTask.description ?? "")
+    }
+  }, [cachedTask])
+
+  if (!cachedTask) {
+    return <div>Task not found</div>
+  }
+
   const mutation = trpc.task.update.useMutation({
-    onMutate: async (input) => {
+    onMutate: async (variables) => {
       await utils.task.getByList.cancel({ listId })
 
       const previousTasks = utils.task.getByList.getData({ listId }) ?? []
@@ -39,11 +46,8 @@ function EditTaskPage() {
           task.id === taskId
             ? {
                 ...task,
-                title: input.title ?? task.title,
-                description: input.description ?? task.description ?? null,
-                // When adding dueDate/priority/etc later:
-                // dueDate: input.dueDate !== undefined ? (input.dueDate ? input.dueDate.toISOString() : null) : task.dueDate,
-                // priority: input.priority ?? task.priority,
+                title: variables.title ?? task.title,
+                description: variables.description ?? task.description ?? null,
               }
             : task
         )
@@ -52,7 +56,7 @@ function EditTaskPage() {
       return { previousTasks }
     },
 
-    onError: (err, _vars, context) => {
+    onError: (err, _variables, context) => {
       if (context?.previousTasks) {
         utils.task.getByList.setData({ listId }, context.previousTasks)
       }
@@ -72,30 +76,35 @@ function EditTaskPage() {
     },
   })
 
-  const form = useForm<TaskFormValues>({
-    resolver: zodResolver(taskSchema),
-    defaultValues: {
-      title: cachedTask?.title ?? "",
-      description: cachedTask?.description ?? "",
-    },
-  })
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
 
-  const isSubmitting = mutation.isPending
-  const titleTrimmed = form.watch("title")?.trim() ?? ""  // reactive trim for disable logic
+    const trimmedTitle = title.trim()
+    if (!trimmedTitle) {
+      return
+    }
+
+    setIsSubmitting(true)
+
+    mutation.mutate(
+      {
+        id: taskId,
+        title: trimmedTitle,
+        description: description.trim() || undefined,
+      },
+      {
+        onSettled: () => {
+          setIsSubmitting(false)
+        },
+      }
+    )
+  }
 
   const handleCancel = () => {
     navigate({
       to: "/lists/$listId",
       params: { listId },
       replace: true,
-    })
-  }
-
-  const onSubmit = (data: TaskFormValues) => {
-    // No need for !isDirty check here anymore — button disable handles it
-    mutation.mutate({
-      id: taskId,
-      ...data,
     })
   }
 
@@ -127,7 +136,7 @@ function EditTaskPage() {
           </h1>
 
           <form
-            onSubmit={form.handleSubmit(onSubmit)}
+            onSubmit={handleSubmit}
             className="flex flex-col gap-6 max-w-lg mx-auto w-full"
             data-testid="edit-task-form"
           >
@@ -137,15 +146,11 @@ function EditTaskPage() {
               </label>
               <Input
                 id="title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Finish quarterly report"
                 disabled={isSubmitting}
-                {...form.register("title")}
               />
-              {form.formState.errors.title && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.title.message}
-                </p>
-              )}
             </div>
 
             <div className="space-y-2">
@@ -154,10 +159,11 @@ function EditTaskPage() {
               </label>
               <Textarea
                 id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
                 placeholder="Add more details..."
                 rows={5}
                 disabled={isSubmitting}
-                {...form.register("description")}
               />
             </div>
 
@@ -174,7 +180,7 @@ function EditTaskPage() {
 
               <Button
                 type="submit"
-                disabled={isSubmitting || !titleTrimmed}  // ← This makes button disabled when trimmed title is empty
+                disabled={isSubmitting || !title.trim()}
                 className="w-full sm:w-40"
               >
                 {isSubmitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}

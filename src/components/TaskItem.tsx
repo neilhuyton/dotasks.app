@@ -1,6 +1,7 @@
 // src/components/TaskItem.tsx
-import { Star, Trash2 } from "lucide-react";
+import { Star, Trash2, Pencil } from "lucide-react";
 import { type Task } from "@/hooks/useListTasks";
+import { Link } from "@tanstack/react-router";
 
 import {
   Item,
@@ -55,13 +56,13 @@ export function TaskItem({
       variant="outline"
       size="default"
       className={cn(
-        // Subtle background layer for depth (common in dark mode lists/cards)
-        "bg-card/80 dark:bg-muted/30", // ← key: slight transparency or muted overlay
+        // Subtle background layer for depth
+        "bg-card/80 dark:bg-muted/30",
         "transition-colors duration-150",
         task.isCompleted && "opacity-60 dark:opacity-50",
         task.isCurrent &&
           "bg-primary/10 border-primary/40 dark:bg-primary/15 shadow-sm",
-        "hover:bg-muted/20 dark:hover:bg-muted/40", // gentle hover lift
+        "hover:bg-muted/20 dark:hover:bg-muted/40",
       )}
     >
       <ItemMedia variant="icon" className="self-center">
@@ -69,14 +70,14 @@ export function TaskItem({
           checked={task.isCompleted}
           onCheckedChange={() => toggleTask({ id: task.id })}
           disabled={isToggling}
-          className="translate-y-[2px] h-4 w-4" // match small checkbox size
+          className="translate-y-[2px] h-4 w-4"
         />
       </ItemMedia>
 
       <ItemContent className="min-w-0 py-0.5">
         <ItemTitle
           className={cn(
-            "text-sm font-medium leading-snug", // ← key: text-sm + leading-snug
+            "text-sm font-medium leading-snug",
             task.isCompleted && "line-through text-muted-foreground",
           )}
         >
@@ -107,10 +108,26 @@ export function TaskItem({
               isPending && "opacity-50 pointer-events-none",
             )}
             title={task.isCurrent ? "Clear current" : "Set as current"}
+            aria-label={task.isCurrent ? "Clear current task" : "Set as current task"}
           >
             <Star className={cn("h-4 w-4", task.isCurrent && "fill-primary")} />
           </button>
         )}
+
+        {/* Edit button – links to the edit route */}
+        <Link
+          to="/lists/$listId/tasks/$taskId/edit"
+          params={{ listId, taskId: task.id }}
+          className={cn(
+            "rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors",
+            // Optional: lighter style during delete pending (still clickable)
+            isDeleting && "opacity-60",
+          )}
+          title="Edit task"
+          aria-label={`Edit task: ${task.title}`}
+        >
+          <Pencil className="h-4 w-4" />
+        </Link>
 
         <button
           type="button"

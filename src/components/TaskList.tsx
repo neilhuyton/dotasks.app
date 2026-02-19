@@ -2,7 +2,7 @@
 
 import { Star } from 'lucide-react';
 import { type Task } from '@/hooks/useListTasks';
-import { TaskItem } from '@/components/TaskItem';  // ← new import
+import { TaskItem } from '@/components/TaskItem';
 
 interface TaskListProps {
   tasks: Task[];
@@ -43,7 +43,7 @@ export default function TaskList({
 
   return (
     <div className="space-y-8">
-      {/* Current task banner (quick reference) */}
+      {/* Current task banner */}
       {currentTask && (
         <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 flex items-start gap-3 shadow-sm">
           <Star className="text-amber-600 fill-amber-400 mt-1" size={22} />
@@ -65,7 +65,7 @@ export default function TaskList({
           <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
             Active
             <span className="text-sm font-normal text-gray-500">
-              ({activeTasks.length})
+              ({activeTasks.length})   {/* ← Added space here */}
             </span>
           </h3>
           <div className="space-y-3">
@@ -94,7 +94,7 @@ export default function TaskList({
           <h3 className="text-lg font-semibold text-gray-600 mb-3 flex items-center gap-2">
             Completed
             <span className="text-sm font-normal text-gray-500">
-              ({completedTasks.length})
+              ({completedTasks.length})   {/* ← Added space here too */}
             </span>
           </h3>
           <div className="space-y-3">
