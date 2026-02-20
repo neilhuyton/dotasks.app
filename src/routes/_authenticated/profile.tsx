@@ -34,7 +34,6 @@ function ProfileRoute() {
   };
 
   return (
-    // No <Dialog> wrapper — it's a full route, always "open"
     <div
       className={cn(
         "fixed inset-0 z-50",
@@ -46,11 +45,11 @@ function ProfileRoute() {
     >
       <div className="flex h-full flex-col">
         {/* Header */}
-        <header className="relative px-4 sm:px-6 pt-16 pb-6 shrink-0">
+        <header className="relative px-4 sm:px-6 pt-14 pb-5 shrink-0">
           <Button
             variant="outline"
             size="icon"
-            className="absolute left-4 top-6 sm:left-6 sm:top-8 z-10"
+            className="absolute left-4 top-5 sm:left-6 sm:top-7 z-10"
             aria-label="Close profile"
             onClick={handleClose}
           >
@@ -58,7 +57,9 @@ function ProfileRoute() {
           </Button>
 
           <div className="mx-auto max-w-3xl text-center">
-            <h1 className="text-3xl font-bold tracking-tight">User Profile</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+              User Profile
+            </h1>
             <VisuallyHidden.Root>
               Manage your account settings, email, and password.
             </VisuallyHidden.Root>
@@ -66,63 +67,60 @@ function ProfileRoute() {
         </header>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6">
-          <div className="mx-auto max-w-3xl space-y-12">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 pb-28 sm:pb-12">
+          <div className="mx-auto max-w-3xl space-y-6 sm:space-y-10 lg:space-y-12">
             {/* Current Email */}
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-center sm:text-left">
+            <div className="space-y-2 sm:space-y-3">
+              <h2 className="text-lg sm:text-xl font-semibold text-center sm:text-left">
                 Account Information
               </h2>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-muted/40 p-5 rounded-lg border">
-                <Mail className="h-6 w-6 text-primary flex-shrink-0 mt-1 sm:mt-0" />
-                <div className="flex-1 min-w-0">
-                  <label className="block text-sm font-medium text-muted-foreground">
-                    Current Email
-                  </label>
-                  {isUserLoading ? (
-                    <div
-                      className="h-6 bg-muted animate-pulse rounded w-64 mt-1"
-                      data-testid="email-skeleton"
-                    />
-                  ) : currentEmail ? (
-                    <p
-                      className="text-base font-medium mt-1 break-all"
-                      data-testid="current-email"
-                    >
-                      {currentEmail}
-                    </p>
-                  ) : (
-                    <p className="text-base text-muted-foreground mt-1 italic">
-                      Not available
-                    </p>
-                  )}
-                </div>
+              <div className="bg-muted/40 p-3 sm:p-4 rounded-lg border">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
+                  Current Email
+                </label>
+                {isUserLoading ? (
+                  <div
+                    className="h-5 sm:h-6 bg-muted animate-pulse rounded w-56 sm:w-64"
+                    data-testid="email-skeleton"
+                  />
+                ) : currentEmail ? (
+                  <p
+                    className="text-base font-medium break-all"
+                    data-testid="current-email"
+                  >
+                    {currentEmail}
+                  </p>
+                ) : (
+                  <p className="text-sm sm:text-base text-muted-foreground italic">
+                    Not available
+                  </p>
+                )}
               </div>
             </div>
 
             {/* Change Email Form */}
             <form
               onSubmit={emailForm.handleSubmit(handleEmailSubmit)}
-              className="space-y-5"
+              className="space-y-4 sm:space-y-5"
               data-testid="email-form"
             >
-              <h2 className="text-xl font-semibold text-center sm:text-left">
+              <h2 className="text-lg sm:text-xl font-semibold text-center sm:text-left">
                 Change Email
               </h2>
-              <div className="flex items-center gap-3">
-                <Mail className="h-6 w-6 text-primary flex-shrink-0 opacity-70" />
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Mail className="h-5 w-5 sm:h-6 sm:w-6 text-primary flex-shrink-0 opacity-70" />
                 <input
                   type="email"
                   placeholder="New email address"
                   {...emailForm.register("email")}
-                  className="flex-1 p-3 bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                  className="flex-1 p-2.5 sm:p-3 bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-sm sm:text-base"
                   data-testid="email-input"
                 />
               </div>
 
               {emailForm.formState.errors.email && (
                 <p
-                  className="text-red-500 text-sm text-center sm:text-left"
+                  className="text-red-500 text-xs sm:text-sm text-center sm:text-left"
                   data-testid="email-validation-error"
                 >
                   {emailForm.formState.errors.email.message}
@@ -132,15 +130,15 @@ function ProfileRoute() {
               {emailMessage && (
                 <p
                   className={cn(
-                    "text-sm text-center sm:text-left",
+                    "text-xs sm:text-sm text-center sm:text-left",
                     emailMessage.toLowerCase().includes("success") ||
-                    emailMessage.toLowerCase().includes("updated")
+                      emailMessage.toLowerCase().includes("updated")
                       ? "text-green-500"
                       : "text-red-500"
                   )}
                   data-testid={
                     emailMessage.toLowerCase().includes("success") ||
-                    emailMessage.toLowerCase().includes("updated")
+                      emailMessage.toLowerCase().includes("updated")
                       ? "email-success"
                       : "email-error"
                   }
@@ -149,32 +147,34 @@ function ProfileRoute() {
                 </p>
               )}
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isEmailPending}
-                data-testid="email-submit"
-              >
-                {isEmailPending ? "Updating..." : "Update Email"}
-              </Button>
+              <div className="flex justify-center">
+                <Button
+                  type="submit"
+                  className="min-w-[180px] sm:min-w-[220px] text-sm sm:text-base px-8 py-5"
+                  disabled={isEmailPending}
+                  data-testid="email-submit"
+                >
+                  {isEmailPending ? "Updating..." : "Update Email"}
+                </Button>
+              </div>
             </form>
 
-            {/* Password Reset Form */}
+            {/* Change Password Form */}
             <form
               onSubmit={passwordForm.handleSubmit(handlePasswordSubmit)}
-              className="space-y-5"
+              className="space-y-4 sm:space-y-5"
               data-testid="password-form"
             >
-              <h2 className="text-xl font-semibold text-center sm:text-left">
+              <h2 className="text-lg sm:text-xl font-semibold text-center sm:text-left">
                 Change Password
               </h2>
-              <div className="flex items-center gap-3">
-                <Lock className="h-6 w-6 text-primary flex-shrink-0" />
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Lock className="h-5 w-5 sm:h-6 sm:w-6 text-primary flex-shrink-0" />
                 <input
                   type="email"
                   placeholder="Enter your email"
                   {...passwordForm.register("email")}
-                  className="flex-1 p-3 bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                  className="flex-1 p-2.5 sm:p-3 bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-sm sm:text-base"
                   data-testid="password-input"
                 />
               </div>
@@ -182,15 +182,15 @@ function ProfileRoute() {
               {passwordMessage && (
                 <p
                   className={cn(
-                    "text-sm text-center sm:text-left",
+                    "text-xs sm:text-sm text-center sm:text-left",
                     passwordMessage.toLowerCase().includes("success") ||
-                    passwordMessage.toLowerCase().includes("sent")
+                      passwordMessage.toLowerCase().includes("sent")
                       ? "text-green-500"
                       : "text-red-500"
                   )}
                   data-testid={
                     passwordMessage.toLowerCase().includes("success") ||
-                    passwordMessage.toLowerCase().includes("sent")
+                      passwordMessage.toLowerCase().includes("sent")
                       ? "password-success"
                       : "password-error"
                   }
@@ -199,27 +199,31 @@ function ProfileRoute() {
                 </p>
               )}
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isPasswordPending}
-                data-testid="password-submit"
-              >
-                {isPasswordPending ? "Sending..." : "Send Reset Link"}
-              </Button>
+              <div className="flex justify-center">
+                <Button
+                  type="submit"
+                  className="min-w-[180px] sm:min-w-[220px] text-sm sm:text-base px-8 py-5"
+                  disabled={isPasswordPending}
+                  data-testid="password-submit"
+                >
+                  {isPasswordPending ? "Sending..." : "Send Reset Link"}
+                </Button>
+              </div>
             </form>
 
-            {/* Logout */}
-            <div className="pt-8 border-t">
-              <Button
-                variant="destructive"
-                onClick={handleLogout}
-                className="w-full flex items-center justify-center gap-2"
-                data-testid="logout-button"
-              >
-                <LogOut className="h-5 w-5" />
-                Logout
-              </Button>
+            {/* Logout – now also centered, not full width */}
+            <div className="pt-6 sm:pt-8 border-t">
+              <div className="flex justify-center">
+                <Button
+                  variant="destructive"
+                  onClick={handleLogout}
+                  className="min-w-[180px] sm:min-w-[220px] text-sm sm:text-base px-8 py-5 flex items-center justify-center gap-2"
+                  data-testid="logout-button"
+                >
+                  <LogOut className="h-5 w-5" />
+                  Logout
+                </Button>
+              </div>
             </div>
           </div>
         </div>
