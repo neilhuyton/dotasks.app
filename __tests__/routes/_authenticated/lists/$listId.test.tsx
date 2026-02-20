@@ -1,3 +1,5 @@
+// __tests__/routes/_authenticated/lists/$listId.test.tsx
+
 import {
   describe,
   it,
@@ -8,7 +10,7 @@ import {
   afterAll,
   beforeEach,
 } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -157,12 +159,21 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
     await screen.findByText(/not found|don't have access/i);
   });
 
-  it("renders 'Add Task' link with correct navigation target", async () => {
+  it("renders Add Task FAB with correct navigation target", async () => {
     const { history } = await renderListDetail();
-    const link = await screen.findByRole("link", { name: /add task/i });
-    expect(link).toHaveAttribute("href", `/lists/list-abc-123/tasks/new`);
-    await user.click(link);
-    expect(history.location.pathname).toBe(`/lists/list-abc-123/tasks/new`);
+
+    const fab = await screen.findByTestId("fab-add-task");
+
+    // Since Button asChild + Link renders <a> directly with href
+    expect(fab.tagName.toLowerCase()).toBe("a");
+    expect(fab).toHaveAttribute("href", "/lists/list-abc-123/tasks/new");
+
+    // Confirm the sr-only label is present (good accessibility check)
+    expect(within(fab).getByText("Add new task", { selector: "span.sr-only" })).toBeInTheDocument();
+
+    await user.click(fab);
+
+    expect(history.location.pathname).toBe("/lists/list-abc-123/tasks/new");
   });
 
   it("renders TaskList component with tasks", async () => {

@@ -6,27 +6,17 @@ import TaskList from "@/components/TaskList";
 import { useListTasks } from "@/hooks/useListTasks";
 import { trpc } from "@/trpc";
 import { Link, Outlet } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button"; // shadcn/ui Button
 
 export const Route = createFileRoute("/_authenticated/lists/$listId")({
-  // Optional: loader for prefetching if you want (can move query here later)
-  // loader: async ({ params }) => {
-  //   return { list: await trpc.list.getOne.query({ id: params.listId }) }
-  // },
   component: ListDetail,
 });
 
 function ListDetail() {
-  const { listId } = Route.useParams(); // ← type-safe params from TanStack Router
-
+  const { listId } = Route.useParams();
   const navigate = Route.useNavigate();
 
-  // If you have delete modal routes, keep matching them (adjust route IDs if needed)
-  // const isDeleteModalActive = !!useMatch({ from: deleteListRoute.id, shouldThrow: false })
-  // const isTaskDeleteModalActive = !!useMatch({ from: deleteTaskRoute.id, shouldThrow: false })
-  // const isAnyModalActive = isDeleteModalActive || isTaskDeleteModalActive
-
-  // For now, simplified — add modal checks back if needed
-  const isAnyModalActive = false; // ← replace with your logic
+  const isAnyModalActive = false; // ← replace with your modal logic if needed
 
   const { data: list, isLoading: listLoading } = trpc.list.getOne.useQuery(
     { id: listId },
@@ -52,11 +42,11 @@ function ListDetail() {
     return (
       <div 
         className="flex min-h-[60vh] items-center justify-center"
-        data-testid="list-loading"           // ← added for tests
+        data-testid="list-loading"
       >
         <Loader2 
           className="h-12 w-12 animate-spin text-blue-600"
-          data-testid="loading-spinner"      // ← added for tests
+          data-testid="loading-spinner"
         />
       </div>
     );
@@ -66,7 +56,7 @@ function ListDetail() {
     return (
       <div 
         className="rounded-lg bg-red-50 p-8 text-center text-red-800"
-        data-testid="list-not-found"         // ← optional, but useful if you add a test later
+        data-testid="list-not-found"
       >
         List not found or you don't have access.
       </div>
@@ -74,18 +64,10 @@ function ListDetail() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 relative pb-24 md:pb-28"> {/* increased padding to accommodate higher FAB */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">{list?.title}</h1>
-
-        <Link
-          to="/lists/$listId/tasks/new"
-          params={{ listId }}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-        >
-          <Plus size={18} />
-          Add Task
-        </Link>
+        {/* Inline Add Task button removed – using FAB now */}
       </div>
 
       {list?.description && (
@@ -95,11 +77,11 @@ function ListDetail() {
       {isLoadingTasks ? (
         <div 
           className="flex min-h-[40vh] items-center justify-center"
-          data-testid="tasks-loading"          // ← added for tests
+          data-testid="tasks-loading"
         >
           <Loader2 
             className="h-10 w-10 animate-spin text-primary"
-            data-testid="tasks-spinner"         // ← optional extra locator
+            data-testid="tasks-spinner"
           />
         </div>
       ) : (
@@ -121,6 +103,31 @@ function ListDetail() {
           listId={listId}
         />
       )}
+
+      {/* Floating Action Button (FAB) - moved slightly right & higher */}
+      <Button
+        asChild
+        size="lg"
+        className="
+          fixed bottom-24 right-4 z-50             
+          rounded-full w-14 h-14 
+          shadow-xl hover:shadow-2xl 
+          transition-all duration-200 hover:scale-110
+          bg-primary hover:bg-primary/90
+          text-primary-foreground
+          flex items-center justify-center
+          md:bottom-28 md:right-10 md:w-16 md:h-16  
+        "
+        data-testid="fab-add-task"
+      >
+        <Link
+          to="/lists/$listId/tasks/new"
+          params={{ listId }}
+        >
+          <Plus className="h-7 w-7 md:h-8 md:w-8" />
+          <span className="sr-only">Add new task</span>
+        </Link>
+      </Button>
 
       <Outlet />
     </div>
