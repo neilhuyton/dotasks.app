@@ -1,4 +1,5 @@
-// src/routes/dashboard.lazy.tsx
+// src/routes/index.tsx
+
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { Pin, PinOff, Plus } from 'lucide-react';
 import { trpc } from '@/trpc';
@@ -6,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PageContainer } from '@/components/PageContainer';
 
 export const Route = createFileRoute('/')({
   component: Dashboard,
@@ -23,7 +25,6 @@ function Dashboard() {
       const prevPinned = utils.list.getPinned.getData() ?? [];
       const prevAll = utils.list.getAll.getData() ?? [];
 
-      // Optimistic: remove from pinned view, flip flag in full list
       utils.list.getPinned.setData(undefined, prevPinned.filter(l => l.id !== id));
       utils.list.getAll.setData(undefined, prevAll.map(l =>
         l.id === id ? { ...l, isPinned: false } : l
@@ -44,8 +45,8 @@ function Dashboard() {
   });
 
   return (
-    <div className="container mx-auto py-8 px-4 md:px-6 space-y-10">
-      <div className="flex items-center justify-between">
+    <PageContainer>
+      <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <Button variant="outline" size="sm" asChild>
           <Link to="/lists">
@@ -55,7 +56,6 @@ function Dashboard() {
         </Button>
       </div>
 
-      {/* Pinned Lists Section */}
       <section className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-semibold flex items-center gap-3">
@@ -93,106 +93,103 @@ function Dashboard() {
           </Card>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {pinnedLists.map((list) => (
-              <Card
-                key={list.id}
-                className={cn(
-                  "group relative overflow-hidden transition-all hover:shadow-md hover:-translate-y-0.5",
-                  list.color && "border-l-4",
-                )}
-                style={list.color ? { borderLeftColor: list.color } : undefined}
-              >
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => togglePin.mutate({ id: list.id })}
-                  disabled={togglePin.isPending}
-                  title="Unpin list"
+            {pinnedLists.map((list) => {
+              const activeCount = list.tasks?.length ?? 0;
+              const progress =
+                list._count.tasks > 0
+                  ? Math.round(((list._count.tasks - activeCount) / list._count.tasks) * 100)
+                  : 0;
+
+              return (
+                <Card
+                  key={list.id}
+                  className={cn(
+                    "group relative overflow-hidden transition-all hover:shadow-md hover:-translate-y-0.5",
+                    list.color && "border-l-4",
+                  )}
+                  style={list.color ? { borderLeftColor: list.color } : undefined}
                 >
-                  <PinOff className="h-4 w-4" />
-                </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => togglePin.mutate({ id: list.id })}
+                    disabled={togglePin.isPending}
+                    title="Unpin list"
+                  >
+                    <PinOff className="h-4 w-4" />
+                  </Button>
 
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg font-semibold leading-tight pr-10">
-                    <Link
-                      to="/lists/$listId"
-                      params={{ listId: list.id }}
-                      className="hover:underline"
-                    >
-                      {list.title}
-                    </Link>
-                  </CardTitle>
-                </CardHeader>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg font-semibold leading-tight pr-10 line-clamp-2">
+                      <Link
+                        to="/lists/$listId"
+                        params={{ listId: list.id }}
+                        className="hover:underline"
+                      >
+                        {list.title}
+                      </Link>
+                    </CardTitle>
+                  </CardHeader>
 
-                <CardContent className="space-y-4 text-sm">
-                  {list.description && (
-                    <p className="text-muted-foreground line-clamp-2">
-                      {list.description}
-                    </p>
-                  )}
+                  <CardContent className="space-y-4 text-sm">
+                    {list.description && (
+                      <p className="text-muted-foreground line-clamp-2">
+                        {list.description}
+                      </p>
+                    )}
 
-                  {/* Corrected counters */}
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="font-medium">
-                      {list._count.tasks} task{list._count.tasks !== 1 ? 's' : ''}
-                    </span>
-                    <span>
-                      {list.tasks?.length ?? 0} active
-                    </span>
-                  </div>
-
-                  {/* Progress bar (approximate based on preview) */}
-                  {list._count.tasks > 0 && (
-                    <div className="mt-1">
-                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-green-500 transition-all duration-300"
-                          style={{
-                            width: `${Math.min(100, Math.round(
-                              ((list._count.tasks - (list.tasks?.length ?? 0)) / list._count.tasks) * 100
-                            ))}%`,
-                          }}
-                        />
-                      </div>
-                      <div className="text-[10px] text-right mt-1 text-muted-foreground">
-                        ≈{Math.round(((list._count.tasks - (list.tasks?.length ?? 0)) / list._count.tasks) * 100)}% complete
-                      </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span className="font-medium">
+                        {list._count.tasks} task{list._count.tasks !== 1 ? 's' : ''}
+                      </span>
+                      <span>{activeCount} active</span>
                     </div>
-                  )}
 
-                  {/* Task preview */}
-                  {list.tasks?.length > 0 && (
-                    <ul className="text-xs space-y-1.5 mt-3 pt-3 border-t">
-                      {list.tasks.map((task) => (
-                        <li key={task.id} className="flex items-center gap-2">
+                    {list._count.tasks > 0 && (
+                      <div className="mt-1">
+                        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                           <div
-                            className={cn(
-                              "size-2.5 rounded-full flex-shrink-0",
-                              task.isCompleted ? "bg-green-500" : "bg-amber-400"
-                            )}
+                            className="h-full bg-green-500 transition-all duration-300"
+                            style={{ width: `${progress}%` }}
                           />
-                          <span className="line-clamp-1 text-muted-foreground">
-                            {task.title}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                        </div>
+                        <div className="text-[10px] text-right mt-1 text-muted-foreground">
+                          {progress}% complete
+                        </div>
+                      </div>
+                    )}
 
-                  {list.icon && (
-                    <div className="absolute bottom-3 right-3 text-3xl opacity-30 pointer-events-none">
-                      {list.icon}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                    {list.tasks?.length > 0 && (
+                      <ul className="text-xs space-y-1.5 mt-3 pt-3 border-t">
+                        {list.tasks.map((task) => (
+                          <li key={task.id} className="flex items-center gap-2">
+                            <div
+                              className={cn(
+                                "size-2.5 rounded-full flex-shrink-0",
+                                task.isCompleted ? "bg-green-500" : "bg-amber-400"
+                              )}
+                            />
+                            <span className="line-clamp-1 text-muted-foreground">
+                              {task.title}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    {list.icon && (
+                      <div className="absolute bottom-3 right-3 text-3xl opacity-30 pointer-events-none">
+                        {list.icon}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </section>
-
-      {/* You can add more dashboard sections here */}
-    </div>
+    </PageContainer>
   );
 }

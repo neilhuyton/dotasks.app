@@ -30,27 +30,30 @@ import { suppressActWarnings } from "../../act-suppress";
 
 suppressActWarnings();
 
-// Mock the Link component from TanStack Router
+// Mock TanStack Router components/hooks we use
 vi.mock("@tanstack/react-router", async () => {
   const actual = await vi.importActual("@tanstack/react-router");
+
   return {
     ...actual,
-    Link: vi.fn(
-      ({ children, className, title, "aria-label": ariaLabel, ...props }) => (
-        <a
-          data-testid="mocked-link"
-          className={className}
-          data-to={props.to}
-          data-params={JSON.stringify(props.params || {})}
-          data-search={JSON.stringify(props.search || {})}
-          title={title}
-          aria-label={ariaLabel}
-          {...props}
-        >
-          {children}
-        </a>
-      ),
-    ),
+
+    // Mock <Link> – used for the main list card navigation
+    Link: vi.fn(({ children, className, title, "aria-label": ariaLabel, ...props }) => (
+      <a
+        data-testid="mocked-link"
+        className={className}
+        data-to={props.to}
+        data-params={JSON.stringify(props.params || {})}
+        title={title}
+        aria-label={ariaLabel}
+        {...props}
+      >
+        {children}
+      </a>
+    )),
+
+    // Mock useNavigate – prevents "useRouter must be used inside a <RouterProvider>" warnings
+    useNavigate: vi.fn(() => vi.fn()), // returns a no-op navigate function
   };
 });
 
@@ -71,9 +74,7 @@ describe("ListsTable", () => {
 
   const setup = async (overrideHandler = listGetAllHandler) => {
     queryClient = createTestQueryClient();
-
     server.use(overrideHandler);
-
     useAuthStore.setState({ userId: "test-user-id" });
 
     let renderResult;
@@ -88,25 +89,23 @@ describe("ListsTable", () => {
           <QueryClientProvider client={queryClient}>
             <ListsTable />
           </QueryClientProvider>
-        </trpc.Provider>,
+        </trpc.Provider>
       );
     });
 
     await waitFor(
       () => {
-        const hasHeader = screen.queryByText("List Name") !== null;
-        const hasEmpty = screen.queryByText("No lists yet") !== null;
-        expect(hasHeader || hasEmpty).toBe(true);
+        const hasContent = screen.queryByText("Groceries") !== null;
+        const hasEmpty = screen.queryByText("No lists yet.") !== null;
+        expect(hasContent || hasEmpty).toBe(true);
       },
-      { timeout: 8000 },
+      { timeout: 5000 }
     );
 
     return { renderResult, queryClient };
   };
 
-  beforeAll(() => {
-    server.listen({ onUnhandledRequest: "error" });
-  });
+  beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 
   beforeEach(() => {
     resetMockLists();
@@ -129,92 +128,55 @@ describe("ListsTable", () => {
   it("shows empty state UI when user has no lists", async () => {
     await setup(listGetEmptyHandler);
 
-    await waitFor(
-      () => {
-        expect(screen.getByText("No lists yet")).toBeInTheDocument();
-        expect(screen.getByText(/Create your first list/i)).toBeInTheDocument();
-      },
-      { timeout: 5000 },
-    );
+    await waitFor(() => {
+      expect(screen.getByText("No lists yet.")).toBeInTheDocument();
+    }, { timeout: 5000 });
 
-    expect(screen.queryByText("List Name")).not.toBeInTheDocument();
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("mocked-link")).not.toBeInTheDocument();
+    expect(screen.queryByText("Groceries")).not.toBeInTheDocument();
   });
 
-  it("renders table headers correctly", async () => {
-    await setup();
-
-    expect(screen.getByText("List Name")).toBeInTheDocument();
-    expect(screen.getByText("Description")).toBeInTheDocument();
-    expect(screen.getByText("Actions")).toBeInTheDocument();
-
-    expect(screen.getByText("Description")).toHaveClass("hidden md:table-cell");
-  });
-
-  it("renders list rows with titles as links and correct descriptions when data is fetched", async () => {
-    await setup();
-
-    await waitFor(
-      () => {
-        expect(screen.getByText("Groceries")).toBeInTheDocument();
-        expect(screen.getByText("Weekend shopping")).toBeInTheDocument();
-        expect(screen.getByText("Work Tasks")).toBeInTheDocument();
-
-        const noDescElements = screen.getAllByText("No description");
-        expect(noDescElements.length).toBeGreaterThan(0);
-        expect(noDescElements[0]).toHaveClass("text-gray-400 italic");
-      },
-      { timeout: 5000 },
-    );
-
-    const titleLinks = screen
-      .getAllByTestId("mocked-link")
-      .filter((link) => link.getAttribute("data-to") === "/lists/$listId");
-
-    expect(titleLinks.length).toBe(2);
-
-    expect(titleLinks[0]).toHaveTextContent("Groceries");
-    expect(titleLinks[0]).toHaveAttribute(
-      "data-params",
-      expect.stringContaining('"listId":"l1"'),
-    );
-  });
-
-  // ───────────────────────────────────────────────────────────────
-  // NEW TEST: checks the delete link
-  // ───────────────────────────────────────────────────────────────
-  it("renders delete link for each list pointing to /lists/$listId/delete", async () => {
+  it("renders list items as cards with titles, icons and action buttons", async () => {
     await setup();
 
     await waitFor(() => {
       expect(screen.getByText("Groceries")).toBeInTheDocument();
-    });
+      expect(screen.getByText("Work Tasks")).toBeInTheDocument();
+      expect(screen.getByText("shopping-cart")).toBeInTheDocument();
 
-    // Find all mocked links
-    const allLinks = screen.getAllByTestId("mocked-link");
+      // Check action buttons via title
+      expect(screen.getAllByTitle("Edit")).toHaveLength(2);
+      expect(screen.getAllByTitle("Delete")).toHaveLength(2);
+    }, { timeout: 5000 });
+  });
 
-    // Filter to delete links (they point to "/lists/$listId/delete")
-    const deleteLinks = allLinks.filter(
-      (link) => link.getAttribute("data-to") === "/lists/$listId/delete",
-    );
+  it("main link for each list points to /lists/$listId", async () => {
+    await setup();
 
-    expect(deleteLinks.length).toBe(2); // one per list
+    await waitFor(() => {
+      const mainLinks = screen
+        .getAllByTestId("mocked-link")
+        .filter((el) => el.getAttribute("data-to") === "/lists/$listId");
 
-    // Check first delete link (Groceries / l1)
-    expect(deleteLinks[0]).toHaveAttribute(
-      "data-params",
-      expect.stringContaining('"listId":"l1"'),
-    );
-    expect(deleteLinks[0]).toHaveAttribute("title", "Delete list");
-    expect(deleteLinks[0]).toHaveAttribute(
-      "aria-label",
-      expect.stringContaining("Delete list"),
-    );
-    expect(deleteLinks[0].querySelector("svg")).toBeInTheDocument(); // has Trash2 icon
+      expect(mainLinks).toHaveLength(2);
+      expect(mainLinks[0]).toHaveAttribute("data-params", expect.stringContaining('"listId":"l1"'));
+      expect(mainLinks[0]).toHaveTextContent("Groceries");
+    }, { timeout: 5000 });
+  });
 
-    // Optional: check classes for styling
-    expect(deleteLinks[0]).toHaveClass("text-gray-400");
-    expect(deleteLinks[0]).toHaveClass("hover:text-red-600");
-    expect(deleteLinks[0]).toHaveClass("hover:bg-red-50");
+  it("edit and delete buttons are present with correct titles", async () => {
+    await setup();
+
+    await waitFor(() => {
+      const editButtons = screen.getAllByTitle("Edit");
+      const deleteButtons = screen.getAllByTitle("Delete");
+
+      expect(editButtons).toHaveLength(2);
+      expect(deleteButtons).toHaveLength(2);
+
+      // Optional: check aria-label for accessibility
+      expect(editButtons[0]).toHaveAttribute("aria-label", "Edit list: Groceries");
+      expect(deleteButtons[0]).toHaveAttribute("aria-label", "Delete list: Groceries");
+    }, { timeout: 5000 });
   });
 });

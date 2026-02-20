@@ -31,6 +31,11 @@ describe("list router (protected procedures)", () => {
           isPinned: false,
           createdAt: new Date("2025-02-10T09:30:00Z"),
           updatedAt: new Date("2025-02-10T09:30:00Z"),
+          _count: { tasks: 5 },
+          tasks: [
+            { id: "t1", title: "Milk", isCompleted: false },
+            { id: "t2", title: "Bread", isCompleted: false },
+          ],
         },
         {
           id: crypto.randomUUID(),
@@ -43,6 +48,10 @@ describe("list router (protected procedures)", () => {
           isPinned: false,
           createdAt: new Date("2025-02-12T14:15:00Z"),
           updatedAt: new Date("2025-02-12T14:15:00Z"),
+          _count: { tasks: 3 },
+          tasks: [
+            { id: "t3", title: "Meeting prep", isCompleted: false },
+          ],
         },
       ];
 
@@ -59,8 +68,39 @@ describe("list router (protected procedures)", () => {
       );
 
       expect(mockPrisma.todoList.findMany).toHaveBeenCalledWith({
-        where: { userId: "test-user-id" },
-        orderBy: [{ isPinned: "desc" }, { createdAt: "desc" }],
+        where: {
+          userId: "test-user-id",
+          isArchived: false,
+        },
+        orderBy: [
+          { isPinned: "desc" },
+          { createdAt: "desc" },
+        ],
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          color: true,
+          icon: true,
+          isPinned: true,
+          createdAt: true,
+          updatedAt: true,
+          _count: {
+            select: {
+              tasks: true,
+            },
+          },
+          tasks: {
+            where: { isCompleted: false },
+            orderBy: { order: "asc" },
+            take: 3,
+            select: {
+              id: true,
+              title: true,
+              isCompleted: true,
+            },
+          },
+        },
       });
     });
 

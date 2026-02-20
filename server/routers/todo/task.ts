@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../../trpc-base";
 import { TRPCError } from "@trpc/server";
+import { Prisma } from "@prisma/client"; // ← needed for Prisma.TaskUpdateInput
 
 export const taskRouter = router({
   getByList: protectedProcedure
@@ -18,11 +19,7 @@ export const taskRouter = router({
 
       return ctx.prisma.task.findMany({
         where: { listId: input.listId },
-
-        orderBy: [
-          { isPinned: "desc" }, // pinned tasks first
-          { order: "asc" }, // then by your drag-drop order
-        ],
+        orderBy: [{ isPinned: "desc" }, { order: "asc" }],
       });
     }),
 
@@ -51,7 +48,7 @@ export const taskRouter = router({
         data: {
           ...input,
           isCompleted: false,
-          isCurrent: false, // ← explicitly false on creation
+          isCurrent: false,
         },
       });
     }),
@@ -67,15 +64,15 @@ export const taskRouter = router({
         order: z.number().int().optional(),
         isCompleted: z.boolean().optional(),
         isCurrent: z.boolean().optional(),
+        isPinned: z.boolean().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { id, ...data } = input;
+      const { id, ...inputData } = input;
 
-      // Find task and check ownership via list
       const task = await ctx.prisma.task.findUnique({
         where: { id },
-        select: { listId: true },
+        select: { listId: true, isCompleted: true },
       });
 
       if (!task) {
@@ -91,10 +88,22 @@ export const taskRouter = router({
         throw new TRPCError({ code: "FORBIDDEN" });
       }
 
-      // Perform the partial update
+      const finalData: Prisma.TaskUpdateInput = { ...inputData };
+
+      // Enforce: completed tasks cannot be pinned
+      const isOrWillBeCompleted =
+        inputData.isCompleted === true ||
+        (inputData.isCompleted === undefined && task.isCompleted);
+
+      if (isOrWillBeCompleted) {
+        finalData.isPinned = false;
+        // Optional: also force-unset current if you want to be stricter
+        // finalData.isCurrent = false;
+      }
+
       return ctx.prisma.task.update({
         where: { id },
-        data,
+        data: finalData,
       });
     }),
 
@@ -130,13 +139,18 @@ export const taskRouter = router({
 
       const willBeCompleted = !task.isCompleted;
 
+      const updateData: Prisma.TaskUpdateInput = {
+        isCompleted: !task.isCompleted,
+      };
+
+      if (willBeCompleted) {
+        updateData.isPinned = false;
+        updateData.isCurrent = false;
+      }
+
       return ctx.prisma.task.update({
         where: { id: input.id },
-        data: {
-          isCompleted: !task.isCompleted,
-          // Force-remove isCurrent when completing the task
-          isCurrent: willBeCompleted ? false : undefined, // only change when becoming completed
-        },
+        data: updateData,
       });
     }),
 
@@ -166,16 +180,14 @@ export const taskRouter = router({
       });
     }),
 
-  // ─── NEW: Set exactly one task as the "current/working on" task per list ───
   setCurrent: protectedProcedure
     .input(
       z.object({
-        id: z.string().uuid(), // task id
+        id: z.string().uuid(),
         listId: z.string().uuid(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Verify task exists and belongs to user via list
       const task = await ctx.prisma.task.findFirst({
         where: {
           id: input.id,
@@ -199,7 +211,6 @@ export const taskRouter = router({
       }
 
       return ctx.prisma.$transaction(async (tx) => {
-        // Remove current flag from all other tasks in the list
         await tx.task.updateMany({
           where: {
             listId: input.listId,
@@ -209,7 +220,6 @@ export const taskRouter = router({
           data: { isCurrent: false },
         });
 
-        // Set this task as current
         return tx.task.update({
           where: { id: input.id },
           data: { isCurrent: true },
@@ -224,7 +234,6 @@ export const taskRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Verify user owns the list
       const list = await ctx.prisma.todoList.findUnique({
         where: { id: input.listId },
         select: { userId: true },
@@ -234,7 +243,6 @@ export const taskRouter = router({
         throw new TRPCError({ code: "FORBIDDEN" });
       }
 
-      // Clear isCurrent from all tasks in the list
       await ctx.prisma.task.updateMany({
         where: {
           listId: input.listId,
@@ -243,7 +251,6 @@ export const taskRouter = router({
         data: { isCurrent: false },
       });
 
-      // Return something simple (no single updated task)
       return { success: true };
     }),
 
@@ -256,7 +263,7 @@ export const taskRouter = router({
     .mutation(async ({ ctx, input }) => {
       const task = await ctx.prisma.task.findUnique({
         where: { id: input.id },
-        select: { listId: true },
+        select: { listId: true, isCompleted: true, isPinned: true },
       });
 
       if (!task) {
@@ -272,14 +279,17 @@ export const taskRouter = router({
         throw new TRPCError({ code: "FORBIDDEN" });
       }
 
-      const updatedTask = await ctx.prisma.task.findUnique({
-        where: { id: input.id },
-        select: { isPinned: true },
-      });
+      // Extra safety: don't allow pinning already completed tasks
+      if (task.isCompleted) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot pin a completed task",
+        });
+      }
 
       return ctx.prisma.task.update({
         where: { id: input.id },
-        data: { isPinned: !updatedTask!.isPinned },
+        data: { isPinned: !task.isCompleted ? !task.isPinned : false },
       });
     }),
 });

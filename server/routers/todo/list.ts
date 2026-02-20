@@ -1,3 +1,5 @@
+// server/routers/todo/list.ts
+
 import { z } from "zod";
 import { router, protectedProcedure } from "../../trpc-base";
 import { TRPCError } from "@trpc/server";
@@ -5,11 +7,39 @@ import { TRPCError } from "@trpc/server";
 export const listRouter = router({
   getAll: protectedProcedure.query(async ({ ctx }) => {
     return ctx.prisma.todoList.findMany({
-      where: { userId: ctx.userId },
+      where: {
+        userId: ctx.userId,
+        isArchived: false,
+      },
       orderBy: [
         { isPinned: "desc" },
         { createdAt: "desc" },
       ],
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        color: true,
+        icon: true,
+        isPinned: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            tasks: true,
+          },
+        },
+        tasks: {
+          where: { isCompleted: false },
+          orderBy: { order: "asc" },
+          take: 3,
+          select: {
+            id: true,
+            title: true,
+            isCompleted: true,
+          },
+        },
+      },
     });
   }),
 

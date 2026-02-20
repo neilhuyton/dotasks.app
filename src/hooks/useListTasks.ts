@@ -60,6 +60,7 @@ export function useListTasks(listId: string | null | undefined) {
         description: input.description ?? null,
         isCompleted: false,
         isCurrent: false,
+        isPinned: false,
         dueDate: input.dueDate ? input.dueDate.toISOString() : null,
         priority: input.priority ?? null,
         order: previousSorted.length,
@@ -77,7 +78,6 @@ export function useListTasks(listId: string | null | undefined) {
 
     onSuccess: (saved) => {
       if (!enabled) return;
-      // Replace temp with real (createdAt is very close → stays at top)
       optimisticUpdate((prev) =>
         prev.map((t) => (t.id.startsWith("temp-") ? saved : t))
       );
@@ -100,7 +100,9 @@ export function useListTasks(listId: string | null | undefined) {
             ? {
                 ...t,
                 isCompleted: !t.isCompleted,
-                // If becoming completed → force-remove star/current flag
+                // If becoming completed → force-remove pin & current flags
+                // (matches backend enforcement in taskRouter.toggle)
+                isPinned: !t.isCompleted ? false : t.isPinned,
                 isCurrent: !t.isCompleted ? false : t.isCurrent,
               }
             : t
@@ -109,7 +111,14 @@ export function useListTasks(listId: string | null | undefined) {
 
       return { previousSorted };
     },
+
     onError: (_, __, context) => rollbackTo(context?.previousSorted),
+
+    // Added: always revalidate after toggle (success or error)
+    // Ensures cache stays in sync with server (especially important for forced isPinned = false)
+    onSettled: () => {
+      utils.task.getByList.invalidate(queryKey);
+    },
   });
 
   const remove = trpc.task.delete.useMutation({
