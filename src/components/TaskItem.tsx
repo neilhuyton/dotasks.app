@@ -78,11 +78,11 @@ export function TaskItem({
           {task.title}
         </ItemTitle>
 
-        {task.description && (
+        {/* {task.description && (
           <ItemDescription className="mt-0.5 text-xs text-muted-foreground leading-tight line-clamp-2">
             {task.description}
           </ItemDescription>
-        )}
+        )} */}
       </ItemContent>
 
       <TaskActionsDropdown
