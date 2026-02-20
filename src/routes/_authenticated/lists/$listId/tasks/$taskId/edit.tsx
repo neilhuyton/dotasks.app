@@ -1,70 +1,72 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Loader2, ArrowLeft } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { trpc } from "@/trpc"
-import { useState, useEffect } from "react"
+import { createFileRoute } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, ArrowLeft } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { trpc } from "@/trpc";
+import { useState, useEffect } from "react";
 
-export const Route = createFileRoute('/_authenticated/lists/$listId/tasks/$taskId/edit')({
+export const Route = createFileRoute(
+  "/_authenticated/lists/$listId/tasks/$taskId/edit",
+)({
   component: EditTaskPage,
-})
+});
 
 function EditTaskPage() {
-  const { listId, taskId } = Route.useParams()
-  const navigate = Route.useNavigate()
-  const utils = trpc.useUtils()
+  const { listId, taskId } = Route.useParams();
+  const navigate = Route.useNavigate();
+  const utils = trpc.useUtils();
 
-  const tasks = utils.task.getByList.getData({ listId }) ?? []
-  const cachedTask = tasks.find(t => t.id === taskId)
+  const tasks = utils.task.getByList.getData({ listId }) ?? [];
+  const cachedTask = tasks.find((t) => t.id === taskId);
 
-  const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Set initial values once we have the cached task
   useEffect(() => {
     if (cachedTask) {
-      setTitle(cachedTask.title ?? "")
-      setDescription(cachedTask.description ?? "")
+      setTitle(cachedTask.title ?? "");
+      setDescription(cachedTask.description ?? "");
     }
-  }, [cachedTask])
+  }, [cachedTask]);
 
   if (!cachedTask) {
-    return <div>Task not found</div>
+    return <div>Task not found</div>;
   }
 
   const mutation = trpc.task.update.useMutation({
     onMutate: async (variables) => {
-      await utils.task.getByList.cancel({ listId })
+      await utils.task.getByList.cancel({ listId });
 
-      const previousTasks = utils.task.getByList.getData({ listId }) ?? []
+      const previousTasks = utils.task.getByList.getData({ listId }) ?? [];
 
       utils.task.getByList.setData({ listId }, (old = []) =>
-        old.map(task =>
+        old.map((task) =>
           task.id === taskId
             ? {
                 ...task,
                 title: variables.title ?? task.title,
                 description: variables.description ?? task.description ?? null,
               }
-            : task
-        )
-      )
+            : task,
+        ),
+      );
 
-      return { previousTasks }
+      return { previousTasks };
     },
 
     onError: (err, _variables, context) => {
       if (context?.previousTasks) {
-        utils.task.getByList.setData({ listId }, context.previousTasks)
+        utils.task.getByList.setData({ listId }, context.previousTasks);
       }
-      console.error("Failed to update task:", err)
+      console.error("Failed to update task:", err);
     },
 
     onSettled: () => {
-      utils.task.getByList.invalidate({ listId })
+      utils.task.getByList.invalidate({ listId });
     },
 
     onSuccess: () => {
@@ -72,19 +74,19 @@ function EditTaskPage() {
         to: "/lists/$listId",
         params: { listId },
         replace: true,
-      })
+      });
     },
-  })
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    const trimmedTitle = title.trim()
+    const trimmedTitle = title.trim();
     if (!trimmedTitle) {
-      return
+      return;
     }
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
     mutation.mutate(
       {
@@ -94,19 +96,19 @@ function EditTaskPage() {
       },
       {
         onSettled: () => {
-          setIsSubmitting(false)
+          setIsSubmitting(false);
         },
-      }
-    )
-  }
+      },
+    );
+  };
 
   const handleCancel = () => {
     navigate({
       to: "/lists/$listId",
       params: { listId },
       replace: true,
-    })
-  }
+    });
+  };
 
   return (
     <div
@@ -115,7 +117,7 @@ function EditTaskPage() {
         "h-dvh w-dvw max-h-none max-w-none",
         "m-0 p-0 left-0 top-0 right-0 bottom-0 translate-x-0 translate-y-0",
         "rounded-none border-0 shadow-none",
-        "bg-background overscroll-none touch-none"
+        "bg-background overscroll-none touch-none",
       )}
     >
       <div className="relative flex min-h-full flex-col px-6 pb-20 pt-20">
@@ -131,9 +133,7 @@ function EditTaskPage() {
         </Button>
 
         <div className="flex flex-1 flex-col">
-          <h1 className="text-3xl font-bold tracking-tight mb-8">
-            Edit Task
-          </h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-8">Edit Task</h1>
 
           <form
             onSubmit={handleSubmit}
@@ -169,6 +169,17 @@ function EditTaskPage() {
 
             <div className="mt-auto flex flex-col gap-4 sm:flex-row sm:justify-center w-full max-w-sm mx-auto pb-10">
               <Button
+                type="submit"
+                disabled={isSubmitting || !title.trim()}
+                className="w-full sm:w-40"
+              >
+                {isSubmitting && (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                )}
+                {isSubmitting ? "Saving..." : "Save Changes"}
+              </Button>
+
+              <Button
                 type="button"
                 variant="outline"
                 onClick={handleCancel}
@@ -177,19 +188,10 @@ function EditTaskPage() {
               >
                 Cancel
               </Button>
-
-              <Button
-                type="submit"
-                disabled={isSubmitting || !title.trim()}
-                className="w-full sm:w-40"
-              >
-                {isSubmitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-                {isSubmitting ? "Saving..." : "Save Changes"}
-              </Button>
             </div>
           </form>
         </div>
       </div>
     </div>
-  )
+  );
 }

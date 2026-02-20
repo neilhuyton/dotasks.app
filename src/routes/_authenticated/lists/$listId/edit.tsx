@@ -18,10 +18,11 @@ function EditListPage() {
   const navigate = Route.useNavigate();
   const utils = trpc.useUtils();
 
-  const { data: list, isLoading, isError } = trpc.list.getOne.useQuery(
-    { id: listId },
-    { enabled: !!listId },
-  );
+  const {
+    data: list,
+    isLoading,
+    isError,
+  } = trpc.list.getOne.useQuery({ id: listId }, { enabled: !!listId });
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -61,7 +62,9 @@ function EditListPage() {
 
       utils.list.getAll.setData(undefined, (old = []) =>
         old.map((l) =>
-          l.id === input.id ? { ...l, ...input, updatedAt: new Date().toISOString() } : l,
+          l.id === input.id
+            ? { ...l, ...input, updatedAt: new Date().toISOString() }
+            : l,
         ),
       );
 
@@ -75,7 +78,8 @@ function EditListPage() {
 
     onError: (_, __, ctx) => {
       if (ctx?.prevAll) utils.list.getAll.setData(undefined, ctx.prevAll);
-      if (ctx?.prevDetail) utils.list.getOne.setData({ id: listId }, ctx.prevDetail);
+      if (ctx?.prevDetail)
+        utils.list.getOne.setData({ id: listId }, ctx.prevDetail);
       console.error("Failed to update list", ctx);
     },
 
@@ -185,6 +189,16 @@ function EditListPage() {
 
               <div className="flex flex-col sm:flex-row gap-4 pt-8 justify-center">
                 <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCancel}
+                  disabled={isPending}
+                  className="w-full sm:w-32"
+                >
+                  Cancel
+                </Button>
+
+                <Button
                   type="submit"
                   disabled={isPending || !title.trim()}
                   className="w-full sm:w-40"
@@ -193,16 +207,6 @@ function EditListPage() {
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   )}
                   {isPending ? "Saving..." : "Save Changes"}
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleCancel}
-                  disabled={isPending}
-                  className="w-full sm:w-32"
-                >
-                  Cancel
                 </Button>
               </div>
             </form>

@@ -45,11 +45,8 @@ export default function TaskList({
       {activeTasks.length > 0 ? (
         <section>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-              Active
-              <span className="text-sm font-normal text-gray-500">
-                ({activeTasks.length})
-              </span>
+            <h3 className="text-sm font-semiboldflex items-center gap-2">
+              Active ({activeTasks.length})
             </h3>
 
             {completedCount > 0 && (

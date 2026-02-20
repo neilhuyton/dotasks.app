@@ -9,6 +9,7 @@ import { useState, type SyntheticEvent } from "react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/trpc";
 import { useAuthStore } from "@/store/authStore";
+import { toast } from "sonner"; // ← add this import
 
 export const Route = createFileRoute("/_authenticated/lists/new")({
   component: CreateListPage,
@@ -37,6 +38,9 @@ function CreateListPage() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         isArchived: false,
+        _count: { tasks: 0 },
+        isPinned: false,
+        tasks: [],
       };
 
       utils.list.getAll.setData(undefined, [optimistic, ...prev]);
@@ -46,13 +50,23 @@ function CreateListPage() {
 
     onError: (_, __, ctx) => {
       if (ctx?.prev) utils.list.getAll.setData(undefined, ctx.prev);
-      console.error("Failed to create list", ctx);
+      toast.error("Failed to create list", {
+        description: "Something went wrong. Please try again.",
+      });
     },
 
     onSuccess: (newList) => {
       utils.list.getAll.setData(undefined, (old = []) =>
-        old.map((l) => (l.id.startsWith("temp-") ? newList : l)),
+        old.map((l) =>
+          l.id.startsWith("temp-") ? { ...l, ...newList } : l
+        )
       );
+
+      // Show success toast
+      toast.success("List created", {
+        description: `"${newList.title}" has been added.`,
+        duration: 4000, // optional: longer visibility
+      });
 
       navigate({ to: "/lists", replace: true });
     },

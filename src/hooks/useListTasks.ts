@@ -5,6 +5,7 @@ import { trpc } from "@/trpc";
 import { v4 as uuidv4 } from "uuid";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/../server/trpc";
+import { toast } from "sonner";
 
 type RouterOutput = inferRouterOutputs<AppRouter>;
 export type Task = RouterOutput["task"]["getByList"][number];
@@ -20,7 +21,11 @@ export function useListTasks(listId: string | null | undefined) {
   const enabled = !!listId;
   const queryKey = useMemo(() => ({ listId: listId! }), [listId]);
 
-  const { data: rawTasks = [], isFetching, isLoading } = trpc.task.getByList.useQuery(queryKey, {
+  const {
+    data: rawTasks = [],
+    isFetching,
+    isLoading,
+  } = trpc.task.getByList.useQuery(queryKey, {
     enabled,
     staleTime: 60_000,
   });
@@ -79,10 +84,15 @@ export function useListTasks(listId: string | null | undefined) {
     onSuccess: (saved) => {
       if (!enabled) return;
       optimisticUpdate((prev) =>
-        prev.map((t) => (t.id.startsWith("temp-") ? saved : t))
+        prev.map((t) => (t.id.startsWith("temp-") ? saved : t)),
       );
       // Background sync to catch any server-side adjustments
       utils.task.getByList.invalidate(queryKey);
+
+      toast.success("List created", {
+        description: `has been added.`,
+        duration: 4000,
+      });
     },
   });
 
@@ -105,8 +115,8 @@ export function useListTasks(listId: string | null | undefined) {
                 isPinned: !t.isCompleted ? false : t.isPinned,
                 isCurrent: !t.isCompleted ? false : t.isCurrent,
               }
-            : t
-        )
+            : t,
+        ),
       );
 
       return { previousSorted };
@@ -148,7 +158,7 @@ export function useListTasks(listId: string | null | undefined) {
         prev.map((t) => ({
           ...t,
           isCurrent: t.id === id,
-        }))
+        })),
       );
 
       return { previousSorted };
@@ -168,7 +178,7 @@ export function useListTasks(listId: string | null | undefined) {
         prev.map((t) => ({
           ...t,
           isCurrent: false,
-        }))
+        })),
       );
 
       return { previousSorted };

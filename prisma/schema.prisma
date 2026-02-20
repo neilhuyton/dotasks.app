@@ -49,7 +49,6 @@ model TodoList {
   icon        String?   // optional emoji or icon name
   isArchived  Boolean   @default(false)
   
-  // ─── NEW: Pinning support (multiple lists can be pinned) ────────────────
   isPinned    Boolean   @default(false)
 
   userId      String
@@ -82,7 +81,6 @@ model Task {
 
   isCurrent   Boolean   @default(false)
 
-  // ─── NEW: Pinning support for tasks ────────────────
   isPinned    Boolean   @default(false)
 
   @@index([listId])
