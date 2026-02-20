@@ -134,11 +134,11 @@ function ProfileRoute() {
                     emailMessage.toLowerCase().includes("success") ||
                       emailMessage.toLowerCase().includes("updated")
                       ? "text-green-500"
-                      : "text-red-500"
+                      : "text-red-500",
                   )}
                   data-testid={
                     emailMessage.toLowerCase().includes("success") ||
-                      emailMessage.toLowerCase().includes("updated")
+                    emailMessage.toLowerCase().includes("updated")
                       ? "email-success"
                       : "email-error"
                   }
@@ -150,6 +150,7 @@ function ProfileRoute() {
               <div className="flex justify-center">
                 <Button
                   type="submit"
+                  variant="outline"
                   className="min-w-[180px] sm:min-w-[220px] text-sm sm:text-base px-8 py-5"
                   disabled={isEmailPending}
                   data-testid="email-submit"
@@ -186,11 +187,11 @@ function ProfileRoute() {
                     passwordMessage.toLowerCase().includes("success") ||
                       passwordMessage.toLowerCase().includes("sent")
                       ? "text-green-500"
-                      : "text-red-500"
+                      : "text-red-500",
                   )}
                   data-testid={
                     passwordMessage.toLowerCase().includes("success") ||
-                      passwordMessage.toLowerCase().includes("sent")
+                    passwordMessage.toLowerCase().includes("sent")
                       ? "password-success"
                       : "password-error"
                   }
@@ -202,6 +203,7 @@ function ProfileRoute() {
               <div className="flex justify-center">
                 <Button
                   type="submit"
+                  variant="outline"
                   className="min-w-[180px] sm:min-w-[220px] text-sm sm:text-base px-8 py-5"
                   disabled={isPasswordPending}
                   data-testid="password-submit"

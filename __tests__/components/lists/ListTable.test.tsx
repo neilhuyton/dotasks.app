@@ -15,6 +15,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpc } from "@/trpc";
 import { httpLink } from "@trpc/client";
 import "@testing-library/jest-dom";
+import userEvent from "@testing-library/user-event";
 
 import ListsTable from "@/components/lists/ListsTable";
 import { server } from "@/../__mocks__/server";
@@ -30,14 +31,12 @@ import { suppressActWarnings } from "../../act-suppress";
 
 suppressActWarnings();
 
-// Mock TanStack Router components/hooks we use
+// Mock TanStack Router components/hooks
 vi.mock("@tanstack/react-router", async () => {
   const actual = await vi.importActual("@tanstack/react-router");
 
   return {
     ...actual,
-
-    // Mock <Link> – used for the main list card navigation
     Link: vi.fn(({ children, className, title, "aria-label": ariaLabel, ...props }) => (
       <a
         data-testid="mocked-link"
@@ -51,14 +50,13 @@ vi.mock("@tanstack/react-router", async () => {
         {children}
       </a>
     )),
-
-    // Mock useNavigate – prevents "useRouter must be used inside a <RouterProvider>" warnings
-    useNavigate: vi.fn(() => vi.fn()), // returns a no-op navigate function
+    useNavigate: vi.fn(() => vi.fn()),
   };
 });
 
 describe("ListsTable", () => {
   let queryClient: QueryClient;
+  const user = userEvent.setup();
 
   const createTestQueryClient = () =>
     new QueryClient({
@@ -136,17 +134,33 @@ describe("ListsTable", () => {
     expect(screen.queryByText("Groceries")).not.toBeInTheDocument();
   });
 
-  it("renders list items as cards with titles, icons and action buttons", async () => {
+  it("renders list items as cards with titles, icons and more actions button", async () => {
     await setup();
 
     await waitFor(() => {
+      // Titles
       expect(screen.getByText("Groceries")).toBeInTheDocument();
       expect(screen.getByText("Work Tasks")).toBeInTheDocument();
+
+      // Icon
       expect(screen.getByText("shopping-cart")).toBeInTheDocument();
 
-      // Check action buttons via title
-      expect(screen.getAllByTitle("Edit")).toHaveLength(2);
-      expect(screen.getAllByTitle("Delete")).toHaveLength(2);
+      // More actions button exists for each list
+      const moreButtons = screen.getAllByTitle("More actions");
+      expect(moreButtons).toHaveLength(2);
+
+      // Accessibility labels
+      expect(moreButtons[0]).toHaveAttribute(
+        "aria-label",
+        "More actions for list: Groceries"
+      );
+      expect(moreButtons[1]).toHaveAttribute(
+        "aria-label",
+        "More actions for list: Work Tasks"
+      );
+
+      // Optional: check data-testid if you added it
+      // expect(screen.getAllByTestId("list-more-actions")).toHaveLength(2);
     }, { timeout: 5000 });
   });
 
@@ -164,19 +178,18 @@ describe("ListsTable", () => {
     }, { timeout: 5000 });
   });
 
-  it("edit and delete buttons are present with correct titles", async () => {
-    await setup();
+it("more actions dropdown contains Edit and Delete options", async () => {
+  await setup();
 
-    await waitFor(() => {
-      const editButtons = screen.getAllByTitle("Edit");
-      const deleteButtons = screen.getAllByTitle("Delete");
+  const moreButtons = await screen.findAllByTitle("More actions");
+  await user.click(moreButtons[0]);
 
-      expect(editButtons).toHaveLength(2);
-      expect(deleteButtons).toHaveLength(2);
+  await waitFor(() => {
+    expect(screen.getByTestId("edit-list-l1")).toBeInTheDocument(); // or whatever your mock IDs are
+    expect(screen.getByTestId("delete-list-l1")).toBeInTheDocument();
 
-      // Optional: check aria-label for accessibility
-      expect(editButtons[0]).toHaveAttribute("aria-label", "Edit list: Groceries");
-      expect(deleteButtons[0]).toHaveAttribute("aria-label", "Delete list: Groceries");
-    }, { timeout: 5000 });
-  });
+    // Check destructive class directly on the item
+    expect(screen.getByTestId("delete-list-l1")).toHaveClass(/text-destructive/);
+  }, { timeout: 3000 });
+});
 });
