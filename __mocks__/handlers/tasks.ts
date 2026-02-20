@@ -1,5 +1,5 @@
 // __mocks__/handlers/tasks.ts
-
+// 
 import { TRPCError } from "@trpc/server";
 import { trpcMsw } from "../trpcMsw";
 
@@ -95,7 +95,7 @@ export function setTaskPinned(taskId: string, pinned: boolean = true) {
 }
 
 // ────────────────────────────────────────────────
-// Input shapes (updated with isPinned)
+// Input shapes
 // ────────────────────────────────────────────────
 
 type TaskCreateInput = {
@@ -135,7 +135,7 @@ const createTaskResolver = ({ input }: { input: TaskCreateInput }) => {
     listId: input.listId,
     title: input.title,
     description: input.description ?? null,
-    dueDate: input.dueDate ? new Date(input.dueDate) : null,
+    dueDate: input.dueDate ?? null,
     priority: input.priority ?? null,
     order: input.order ?? 0,
     isCompleted: false,
@@ -152,7 +152,7 @@ const createTaskResolver = ({ input }: { input: TaskCreateInput }) => {
     listId: newTask.listId,
     title: newTask.title,
     description: newTask.description,
-    dueDate: newTask.dueDate?.toISOString() ?? null,
+    dueDate: newTask.dueDate ? newTask.dueDate.toISOString() : null,
     priority: newTask.priority,
     order: newTask.order,
     isCompleted: newTask.isCompleted,
@@ -177,6 +177,7 @@ const taskUpdateResolver = ({ input }: { input: TaskUpdateInput }) => {
   mockTasks[taskIndex] = {
     ...current,
     ...patch,
+    dueDate: patch.dueDate !== undefined ? patch.dueDate : current.dueDate,
     updatedAt: now,
   };
 
@@ -224,7 +225,7 @@ const pinToggleResolver = ({ input }: { input: PinToggleInput }) => {
     listId: updated.listId,
     title: updated.title,
     description: updated.description,
-    dueDate: updated.dueDate?.toISOString() ?? null,
+    dueDate: updated.dueDate ? updated.dueDate.toISOString() : null,
     priority: updated.priority,
     order: updated.order,
     isCompleted: updated.isCompleted,
@@ -232,6 +233,32 @@ const pinToggleResolver = ({ input }: { input: PinToggleInput }) => {
     isPinned: updated.isPinned,
     createdAt: updated.createdAt.toISOString(),
     updatedAt: updated.updatedAt.toISOString(),
+  };
+};
+
+const deleteTaskResolver = ({ input }: { input: { id: string } }) => {
+  const { id } = input;
+
+  const deletedTask = mockTasks.find((t) => t.id === id);
+  if (!deletedTask) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "Task not found" });
+  }
+
+  mockTasks = mockTasks.filter((t) => t.id !== id);
+
+  return {
+    id: deletedTask.id,
+    listId: deletedTask.listId,
+    title: deletedTask.title,
+    description: deletedTask.description,
+    dueDate: deletedTask.dueDate ? deletedTask.dueDate.toISOString() : null,
+    priority: deletedTask.priority,
+    order: deletedTask.order,
+    isCompleted: deletedTask.isCompleted,
+    isCurrent: deletedTask.isCurrent,
+    isPinned: deletedTask.isPinned,
+    createdAt: deletedTask.createdAt.toISOString(),
+    updatedAt: deletedTask.updatedAt.toISOString(),
   };
 };
 
@@ -261,37 +288,11 @@ export const delayedTaskUpdateHandler = trpcMsw.task.update.mutation(async ({ in
 // DELETE handlers
 // ────────────────────────────────────────────────
 
-const deleteTaskResolver = ({ input }: { input: { id: string } }) => {
-  const { id } = input;
-
-  const deletedTask = mockTasks.find((t) => t.id === id);
-  if (!deletedTask) {
-    throw new TRPCError({ code: "NOT_FOUND", message: "Task not found" });
-  }
-
-  mockTasks = mockTasks.filter((t) => t.id !== id);
-
-  return {
-    id: deletedTask.id,
-    listId: deletedTask.listId,
-    title: deletedTask.title,
-    description: deletedTask.description,
-    dueDate: deletedTask.dueDate?.toISOString() ?? null,
-    priority: deletedTask.priority,
-    order: deletedTask.order,
-    isCompleted: deletedTask.isCompleted,
-    isCurrent: deletedTask.isCurrent,
-    isPinned: deletedTask.isPinned,
-    createdAt: deletedTask.createdAt.toISOString(),
-    updatedAt: deletedTask.updatedAt.toISOString(),
-  };
-};
-
 export const taskDeleteSuccess = trpcMsw.task.delete.mutation(deleteTaskResolver);
 
-export const delayedTaskDeleteHandler = trpcMsw.task.delete.mutation(async (ctx) => {
+export const delayedTaskDeleteHandler = trpcMsw.task.delete.mutation(async ({ input }) => {
   await new Promise((resolve) => setTimeout(resolve, 400));
-  return deleteTaskResolver(ctx);
+  return deleteTaskResolver({ input });
 });
 
 // ────────────────────────────────────────────────
@@ -308,7 +309,7 @@ export const taskGetByListSuccess = trpcMsw.task.getByList.query(({ input }) => 
       listId: t.listId,
       title: t.title,
       description: t.description,
-      dueDate: t.dueDate?.toISOString() ?? null,
+      dueDate: t.dueDate ? t.dueDate.toISOString() : null,
       priority: t.priority,
       order: t.order,
       isCompleted: t.isCompleted,
@@ -324,13 +325,13 @@ export const taskGetByListPinnedFirst = trpcMsw.task.getByList.query(({ input })
 
   return mockTasks
     .filter((t) => t.listId === listId)
-    .sort((a, b) => Number(b.isPinned) - Number(a.isPinned)) // simulate orderBy isPinned desc
+    .sort((a, b) => Number(b.isPinned) - Number(a.isPinned))
     .map((t) => ({
       id: t.id,
       listId: t.listId,
       title: t.title,
       description: t.description,
-      dueDate: t.dueDate?.toISOString() ?? null,
+      dueDate: t.dueDate ? t.dueDate.toISOString() : null,
       priority: t.priority,
       order: t.order,
       isCompleted: t.isCompleted,
@@ -354,12 +355,14 @@ export const taskGetByListLoading = trpcMsw.task.getByList.query(async () => {
 
 export const taskPinToggleSuccess = trpcMsw.task.pinToggle.mutation(pinToggleResolver);
 
-export const delayedTaskPinToggle = trpcMsw.task.pinToggle.mutation(async (ctx) => {
-  await new Promise((resolve) => setTimeout(resolve, 400));
-  return pinToggleResolver(ctx);
+export const delayedTaskPinToggle = trpcMsw.task.pinToggle.mutation(async () => {
+  await new Promise((resolve) => setTimeout(resolve, 3000));
+  // We simulate success – use a dummy input since we don't need the real one here
+  return pinToggleResolver({ input: { id: "t-real-1" } });
 });
 
-export const taskPinToggleFailure = trpcMsw.task.pinToggle.mutation(() => {
+export const taskPinToggleFailure = trpcMsw.task.pinToggle.mutation(async () => {
+  await new Promise((resolve) => setTimeout(resolve, 120));
   throw new TRPCError({
     code: "INTERNAL_SERVER_ERROR",
     message: "Mock pin toggle failure",
@@ -367,7 +370,7 @@ export const taskPinToggleFailure = trpcMsw.task.pinToggle.mutation(() => {
 });
 
 // ────────────────────────────────────────────────
-// Handler groups (updated)
+// Handler groups
 // ────────────────────────────────────────────────
 
 export const taskHandlers = [
@@ -376,7 +379,6 @@ export const taskHandlers = [
   taskUpdateHandler,
   taskDeleteSuccess,
   taskPinToggleSuccess,
-  taskPinToggleFailure,
 ];
 
 export const emptyTaskHandlers = [
@@ -385,5 +387,4 @@ export const emptyTaskHandlers = [
   taskUpdateHandler,
   taskDeleteSuccess,
   taskPinToggleSuccess,
-  taskPinToggleFailure,
 ];

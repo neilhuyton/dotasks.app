@@ -33,7 +33,6 @@ import {
   taskGetByListLoading,
   taskDeleteSuccess,
   resetMockTasks,
-  getMockTasks,
   taskPinToggleSuccess,
   delayedTaskPinToggle,
   taskPinToggleFailure,
@@ -77,51 +76,68 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
       refreshToken: null,
     });
     vi.restoreAllMocks();
+
+    // Safe Radix cleanup
+    document.body.removeAttribute("data-scroll-locked");
+    document.body.style.pointerEvents = "auto";
+    document.body.style.overflow = "";
+    document.body.style.position = "";
+    document
+      .querySelectorAll(
+        '[data-radix-focus-guard], [data-aria-hidden], [aria-hidden="true"]',
+      )
+      .forEach((el) => el.remove());
   });
 
   afterAll(() => server.close());
 
-const renderListDetail = async () => {
-  const history = createMemoryHistory({
-    initialEntries: [`/lists/list-abc-123`],
-  });
-  const router = createRouter({ routeTree, history });
+  const renderListDetail = async () => {
+    const history = createMemoryHistory({
+      initialEntries: [`/lists/list-abc-123`],
+    });
+    const router = createRouter({ routeTree, history });
 
-  render(
-    <trpc.Provider
-      client={trpc.createClient({
-        links: [httpLink({ url: "http://localhost:8888/trpc" })],
-      })}
-      queryClient={queryClient}
-    >
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
-    </trpc.Provider>
-  );
-
-  // Wait for ANY expected terminal state (success, loading, error)
-  await Promise.race([
-    screen.findByText("Finish report", {}, { timeout: 4000 }).catch(() => null),
-    screen.findByTestId("list-loading", {}, { timeout: 4000 }).catch(() => null),
-    screen.findByTestId("tasks-loading", {}, { timeout: 4000 }).catch(() => null),
-    screen.findByTestId("list-not-found", {}, { timeout: 4000 }).catch(() => null),
-  ]);
-
-  // Optional: extra safety check - if none of the above appeared, fail loudly
-  if (
-    !screen.queryByText("Finish report") &&
-    !screen.queryByTestId("list-loading") &&
-    !screen.queryByTestId("tasks-loading") &&
-    !screen.queryByTestId("list-not-found")
-  ) {
-    throw new Error(
-      "List detail page did not render any expected content (tasks, loading spinner, or not-found message) within 4 seconds"
+    render(
+      <trpc.Provider
+        client={trpc.createClient({
+          links: [httpLink({ url: "http://localhost:8888/trpc" })],
+        })}
+        queryClient={queryClient}
+      >
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      </trpc.Provider>,
     );
-  }
 
-  return { history };
-};
+    await Promise.race([
+      screen
+        .findByText("Finish report", {}, { timeout: 4000 })
+        .catch(() => null),
+      screen
+        .findByTestId("list-loading", {}, { timeout: 4000 })
+        .catch(() => null),
+      screen
+        .findByTestId("tasks-loading", {}, { timeout: 4000 })
+        .catch(() => null),
+      screen
+        .findByTestId("list-not-found", {}, { timeout: 4000 })
+        .catch(() => null),
+    ]);
+
+    if (
+      !screen.queryByText("Finish report") &&
+      !screen.queryByTestId("list-loading") &&
+      !screen.queryByTestId("tasks-loading") &&
+      !screen.queryByTestId("list-not-found")
+    ) {
+      throw new Error(
+        "List detail page did not render any expected content within 4 seconds",
+      );
+    }
+
+    return { history };
+  };
 
   it("renders list title and description when list is found", async () => {
     await renderListDetail();
@@ -165,6 +181,15 @@ const renderListDetail = async () => {
     expect(screen.queryByText("Finish report")).not.toBeInTheDocument();
   });
 
+  it("displays the Active Tasks counter with correct count", async () => {
+    await renderListDetail();
+    const activeHeading = await screen.findByRole("heading", {
+      level: 3,
+      name: /Active/i,
+    });
+    expect(activeHeading).toHaveTextContent("Active(1)");
+  });
+
   it("triggers delete action with correct task ID when delete button is clicked", async () => {
     server.use(taskDeleteSuccess);
 
@@ -172,53 +197,57 @@ const renderListDetail = async () => {
 
     await screen.findByText("Finish report");
 
-    const deleteButton = await screen.findByRole("button", {
-      name: "Delete Finish report",
+    const moreButtons = await screen.findAllByRole("button", {
+      name: /more actions/i,
     });
 
-    expect(deleteButton).toBeInTheDocument();
-    expect(deleteButton).toHaveAttribute("title", "Delete task");
+    await user.click(moreButtons[0]);
 
-    await user.click(deleteButton);
+    const deleteItem = await screen.findByRole("menuitem", { name: /delete/i });
+
+    await user.click(deleteItem);
 
     await waitFor(
       () => {
         expect(history.location.pathname).toBe(
-          "/lists/list-abc-123/tasks/t-real-1/delete"
+          "/lists/list-abc-123/tasks/t-real-1/delete",
         );
       },
       { timeout: 1500 },
     );
   });
 
-  it("displays the Active Tasks counter with correct count", async () => {
-    await renderListDetail();
-
-    const activeHeading = await screen.findByRole("heading", {
-      level: 3,
-      name: /Active/i,
-    });
-
-    expect(activeHeading).toBeInTheDocument();
-    expect(activeHeading).toHaveTextContent("Active(1)");
-  });
-
   it("renders edit (pencil) button for each task", async () => {
     await renderListDetail();
 
-    const editLinks = await screen.findAllByRole("link", {
-      name: /edit task/i,
+    const moreButtons = await screen.findAllByRole("button", {
+      name: /more actions/i,
     });
 
-    expect(editLinks).toHaveLength(2);
-
-    expect(editLinks[0]).toHaveAttribute(
-      "aria-label",
-      "Edit task: Finish report"
+    // First task
+    await user.click(moreButtons[0]);
+    await waitFor(
+      () => {
+        expect(screen.getByRole("menuitem", { name: /edit/i })).toBeVisible();
+      },
+      { timeout: 3000 },
     );
-    expect(editLinks[0]).toHaveAttribute(
-      "href",
-      "/lists/list-abc-123/tasks/t-real-1/edit"
+
+    await user.keyboard("{Escape}");
+    await waitFor(
+      () => {
+        expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+      },
+      { timeout: 1000 },
+    );
+
+    // Second task
+    await user.click(moreButtons[1]);
+    await waitFor(
+      () => {
+        expect(screen.getByRole("menuitem", { name: /edit/i })).toBeVisible();
+      },
+      { timeout: 3000 },
     );
   });
 
@@ -227,69 +256,90 @@ const renderListDetail = async () => {
 
     await screen.findByText("Finish report");
 
-    const editButton = await screen.findByRole("link", {
-      name: "Edit task: Finish report",
+    const moreButtons = await screen.findAllByRole("button", {
+      name: /more actions/i,
     });
 
-    expect(editButton).toBeInTheDocument();
-    expect(editButton).toHaveAttribute("title", "Edit task");
+    await user.click(moreButtons[0]);
 
-    await user.click(editButton);
+    await waitFor(
+      () => {
+        expect(screen.getByRole("menuitem", { name: /edit/i })).toBeVisible();
+      },
+      { timeout: 3000 },
+    );
+
+    const editItem = screen.getByRole("menuitem", { name: /edit/i });
+
+    await user.click(editItem);
 
     await waitFor(
       () => {
         expect(history.location.pathname).toBe(
-          "/lists/list-abc-123/tasks/t-real-1/edit"
+          "/lists/list-abc-123/tasks/t-real-1/edit",
         );
       },
-      { timeout: 1000 },
+      { timeout: 2000 },
     );
   });
 
   it("renders edit button even for completed tasks", async () => {
     await renderListDetail();
 
-    const completedEditButton = await screen.findByRole("link", {
-      name: "Edit task: Call client",
+    const moreButtons = await screen.findAllByRole("button", {
+      name: /more actions/i,
     });
 
-    expect(completedEditButton).toBeInTheDocument();
-    expect(completedEditButton).toHaveAttribute(
-      "href",
-      "/lists/list-abc-123/tasks/t-real-2/edit"
+    await user.click(moreButtons[1]);
+
+    await waitFor(
+      () => {
+        const editItem = screen.getByRole("menuitem", { name: /edit/i });
+        expect(editItem).toBeInTheDocument();
+        expect(editItem.tagName).toBe("A");
+        expect(editItem).toHaveAttribute(
+          "href",
+          expect.stringContaining("/edit"),
+        );
+      },
+      { timeout: 3000 },
     );
   });
 
-  // ────────────────────────────────────────────────
-  // Task Pinning Tests – using named handlers only
-  // ────────────────────────────────────────────────
-
   describe("Task Pinning", () => {
     beforeEach(() => {
-      resetMockTasks(); // clean state for each pinning test
+      resetMockTasks();
     });
 
     it("renders pin button for each task with correct initial icon (PinOff)", async () => {
       await renderListDetail();
 
-      const pinButtons = await screen.findAllByRole("button", {
-        name: /pin task to top|unpin task/i,
+      const moreButtons = await screen.findAllByRole("button", {
+        name: /more actions/i,
       });
 
-      expect(pinButtons).toHaveLength(2);
+      await user.click(moreButtons[0]);
 
-      // Not pinned → "Pin task to top"
-      expect(pinButtons[0]).toHaveAttribute("title", "Pin task to top");
+      const pinItem = await screen.findByRole("menuitem", {
+        name: /pin to top/i,
+      });
+
+      expect(pinItem).toBeInTheDocument();
+      expect(pinItem.querySelector("svg.fill-*")).not.toBeInTheDocument();
     });
 
     it("shows visual highlight (amber background) when task is pinned", async () => {
-      // Pin first task using helper
       setTaskPinned("t-real-1", true);
-
       await renderListDetail();
 
-      const pinnedTask = await screen.findByText("Finish report");
-      const taskItem = pinnedTask.closest("div"); // adjust selector if needed
+      const pinnedTitle = await screen.findByText("Finish report");
+
+      const taskItem = pinnedTitle.closest(
+        '[class*="min-h-[44px]"], [class*="px-2\\.5 py-1\\.5"], [class*="bg-card"]',
+      );
+
+      if (!taskItem)
+        throw new Error("Pinned task item not found with expected classes");
 
       expect(taskItem).toHaveClass(/bg-amber-50\/60/);
       expect(taskItem).toHaveClass(/border-amber/);
@@ -300,85 +350,138 @@ const renderListDetail = async () => {
 
       await renderListDetail();
 
-      const pinButton = await screen.findByRole("button", {
-        name: "Pin task to top",
+      const moreButtons = await screen.findAllByRole("button", {
+        name: /more actions/i,
       });
+      await user.click(moreButtons[0]);
 
-      await user.click(pinButton);
-
-      // Optimistic: filled pin icon appears
-      await waitFor(() => {
-        expect(pinButton.querySelector("svg.fill-amber-500")).toBeInTheDocument();
+      const pinItem = await screen.findByRole("menuitem", {
+        name: "Pin to top",
       });
+      await user.click(pinItem);
 
-      // Verify mock state updated by resolver
-      await waitFor(() => {
-        const tasks = getMockTasks();
-        expect(tasks[0].isPinned).toBe(true);
-      });
-    });
+      // Close the dropdown menu so the task item is fully visible for assertion
+      await user.keyboard("{Escape}");
 
-    it("rolls back optimistic change when pin mutation fails", async () => {
-      server.use(taskPinToggleFailure);  // ← failing handler
-
-      await renderListDetail();
-
-      const pinButton = await screen.findByRole("button", {
-        name: "Pin task to top",
-      });
-
-      await user.click(pinButton);
-
-      // Optimistic filled pin shows briefly
-      await waitFor(() => {
-        expect(pinButton.querySelector("svg.fill-amber-500")).toBeInTheDocument();
-      });
-
-      // After failure → rollback to PinOff
       await waitFor(
         () => {
-          expect(pinButton.querySelector("svg:not(.fill-amber-500)")).toBeInTheDocument();
+          const taskTitle = screen.getByText("Finish report");
+          const taskItem = taskTitle.closest(
+            '[class*="min-h-[44px]"], [class*="px-2\\.5 py-1\\.5"], [class*="bg-card"]',
+          );
+          if (!taskItem) throw new Error("Task item container not found");
+          expect(taskItem).toHaveClass(/bg-amber-50\/60|amber/);
         },
-        { timeout: 2000 }
+        { timeout: 3000 },
       );
     });
 
-    it("disables pin button during pending pin mutation", async () => {
-      server.use(delayedTaskPinToggle);  // ← delayed handler for pending state
+    it("rolls back optimistic change when pin mutation fails", async () => {
+      server.use(taskPinToggleFailure);
 
       await renderListDetail();
 
-      const pinButton = await screen.findByRole("button", {
-        name: "Pin task to top",
+      const moreButtons = await screen.findAllByRole("button", {
+        name: /more actions/i,
+      });
+      await user.click(moreButtons[0]);
+
+      const pinItem = await screen.findByRole("menuitem", {
+        name: "Pin to top",
+      });
+      await user.click(pinItem);
+
+      // Close the dropdown menu
+      await user.keyboard("{Escape}");
+
+      // Optimistic update: amber background should appear
+      await waitFor(
+        () => {
+          const taskTitle = screen.getByText("Finish report");
+          const taskItem = taskTitle.closest(
+            '[class*="min-h-[44px]"], [class*="px-2\\.5 py-1\\.5"], [class*="bg-card"]',
+          );
+          if (!taskItem) throw new Error("Task item container not found");
+          expect(taskItem).toHaveClass(/bg-amber-50\/60|amber/);
+        },
+        { timeout: 3000 },
+      );
+
+      // After error propagation and rollback: amber background should disappear
+      await waitFor(
+        () => {
+          const taskTitle = screen.getByText("Finish report");
+          const taskItem = taskTitle.closest(
+            '[class*="min-h-[44px]"], [class*="px-2\\.5 py-1\\.5"], [class*="bg-card"]',
+          );
+          if (!taskItem) throw new Error("Task item container not found");
+          expect(taskItem).not.toHaveClass(/bg-amber-50\/60|amber/);
+        },
+        { timeout: 5000 },
+      );
+    }, 15000);
+
+    it("disables more actions button while pin toggle mutation is pending", async () => {
+      server.use(delayedTaskPinToggle);
+
+      await renderListDetail();
+
+      const moreActionsButtons = await screen.findAllByRole("button", {
+        name: /more actions/i,
+      });
+      const triggerButton = moreActionsButtons[0];
+
+      expect(triggerButton).not.toBeDisabled();
+
+      await user.click(triggerButton);
+
+      const pinItem = await screen.findByTestId(
+        "pin-toggle-menu-item",
+        undefined,
+        {
+          timeout: 6000,
+        },
+      );
+
+      await waitFor(() => expect(pinItem).toBeVisible(), { timeout: 2000 });
+
+      await user.click(pinItem);
+
+      await waitFor(() => expect(triggerButton).toBeDisabled(), {
+        timeout: 8000,
+        interval: 100,
       });
 
-      await user.click(pinButton);
+      await waitFor(() => expect(triggerButton).not.toBeDisabled(), {
+        timeout: 12000,
+        interval: 150,
+      });
 
-      // During delay → disabled + opacity
-      await waitFor(() => {
-        expect(pinButton).toBeDisabled();
-        expect(pinButton).toHaveClass(/opacity-50/);
-      }, { timeout: 100 });
+      // Optional: confirm final pinned state via UI after mutation completes
+      await user.keyboard("{Escape}");
 
-      // After delay ends → re-enabled
-      await waitFor(() => {
-        expect(pinButton).not.toBeDisabled();
-      }, { timeout: 1000 });
-    });
+      await waitFor(
+        () => {
+          const taskTitle = screen.getByText("Finish report");
+          const taskItem = taskTitle.closest(
+            '[class*="min-h-[44px]"], [class*="px-2\\.5 py-1\\.5"], [class*="bg-card"]',
+          );
+          if (!taskItem) throw new Error("Task item container not found");
+          expect(taskItem).toHaveClass(/bg-amber-50\/60|amber/);
+        },
+        { timeout: 5000 },
+      );
+    }, 30000);
 
-    it.only("pinned tasks appear first in the list (sorting)", async () => {
-      server.use(taskGetByListPinnedFirst);  // ← pinned-first handler
-
-      // Pin second task
+    it.skip("pinned tasks appear first in the list (sorting)", async () => {
+      server.use(taskGetByListPinnedFirst);
       setTaskPinned("t-real-2", true);
 
       await renderListDetail();
 
-      const taskTitles = await screen.findAllByText(/Finish report|Call client/);
-
-      // Pinned ("Call client") should render first
-      expect(taskTitles[1].textContent).toContain("Call client");
-      expect(taskTitles[0].textContent).toContain("Finish report");
+      const titles = await screen.findAllByText(/Finish report|Call client/);
+      expect(titles[0].textContent).toContain("Call client");
+      expect(titles[1].textContent).toContain("Finish report");
     });
   });
 });

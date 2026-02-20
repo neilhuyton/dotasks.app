@@ -1,4 +1,11 @@
-// __tests__/setupTests.ts
+// Force mock ResizeObserver at the very top – prevents "observe is not a function"
+class MockResizeObserver {
+  observe = vi.fn(() => {});
+  unobserve = vi.fn(() => {});
+  disconnect = vi.fn();
+}
+
+global.ResizeObserver = MockResizeObserver;
 
 import "@testing-library/jest-dom";
 import { vi, beforeAll, afterEach, afterAll } from "vitest";
@@ -18,13 +25,6 @@ Object.defineProperty(global, "Request", {
   value: Request,
 });
 
-// Mock ResizeObserver
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}));
-
 // Mock localStorage
 const localStorageMock = (() => {
   let store: Record<string, string> = {};
@@ -37,7 +37,7 @@ const localStorageMock = (() => {
 })();
 Object.defineProperty(window, "localStorage", { value: localStorageMock });
 
-// Mock sessionStorage (optional, include if used in your app)
+// Mock sessionStorage
 Object.defineProperty(window, "sessionStorage", { value: localStorageMock });
 
 // Mock matchMedia
@@ -62,7 +62,7 @@ Object.defineProperty(window, "matchMedia", {
     ),
 });
 
-// Polyfill PointerEvent for jsdom to support @radix-ui/react-select
+// Polyfill PointerEvent – original working version
 if (typeof window !== "undefined") {
   window.PointerEvent = class PointerEvent extends Event {
     public pointerId: number;
@@ -89,25 +89,20 @@ if (typeof window !== "undefined") {
     Element.prototype.hasPointerCapture = () => false;
   }
 
-  // Polyfill scrollIntoView for jsdom
   if (!Element.prototype.scrollIntoView) {
     Element.prototype.scrollIntoView = () => {};
   }
 }
 
-// MSW setup for server tests
+// MSW setup
 export const setupMSW = () => {
   beforeAll(() => {
     server.listen({
-      // Custom handler: silence warnings ONLY for tRPC paths (expected in Zod client validation tests)
       onUnhandledRequest(request, print) {
         const url = new URL(request.url);
-
         if (url.pathname.startsWith("/trpc")) {
-          return; // ← silent bypass: no warning, request proceeds normally
+          return;
         }
-
-        // For any other unhandled request → warn (helps catch real bugs)
         print.warning();
       },
     });

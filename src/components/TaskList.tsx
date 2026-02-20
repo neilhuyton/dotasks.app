@@ -1,6 +1,5 @@
 // src/components/TaskList.tsx
 
-import { Star } from 'lucide-react';
 import { type Task } from '@/hooks/useListTasks';
 import { TaskItem } from '@/components/TaskItem';
 
@@ -39,25 +38,9 @@ export default function TaskList({
 
   const activeTasks = tasks.filter((t) => !t.isCompleted);
   const completedTasks = tasks.filter((t) => t.isCompleted);
-  const currentTask = tasks.find((t) => t.isCurrent);
 
   return (
     <div className="space-y-8">
-      {/* Current task banner */}
-      {currentTask && (
-        <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 flex items-start gap-3 shadow-sm">
-          <Star className="text-amber-600 fill-amber-400 mt-1" size={22} />
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-amber-800 text-base">Currently working on</p>
-            <p className="text-amber-900 truncate">{currentTask.title}</p>
-            {currentTask.description && (
-              <p className="text-sm text-amber-800/80 mt-1 line-clamp-2">
-                {currentTask.description}
-              </p>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Active Tasks */}
       {activeTasks.length > 0 && (
