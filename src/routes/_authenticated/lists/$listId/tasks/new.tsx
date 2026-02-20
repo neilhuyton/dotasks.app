@@ -82,10 +82,9 @@ function NewTaskPage() {
     mutation.mutate({
       title: trimmedTitle,
       listId,
-      description: description.trim() || undefined, // send as undefined if empty
+      description: description.trim() || undefined,
     });
 
-    // Reset form
     setTitle("");
     setDescription("");
   };
@@ -103,7 +102,7 @@ function NewTaskPage() {
   return (
     <div
       className={cn(
-        "fixed inset-0 z-[9999] isolate pointer-events-auto",
+        "fixed inset-0 z-9999 isolate pointer-events-auto",
         "h-dvh w-dvw max-h-none max-w-none",
         "m-0 p-0 left-0 top-0 right-0 bottom-0 translate-x-0 translate-y-0",
         "rounded-none border-0 shadow-none",
@@ -111,11 +110,10 @@ function NewTaskPage() {
       )}
     >
       <div className="relative flex min-h-full flex-col px-6 pb-20 pt-20">
-        {/* Back / Cancel button – top-left */}
         <Button
           variant="outline"
           size="icon"
-          className="absolute left-4 top-6 z-[10000]"
+          className="absolute left-4 top-6 z-10000"
           aria-label="Back to list"
           onClick={handleCancel}
           disabled={isPending}
@@ -123,7 +121,6 @@ function NewTaskPage() {
           <ArrowLeft className="h-5 w-5" />
         </Button>
 
-        {/* Centered form content */}
         <div className="flex flex-1 flex-col items-center justify-center text-center">
           <div className="w-full max-w-lg space-y-8">
             <h1 className="text-3xl font-bold tracking-tight">New Task</h1>
@@ -173,7 +170,6 @@ function NewTaskPage() {
                 </div>
               </div>
 
-              {/* Footer buttons */}
               <div className="flex flex-col gap-4 sm:flex-row sm:justify-center pt-8">
                 <Button
                   type="submit"

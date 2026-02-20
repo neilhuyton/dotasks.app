@@ -23,6 +23,7 @@ import { Route as AuthenticatedListsListIdRouteImport } from './routes/_authenti
 import { Route as AuthenticatedListsListIdEditRouteImport } from './routes/_authenticated/lists/$listId/edit'
 import { Route as AuthenticatedListsListIdDeleteRouteImport } from './routes/_authenticated/lists/$listId/delete'
 import { Route as AuthenticatedListsListIdTasksNewRouteImport } from './routes/_authenticated/lists/$listId/tasks/new'
+import { Route as AuthenticatedListsListIdTasksCompletedRouteImport } from './routes/_authenticated/lists/$listId/tasks/completed'
 import { Route as AuthenticatedListsListIdTasksTaskIdEditRouteImport } from './routes/_authenticated/lists/$listId/tasks/$taskId/edit'
 import { Route as AuthenticatedListsListIdTasksTaskIdDeleteRouteImport } from './routes/_authenticated/lists/$listId/tasks/$taskId/delete'
 
@@ -99,6 +100,12 @@ const AuthenticatedListsListIdTasksNewRoute =
     path: '/tasks/new',
     getParentRoute: () => AuthenticatedListsListIdRoute,
   } as any)
+const AuthenticatedListsListIdTasksCompletedRoute =
+  AuthenticatedListsListIdTasksCompletedRouteImport.update({
+    id: '/tasks/completed',
+    path: '/tasks/completed',
+    getParentRoute: () => AuthenticatedListsListIdRoute,
+  } as any)
 const AuthenticatedListsListIdTasksTaskIdEditRoute =
   AuthenticatedListsListIdTasksTaskIdEditRouteImport.update({
     id: '/tasks/$taskId/edit',
@@ -125,6 +132,7 @@ export interface FileRoutesByFullPath {
   '/lists/': typeof AuthenticatedListsIndexRoute
   '/lists/$listId/delete': typeof AuthenticatedListsListIdDeleteRoute
   '/lists/$listId/edit': typeof AuthenticatedListsListIdEditRoute
+  '/lists/$listId/tasks/completed': typeof AuthenticatedListsListIdTasksCompletedRoute
   '/lists/$listId/tasks/new': typeof AuthenticatedListsListIdTasksNewRoute
   '/lists/$listId/tasks/$taskId/delete': typeof AuthenticatedListsListIdTasksTaskIdDeleteRoute
   '/lists/$listId/tasks/$taskId/edit': typeof AuthenticatedListsListIdTasksTaskIdEditRoute
@@ -142,6 +150,7 @@ export interface FileRoutesByTo {
   '/lists': typeof AuthenticatedListsIndexRoute
   '/lists/$listId/delete': typeof AuthenticatedListsListIdDeleteRoute
   '/lists/$listId/edit': typeof AuthenticatedListsListIdEditRoute
+  '/lists/$listId/tasks/completed': typeof AuthenticatedListsListIdTasksCompletedRoute
   '/lists/$listId/tasks/new': typeof AuthenticatedListsListIdTasksNewRoute
   '/lists/$listId/tasks/$taskId/delete': typeof AuthenticatedListsListIdTasksTaskIdDeleteRoute
   '/lists/$listId/tasks/$taskId/edit': typeof AuthenticatedListsListIdTasksTaskIdEditRoute
@@ -161,6 +170,7 @@ export interface FileRoutesById {
   '/_authenticated/lists/': typeof AuthenticatedListsIndexRoute
   '/_authenticated/lists/$listId/delete': typeof AuthenticatedListsListIdDeleteRoute
   '/_authenticated/lists/$listId/edit': typeof AuthenticatedListsListIdEditRoute
+  '/_authenticated/lists/$listId/tasks/completed': typeof AuthenticatedListsListIdTasksCompletedRoute
   '/_authenticated/lists/$listId/tasks/new': typeof AuthenticatedListsListIdTasksNewRoute
   '/_authenticated/lists/$listId/tasks/$taskId/delete': typeof AuthenticatedListsListIdTasksTaskIdDeleteRoute
   '/_authenticated/lists/$listId/tasks/$taskId/edit': typeof AuthenticatedListsListIdTasksTaskIdEditRoute
@@ -180,6 +190,7 @@ export interface FileRouteTypes {
     | '/lists/'
     | '/lists/$listId/delete'
     | '/lists/$listId/edit'
+    | '/lists/$listId/tasks/completed'
     | '/lists/$listId/tasks/new'
     | '/lists/$listId/tasks/$taskId/delete'
     | '/lists/$listId/tasks/$taskId/edit'
@@ -197,6 +208,7 @@ export interface FileRouteTypes {
     | '/lists'
     | '/lists/$listId/delete'
     | '/lists/$listId/edit'
+    | '/lists/$listId/tasks/completed'
     | '/lists/$listId/tasks/new'
     | '/lists/$listId/tasks/$taskId/delete'
     | '/lists/$listId/tasks/$taskId/edit'
@@ -215,6 +227,7 @@ export interface FileRouteTypes {
     | '/_authenticated/lists/'
     | '/_authenticated/lists/$listId/delete'
     | '/_authenticated/lists/$listId/edit'
+    | '/_authenticated/lists/$listId/tasks/completed'
     | '/_authenticated/lists/$listId/tasks/new'
     | '/_authenticated/lists/$listId/tasks/$taskId/delete'
     | '/_authenticated/lists/$listId/tasks/$taskId/edit'
@@ -330,6 +343,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedListsListIdTasksNewRouteImport
       parentRoute: typeof AuthenticatedListsListIdRoute
     }
+    '/_authenticated/lists/$listId/tasks/completed': {
+      id: '/_authenticated/lists/$listId/tasks/completed'
+      path: '/tasks/completed'
+      fullPath: '/lists/$listId/tasks/completed'
+      preLoaderRoute: typeof AuthenticatedListsListIdTasksCompletedRouteImport
+      parentRoute: typeof AuthenticatedListsListIdRoute
+    }
     '/_authenticated/lists/$listId/tasks/$taskId/edit': {
       id: '/_authenticated/lists/$listId/tasks/$taskId/edit'
       path: '/tasks/$taskId/edit'
@@ -350,6 +370,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedListsListIdRouteChildren {
   AuthenticatedListsListIdDeleteRoute: typeof AuthenticatedListsListIdDeleteRoute
   AuthenticatedListsListIdEditRoute: typeof AuthenticatedListsListIdEditRoute
+  AuthenticatedListsListIdTasksCompletedRoute: typeof AuthenticatedListsListIdTasksCompletedRoute
   AuthenticatedListsListIdTasksNewRoute: typeof AuthenticatedListsListIdTasksNewRoute
   AuthenticatedListsListIdTasksTaskIdDeleteRoute: typeof AuthenticatedListsListIdTasksTaskIdDeleteRoute
   AuthenticatedListsListIdTasksTaskIdEditRoute: typeof AuthenticatedListsListIdTasksTaskIdEditRoute
@@ -359,6 +380,8 @@ const AuthenticatedListsListIdRouteChildren: AuthenticatedListsListIdRouteChildr
   {
     AuthenticatedListsListIdDeleteRoute: AuthenticatedListsListIdDeleteRoute,
     AuthenticatedListsListIdEditRoute: AuthenticatedListsListIdEditRoute,
+    AuthenticatedListsListIdTasksCompletedRoute:
+      AuthenticatedListsListIdTasksCompletedRoute,
     AuthenticatedListsListIdTasksNewRoute:
       AuthenticatedListsListIdTasksNewRoute,
     AuthenticatedListsListIdTasksTaskIdDeleteRoute:
