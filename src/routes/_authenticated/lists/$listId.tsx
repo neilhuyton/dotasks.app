@@ -34,6 +34,8 @@ function ListDetail() {
     setCurrentTaskPending,
     clearCurrentTask,
     clearCurrentTaskPending,
+    updateTaskOrder,          // ← added
+    isReordering,             // ← added
   } = useListTasks(listId);
 
   if (listLoading) {
@@ -98,6 +100,8 @@ function ListDetail() {
           clearCurrentTask={clearCurrentTask}
           clearCurrentTaskPending={clearCurrentTaskPending}
           listId={listId}
+          updateTaskOrder={updateTaskOrder}      // ← added
+          isReordering={isReordering}            // ← added
         />
       )}
 

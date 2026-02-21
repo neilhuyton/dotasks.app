@@ -3,9 +3,44 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../../trpc-base";
 import { TRPCError } from "@trpc/server";
-import { Prisma } from "@prisma/client"; // ← needed for Prisma.TaskUpdateInput
+import { Prisma } from "@prisma/client";
 
 export const taskRouter = router({
+  // ──────────────────────────────────────────────
+  // NEW: getOne – Fetch a single task by ID
+  // ──────────────────────────────────────────────
+  getOne: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const task = await ctx.prisma.task.findUnique({
+        where: { id: input.id },
+        include: {
+          list: {
+            select: { userId: true }, // only need this for ownership check
+          },
+        },
+      });
+
+      if (!task) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Task not found",
+        });
+      }
+
+      if (task.list.userId !== ctx.userId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not have access to this task",
+        });
+      }
+
+      return {
+        ...task,
+        list: undefined,
+      };
+    }),
+
   getByList: protectedProcedure
     .input(z.object({ listId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
@@ -97,8 +132,6 @@ export const taskRouter = router({
 
       if (isOrWillBeCompleted) {
         finalData.isPinned = false;
-        // Optional: also force-unset current if you want to be stricter
-        // finalData.isCurrent = false;
       }
 
       return ctx.prisma.task.update({
@@ -279,7 +312,6 @@ export const taskRouter = router({
         throw new TRPCError({ code: "FORBIDDEN" });
       }
 
-      // Extra safety: don't allow pinning already completed tasks
       if (task.isCompleted) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -289,7 +321,31 @@ export const taskRouter = router({
 
       return ctx.prisma.task.update({
         where: { id: input.id },
-        data: { isPinned: !task.isCompleted ? !task.isPinned : false },
+        data: { isPinned: !task.isPinned },
       });
+    }),
+
+  reorder: protectedProcedure
+    .input(
+      z.array(
+        z.object({
+          id: z.string().uuid(),
+          order: z.number().int().min(0),
+        }),
+      ),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Bulk update in a transaction for atomicity & performance
+      await ctx.prisma.$transaction(
+        input.map(({ id, order }) =>
+          ctx.prisma.task.update({
+            where: { id },
+            data: { order },
+          }),
+        ),
+      );
+
+      // Optional: return something useful, or just success
+      return { success: true };
     }),
 });

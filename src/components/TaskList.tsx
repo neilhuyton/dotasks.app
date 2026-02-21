@@ -1,8 +1,8 @@
 // src/components/TaskList.tsx
 
 import { type Task } from "@/hooks/useListTasks";
-import { TaskItem } from "@/components/TaskItem";
 import { Link } from "@tanstack/react-router";
+import { SortableTaskList } from "@/components/SortableTaskList"; // Make sure this exists
 
 interface TaskListProps {
   tasks: Task[];
@@ -15,6 +15,8 @@ interface TaskListProps {
   clearCurrentTask: (input: { listId: string }) => void;
   clearCurrentTaskPending: boolean;
   listId: string;
+  updateTaskOrder: (updates: { id: string; order: number }[]) => void;
+  isReordering: boolean;
 }
 
 export default function TaskList({
@@ -28,7 +30,12 @@ export default function TaskList({
   clearCurrentTask,
   clearCurrentTaskPending,
   listId,
+  updateTaskOrder,
+  isReordering,
 }: TaskListProps) {
+  const activeTasks = tasks.filter((t) => !t.isCompleted);
+  const completedCount = tasks.length - activeTasks.length;
+
   if (tasks.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500 italic">
@@ -37,15 +44,12 @@ export default function TaskList({
     );
   }
 
-  const activeTasks = tasks.filter((t) => !t.isCompleted);
-  const completedCount = tasks.length - activeTasks.length;
-
   return (
     <div className="space-y-10">
       {activeTasks.length > 0 ? (
         <section>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semiboldflex items-center gap-2">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
               Active ({activeTasks.length})
             </h3>
 
@@ -55,28 +59,25 @@ export default function TaskList({
                 params={{ listId }}
                 className="text-sm font-medium text-primary hover:underline flex items-center gap-1"
               >
-                Completed ({completedCount})<span aria-hidden>→</span>
+                Completed ({completedCount}) <span aria-hidden>→</span>
               </Link>
             )}
           </div>
 
-          <div className="space-y-3">
-            {activeTasks.map((task) => (
-              <TaskItem
-                key={task.id}
-                task={task}
-                toggleTask={toggleTask}
-                isToggling={isToggling}
-                onDelete={onDelete}
-                isDeleting={isDeleting}
-                setCurrentTask={setCurrentTask}
-                isSettingCurrent={isSettingCurrent}
-                clearCurrentTask={clearCurrentTask}
-                clearCurrentTaskPending={clearCurrentTaskPending}
-                listId={listId}
-              />
-            ))}
-          </div>
+          <SortableTaskList
+            tasks={tasks}
+            toggleTask={toggleTask}
+            isToggling={isToggling}
+            onDelete={onDelete}
+            isDeleting={isDeleting}
+            setCurrentTask={setCurrentTask}
+            isSettingCurrent={isSettingCurrent}
+            clearCurrentTask={clearCurrentTask}
+            clearCurrentTaskPending={clearCurrentTaskPending}
+            listId={listId}
+            updateTaskOrder={updateTaskOrder}
+            isReordering={isReordering}
+          />
         </section>
       ) : (
         <div className="text-center py-16 text-muted-foreground">

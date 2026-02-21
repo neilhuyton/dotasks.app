@@ -45,7 +45,8 @@ export function TaskItem({
     <Item
       variant="outline"
       className={cn(
-        "px-2.5 py-1.5 min-h-[44px]",
+        "px-3 py-2 min-h-[52px] cursor-grab active:cursor-grabbing",
+        "select-none",
         "flex items-center gap-x-2",
         "bg-card/80 dark:bg-muted/30 transition-colors duration-150",
         task.isCompleted && "opacity-60 dark:opacity-50",
