@@ -22,12 +22,9 @@ export const Route = createFileRoute("/_authenticated")({
 
   component: () => {
     return (
-      <div className="flex flex-col h-dvh overscroll-none bg-background">
-        {/* Fixed header – full width with consistent padding */}
+      <div className="flex flex-col min-h-dvh overscroll-none bg-background">
         <header className="fixed top-0 left-0 right-0 z-50 bg-background px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between border-b">
-          <div className="text-xl font-semibold tracking-tight">
-            To Do
-          </div>
+          <div className="text-xl font-semibold tracking-tight">To Do</div>
 
           <div className="flex items-center gap-3 sm:gap-4">
             <ThemeToggle />
@@ -36,15 +33,14 @@ export const Route = createFileRoute("/_authenticated")({
           </div>
         </header>
 
-        {/* Scrollable content area */}
         <main
           className="
-            flex-1 overflow-y-auto overscroll-y-contain 
-            pt-[68px] md:pt-[72px]           /* header height + space */
-            pb-[76px] md:pb-[72px]           /* nav height + space */
+            flex-1
+            pt-[68px] md:pt-[72px]
+            pb-[80px] md:pb-[80px]          /* slightly increased to safely accommodate FAB */
+            overscroll-y-contain
           "
         >
-          {/* Content wrapper – matches header padding + max-width centering */}
           <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8">
             <Outlet />
           </div>

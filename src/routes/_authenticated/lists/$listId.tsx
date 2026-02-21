@@ -64,7 +64,9 @@ function ListDetail() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] pb-24 md:pb-28">
+    <div className="relative pb-24 md:pb-28">
+      {" "}
+      {/* ← removed min-h-[calc(100vh-4rem)] — key fix */}
       {/* No extra px-* or max-w-* — parent layout handles alignment */}
       <div className="space-y-6 sm:space-y-8">
         <div className="flex items-center justify-between">
@@ -111,14 +113,12 @@ function ListDetail() {
           />
         )}
       </div>
-
       <FabButton
         to="/lists/$listId/tasks/new"
         params={{ listId }}
         label="Add new task"
         testId="fab-add-task"
       />
-
       <Outlet />
     </div>
   );

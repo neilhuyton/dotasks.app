@@ -1,5 +1,5 @@
 // src/components/lists/ListsTable.tsx
-
+// 
 import { useAuthStore } from "@/store/authStore";
 import { trpc } from "@/trpc";
 import { ItemGroup } from "@/components/ui/item";
@@ -18,8 +18,8 @@ export default function ListsTable() {
 
   if (isLoading) {
     return (
-      <div className="space-y-3 min-h-[50vh] flex flex-col justify-start">
-        {[...Array(6)].map((_, i) => (
+      <div className="space-y-3 min-h-[30vh] flex flex-col justify-start">
+        {[...Array(5)].map((_, i) => (
           <div key={i} className="h-14 bg-muted/30 rounded animate-pulse" />
         ))}
       </div>

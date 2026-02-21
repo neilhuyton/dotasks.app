@@ -38,14 +38,14 @@ export default function TaskList({
 
   if (tasks.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500 italic">
+      <div className="text-center py-10 text-gray-500 italic">  {/* ← reduced py-12 → py-10 */}
         No tasks in this list yet. Add one!
       </div>
     );
   }
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">  {/* ← reduced space-y-10 → space-y-8 for tighter feel */}
       {activeTasks.length > 0 ? (
         <section>
           <div className="flex items-center justify-between mb-4">
@@ -80,7 +80,7 @@ export default function TaskList({
           />
         </section>
       ) : (
-        <div className="text-center py-16 text-muted-foreground">
+        <div className="text-center py-12 text-muted-foreground">  {/* kept py-16 → py-12 */}
           <p className="text-lg">All tasks are completed! 🎉</p>
           {completedCount > 0 && (
             <Link
