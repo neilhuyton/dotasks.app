@@ -17,6 +17,7 @@ export const mockTasks = [
   {
     id: "t1",
     title: "Finish report",
+    isPinned: false,
     isCompleted: false,
     isCurrent: false,
     // add description, dueDate, etc. if your Task type has them
@@ -24,12 +25,14 @@ export const mockTasks = [
   {
     id: "t2",
     title: "Call client",
+    isPinned: false,
     isCompleted: true,
     isCurrent: false,
   },
   {
     id: "t3",
     title: "Do laundry",
+    isPinned: false,
     isCompleted: false,
     isCurrent: true,
   },
