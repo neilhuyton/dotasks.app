@@ -1,5 +1,3 @@
-// src/hooks/useListTasks.ts
-
 import { useMemo } from "react";
 import { trpc } from "@/trpc";
 import { v4 as uuidv4 } from "uuid";
@@ -12,11 +10,15 @@ export type Task = RouterOutput["task"]["getByList"][number];
 
 const sortTasks = (tasks: Task[]): Task[] =>
   [...tasks].sort((a, b) => {
-    // Exact match to Prisma: isPinned DESC (true first), then order ASC
+    // pinned first, then by order ascending
     if (a.isPinned !== b.isPinned) {
-      return b.isPinned ? 1 : -1;  // pinned (true) comes BEFORE non-pinned
+      return a.isPinned ? -1 : 1;
     }
-    return a.order - b.order;     // lower order = higher in list
+    if (a.order !== b.order) {
+      return a.order - b.order;
+    }
+    // stable tie-breaker using id (prevents random reordering)
+    return a.id.localeCompare(b.id);
   });
 
 export function useListTasks(listId: string | null | undefined) {
@@ -45,7 +47,7 @@ export function useListTasks(listId: string | null | undefined) {
     }
   };
 
-  // Reordering (drag & drop) – bulk update orders
+  // Reordering (drag & drop)
   const reorderTasks = trpc.task.reorder.useMutation({
     onMutate: async (updates: { id: string; order: number }[]) => {
       if (!enabled || updates.length === 0) return { previous: [] as Task[] };
@@ -57,7 +59,7 @@ export function useListTasks(listId: string | null | undefined) {
         prev.map((t) => {
           const update = updates.find((u) => u.id === t.id);
           return update ? { ...t, order: update.order } : t;
-        })
+        }),
       );
 
       return { previous };
@@ -68,19 +70,25 @@ export function useListTasks(listId: string | null | undefined) {
       console.error("Reorder failed:", _);
     },
 
-    // Keep invalidate to ensure server truth wins
     onSettled: () => {
       utils.task.getByList.invalidate(queryKey);
     },
   });
 
-  // Create task (optimistic – insert at top)
+  // Create – new task appears at bottom, no position change on success
   const create = trpc.task.create.useMutation({
     onMutate: async (input) => {
       if (!enabled) return { previous: [] as Task[] };
 
       await utils.task.getByList.cancel(queryKey);
       const previous = utils.task.getByList.getData(queryKey) ?? [];
+
+      // Same calculation as backend → exact same final position
+      const currentMaxOrder =
+        previous.length > 0
+          ? Math.max(...previous.map((t) => t.order ?? 0))
+          : -1;
+      const nextOrder = currentMaxOrder + 1;
 
       const tempId = `temp-${uuidv4()}`;
       const now = new Date().toISOString();
@@ -90,30 +98,48 @@ export function useListTasks(listId: string | null | undefined) {
         listId: listId!,
         title: input.title,
         description: input.description ?? null,
+        dueDate: input.dueDate ? input.dueDate.toISOString() : null,
+        priority: input.priority ?? null,
         isCompleted: false,
         isCurrent: false,
         isPinned: false,
-        dueDate: input.dueDate ? input.dueDate.toISOString() : null,
-        priority: input.priority ?? null,
-        order: 0,
+        order: nextOrder,
         createdAt: now,
         updatedAt: now,
       };
 
-      optimisticUpdate((prev) => [tempTask, ...prev]);
+      optimisticUpdate((prev) => sortTasks([...prev, tempTask]));
 
-      return { previous };
+      return { previous, tempId };
     },
 
-    onError: (_, __, context) => rollbackTo(context?.previous),
+    onSuccess: (createdTask, _, context) => {
+      // Replace temp → real (same order → same position)
+      optimisticUpdate((prev) =>
+        prev.map((t) =>
+          t.id === context.tempId
+            ? {
+                ...createdTask,
+              }
+            : t,
+        ),
+      );
 
-    onSuccess: () => {
-      utils.task.getByList.invalidate(queryKey);
+      // No immediate invalidate — let user see smooth result first
+      // Background refetch will happen naturally on next focus/mount
+      // If you want forced refresh, uncomment next line:
+      // utils.task.getByList.invalidate(queryKey);
+
       toast.success("Task created");
+    },
+
+    onError: (_, __, context) => {
+      rollbackTo(context?.previous);
+      toast.error("Failed to create task");
     },
   });
 
-  // Toggle complete ↔ incomplete
+  // Toggle complete
   const toggle = trpc.task.toggle.useMutation({
     onMutate: async ({ id }) => {
       if (!enabled) return { previous: [] as Task[] };
@@ -130,8 +156,8 @@ export function useListTasks(listId: string | null | undefined) {
                 isPinned: false,
                 isCurrent: false,
               }
-            : t
-        )
+            : t,
+        ),
       );
 
       return { previous };
@@ -141,7 +167,7 @@ export function useListTasks(listId: string | null | undefined) {
     onSettled: () => utils.task.getByList.invalidate(queryKey),
   });
 
-  // Delete task
+  // Delete
   const remove = trpc.task.delete.useMutation({
     onMutate: async ({ id }) => {
       if (!enabled) return { previous: [] as Task[] };
@@ -158,7 +184,7 @@ export function useListTasks(listId: string | null | undefined) {
     onSettled: () => utils.task.getByList.invalidate(queryKey),
   });
 
-  // Set current task
+  // Set current
   const setCurrentMutation = trpc.task.setCurrent.useMutation({
     onMutate: async ({ id }) => {
       if (!enabled) return { previous: [] as Task[] };
@@ -170,7 +196,7 @@ export function useListTasks(listId: string | null | undefined) {
         prev.map((t) => ({
           ...t,
           isCurrent: t.id === id,
-        }))
+        })),
       );
 
       return { previous };
@@ -180,7 +206,7 @@ export function useListTasks(listId: string | null | undefined) {
     onSettled: () => utils.task.getByList.invalidate(queryKey),
   });
 
-  // Clear current task
+  // Clear current
   const clearCurrentMutation = trpc.task.clearCurrent.useMutation({
     onMutate: async () => {
       if (!enabled) return { previous: [] as Task[] };
@@ -192,7 +218,7 @@ export function useListTasks(listId: string | null | undefined) {
         prev.map((t) => ({
           ...t,
           isCurrent: false,
-        }))
+        })),
       );
 
       return { previous };

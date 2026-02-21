@@ -66,7 +66,7 @@ export const taskRouter = router({
         description: z.string().optional(),
         dueDate: z.date().optional().nullable(),
         priority: z.number().int().min(0).max(5).optional(),
-        order: z.number().int().default(0),
+        // order is intentionally NOT in input — server computes it
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -79,9 +79,20 @@ export const taskRouter = router({
         throw new TRPCError({ code: "FORBIDDEN" });
       }
 
+      // Find the current highest order in this list
+      const lastTask = await ctx.prisma.task.findFirst({
+        where: { listId: input.listId },
+        select: { order: true },
+        orderBy: { order: "desc" },
+        take: 1,
+      });
+
+      const nextOrder = lastTask ? lastTask.order + 1 : 0;
+
       return ctx.prisma.task.create({
         data: {
           ...input,
+          order: nextOrder,
           isCompleted: false,
           isCurrent: false,
         },
@@ -345,7 +356,6 @@ export const taskRouter = router({
         ),
       );
 
-      // Optional: return something useful, or just success
       return { success: true };
     }),
 });
