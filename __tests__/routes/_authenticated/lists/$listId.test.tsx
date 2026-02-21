@@ -198,7 +198,7 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
       level: 3,
       name: /Active/i,
     });
-    expect(activeHeading).toHaveTextContent("Active(1)");
+    expect(activeHeading).toHaveTextContent("Active (1)");
   });
 
   it("triggers delete action with correct task ID when delete button is clicked", async () => {

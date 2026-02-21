@@ -6,7 +6,7 @@ import { type Task } from "@/hooks/useListTasks";
 import {
   Item,
   ItemContent,
-  ItemDescription,
+  // ItemDescription,
   ItemTitle,
   ItemMedia,
 } from "@/components/ui/item";
