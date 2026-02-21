@@ -1,7 +1,7 @@
 // src/routes/_authenticated/lists/$listId.tsx
 
-import { createFileRoute } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ChevronLeft, Loader2 } from "lucide-react";
 import TaskList from "@/components/TaskList";
 import { useListTasks } from "@/hooks/useListTasks";
 import { trpc } from "@/trpc";
@@ -65,12 +65,17 @@ function ListDetail() {
 
   return (
     <div className="relative pb-24 md:pb-28">
-      {" "}
-      {/* ← removed min-h-[calc(100vh-4rem)] — key fix */}
-      {/* No extra px-* or max-w-* — parent layout handles alignment */}
       <div className="space-y-6 sm:space-y-8">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+        <div className="flex items-center gap-3">
+          <Link
+            to="/lists"
+            aria-label="Back to all lists"
+            title="Back to all lists" // shows on desktop hover
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </Link>
+
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex-1 truncate">
             {list?.title}
           </h1>
         </div>
