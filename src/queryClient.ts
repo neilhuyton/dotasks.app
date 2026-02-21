@@ -5,23 +5,21 @@ import { TRPCClientError } from "@trpc/client";
 import type { AppRouter } from "../server/trpc";
 import { useAuthStore } from "./store/authStore";
 import { router } from "./router/router";
+import { keepPreviousData } from "@tanstack/react-query";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: false,
-      staleTime: 10000,                // Data considered fresh for 10 seconds → reduces unnecessary refetches on focus
-      gcTime: 5 * 60 * 1000,           // 5 minutes cache time (helps keep data around between tab switches)
-
-      // === Global polling settings applied to ALL queries ===
-      refetchInterval: 15000,          // Poll every 15 seconds → main mechanism for multi-device sync
-      refetchOnWindowFocus: true,      // Refetch when user returns to the tab/window (very effective)
-      refetchOnReconnect: true,        // Refetch when network reconnects (useful on mobile)
-      // refetchIntervalInBackground: false,  // ← Default value = false → recommended
-                                           // (do not poll when tab is in background → saves Netlify invocations & battery)
-      
-      // You can still override these per-query when needed, example:
-      // trpc.something.useQuery(..., { refetchInterval: false }) to disable for specific queries
+      staleTime: Infinity, // Never auto-stale
+      gcTime: Infinity, // Keep forever (small app)
+      refetchOnWindowFocus: true, // No sneaky refetches
+      refetchOnReconnect: true,
+      refetchOnMount: true, // Trust cache first
+      retry: 1, // Don't hammer slow DB
+      // Optional: background indicators if you want subtle "updating..." text
+      // background: { enabled: true, delay: 2000 },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 8000),
+      placeholderData: keepPreviousData,
     },
     mutations: {
       retry: false,
@@ -70,7 +68,7 @@ function handleTRPCAuthError(error: unknown): void {
   // We only force logout here if there's literally no refresh token left
   if (refreshToken) {
     console.debug(
-      "[QueryCache] Caught 401/UNAUTHORIZED but refresh token exists → letting authRefreshLink handle it"
+      "[QueryCache] Caught 401/UNAUTHORIZED but refresh token exists → letting authRefreshLink handle it",
     );
     return;
   }

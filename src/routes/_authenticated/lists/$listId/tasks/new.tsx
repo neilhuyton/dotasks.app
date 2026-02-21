@@ -7,9 +7,11 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/trpc";
 
-export const Route = createFileRoute("/_authenticated/lists/$listId/tasks/new")({
-  component: NewTaskPage,
-});
+export const Route = createFileRoute("/_authenticated/lists/$listId/tasks/new")(
+  {
+    component: NewTaskPage,
+  },
+);
 
 function NewTaskPage() {
   const { listId } = Route.useParams();
@@ -126,7 +128,7 @@ function NewTaskPage() {
 
             <form
               onSubmit={handleSubmit}
-              data-testid="new-task-form"  // ← added this
+              data-testid="new-task-form" // ← added this
               aria-labelledby="new-task-heading"
               className="space-y-8"
               autoComplete="off"

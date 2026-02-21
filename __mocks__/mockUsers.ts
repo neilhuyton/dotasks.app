@@ -72,3 +72,33 @@ export function getMockUserById(id: string): MockUser | undefined {
 export function getMockUserByEmail(email: string): MockUser | undefined {
   return mockUsers.find(u => u.email === email);
 }
+
+export function createTestUser(overrides: Partial<MockUser> = {}): MockUser {
+  const now = new Date();
+  return {
+    id: "user-" + Math.random().toString(36).slice(2),
+    email: "user-" + Math.random().toString(36).slice(2) + "@example.com",
+    password: "$2b$10$dummyhash....................",
+    verificationToken: null,
+    isEmailVerified: true,
+    resetPasswordToken: null,
+    resetPasswordTokenExpiresAt: null,
+    createdAt: now,
+    updatedAt: now,
+    ...overrides,
+  };
+}
+
+// Optional: named presets
+export const TEST_USER = createTestUser({
+  id: "test-user-123",
+  email: "testuser@example.com",
+  isEmailVerified: true,
+});
+
+export const TAKEN_EMAIL_USER = createTestUser({
+  id: "other-user-999",
+  email: "already.taken@example.com",
+  isEmailVerified: true,
+});
+

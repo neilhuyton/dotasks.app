@@ -1,4 +1,4 @@
-// __tests__/pages/profile.test.tsx
+// __tests__/routes/_authenticated/profile.test.tsx
 
 import {
   describe,
@@ -6,44 +6,52 @@ import {
   expect,
   vi,
   beforeAll,
+  beforeEach,
   afterEach,
   afterAll,
-  beforeEach,
 } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  RouterProvider,
-  createMemoryHistory,
-  createRouter,
-} from "@tanstack/react-router";
-import { trpc } from "@/trpc";
-import { httpLink } from "@trpc/client";
+
 import { server } from "../../../__mocks__/server";
-import { routeTree } from "@/routeTree.gen";
-import { useAuthStore } from "@/store/authStore";
-import {
-  getCurrentUserLoadingHandler,
-  updateEmailHandler,
-  updateEmailSuccessHandler,
-  sendPasswordResetHandler,
-} from "../../../__mocks__/handlers/profile";
 import { trpcMsw } from "../../../__mocks__/trpcMsw";
 import { mockUsers } from "../../../__mocks__/mockUsers";
+import { useAuthStore } from "@/store/authStore";
+
+import {
+  renderWithTrpcRouter,
+  expectSuccessMessage,
+  expectErrorMessage,
+} from "../../utils/test-helpers";
+
+import {
+  getCurrentUserLoadingHandler,
+  updateEmailSuccessHandler,
+  updateEmailHandler,
+  sendPasswordResetHandler,
+} from "../../../__mocks__/handlers/profile";
+
+import { routeTree } from "@/routeTree.gen";
+
+const USER_ID = "test-user-123";
+const INITIAL_EMAIL = "testuser@example.com";
+
+function renderProfile(initialPath = "/profile") {
+  return renderWithTrpcRouter({
+    initialPath,
+    routeTree,
+  });
+}
 
 describe("Profile Route (/_authenticated/profile)", () => {
-  let queryClient: QueryClient;
-  const user = userEvent.setup();
-
-  beforeAll(() => {
-    server.listen({ onUnhandledRequest: "error" });
-  });
+  beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 
   beforeEach(() => {
+    server.resetHandlers();
+
     useAuthStore.setState({
       isLoggedIn: true,
-      userId: "test-user-123",
+      userId: USER_ID,
       accessToken: "mock-access-token-for-tests",
       refreshToken: "mock-refresh-token-for-tests",
     });
@@ -51,17 +59,16 @@ describe("Profile Route (/_authenticated/profile)", () => {
     mockUsers.length = 0;
     mockUsers.push(
       {
-        id: "test-user-123",
-        email: "testuser@example.com",
+        id: USER_ID,
+        email: INITIAL_EMAIL,
         password:
           "$2b$10$BfZjnkEBinREhMQwsUwFjOdeidxX1dvXSKn.n3MxdwmRTcfV8JR16",
         verificationToken: null,
         isEmailVerified: true,
         resetPasswordToken: null,
         resetPasswordTokenExpiresAt: null,
-        createdAt: new Date(),          // ← fixed: Date object instead of string
-        updatedAt: new Date(),          // ← fixed: Date object instead of string
-
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
       {
         id: "other-user-999",
@@ -71,34 +78,22 @@ describe("Profile Route (/_authenticated/profile)", () => {
         isEmailVerified: true,
         resetPasswordToken: null,
         resetPasswordTokenExpiresAt: null,
-        createdAt: new Date(),          // ← fixed
-        updatedAt: new Date(),          // ← fixed
-
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
     );
 
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false, gcTime: 0, staleTime: 0 },
-        mutations: { retry: false },
-      },
-    });
-
-    server.resetHandlers();
-
     server.use(
       trpcMsw.user.getCurrent.query(() => ({
-        id: "test-user-123",
-        email: "testuser@example.com",
+        id: USER_ID,
+        email: INITIAL_EMAIL,
       })),
     );
 
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
-  afterEach(async () => {
-    await queryClient.cancelQueries();
-    queryClient.clear();
+  afterEach(() => {
     server.resetHandlers();
     useAuthStore.setState({
       isLoggedIn: false,
@@ -108,125 +103,113 @@ describe("Profile Route (/_authenticated/profile)", () => {
     });
   });
 
-  afterAll(() => {
-    server.close();
-  });
+  afterAll(() => server.close());
 
-  const createTestRouter = (initialPath = "/profile") => {
-    const history = createMemoryHistory({ initialEntries: [initialPath] });
-    return createRouter({ routeTree, history });
-  };
-
-  const renderProfile = async () => {
-    const testRouter = createTestRouter();
-
-    render(
-      <trpc.Provider
-        client={trpc.createClient({
-          links: [httpLink({ url: "http://localhost:8888/trpc" })],
-        })}
-        queryClient={queryClient}
-      >
-        <QueryClientProvider client={queryClient}>
-          <RouterProvider router={testRouter} />
-        </QueryClientProvider>
-      </trpc.Provider>,
-    );
-
-    // Give React Query / TanStack Router time to settle
-    await new Promise((r) => setTimeout(r, 300));
-    return { history: testRouter.history };
-  };
-
-  it("renders the profile modal UI with title, current email, forms and logout", async () => {
-    await renderProfile();
+  it("renders profile modal with title and current email", async () => {
+    renderProfile();
 
     await screen.findByText("User Profile");
-    expect(screen.getByTestId("current-email")).toHaveTextContent(
-      "testuser@example.com",
+
+    const currentEmailEl = await screen.findByTestId(
+      "current-email",
+      {},
+      { timeout: 1500 },
     );
-    expect(screen.getByTestId("email-input")).toBeInTheDocument();
+    expect(currentEmailEl).toHaveTextContent(INITIAL_EMAIL);
+    expect(currentEmailEl).toBeVisible();
+    expect(currentEmailEl).toHaveClass("text-base", "font-medium", "break-all");
+
+    await screen.findByTestId("email-input");
+    await screen.findByTestId("logout-button");
   });
 
   it("shows loading skeleton while fetching current user", async () => {
     server.use(getCurrentUserLoadingHandler);
-    await renderProfile();
-
+    renderProfile();
     await screen.findByTestId("email-skeleton");
   });
 
   it("submits email change – success", async () => {
     server.use(updateEmailSuccessHandler);
-
-    await renderProfile();
+    renderProfile();
 
     const emailInput = await screen.findByTestId("email-input");
-    await user.type(emailInput, "newemail@example.com");
+    await userEvent.clear(emailInput);
+    await userEvent.type(emailInput, "newemail@example.com");
 
     const form = screen.getByTestId("email-form");
     fireEvent.submit(form);
 
-    const successMsg = await screen.findByTestId("email-success");
-    expect(successMsg).toHaveTextContent(/success|updated/i);
+    await expectSuccessMessage(
+      "email-success",
+      /success|updated/i,
+      "text-green-500",
+      4000,
+    );
   });
 
   it("shows error when new email is already taken", async () => {
     server.use(updateEmailHandler);
-
-    await renderProfile();
+    renderProfile();
 
     const emailInput = await screen.findByTestId("email-input");
-    await user.clear(emailInput);
-    await user.type(emailInput, "already.taken@example.com");
+    await userEvent.clear(emailInput);
+    await userEvent.type(emailInput, "already.taken@example.com");
 
     const form = screen.getByTestId("email-form");
     fireEvent.submit(form);
 
-    const errorMsg = await screen.findByTestId("email-error");
-    expect(errorMsg.textContent?.toLowerCase()).toMatch(
+    await expectErrorMessage(
+      "email-error",
       /already in use|conflict|taken/i,
+      "text-red-500",
+      4000,
     );
-    expect(errorMsg).toHaveClass("text-red-500");
   });
 
   it("sends password reset link successfully", async () => {
     server.use(sendPasswordResetHandler);
+    renderProfile();
 
-    await renderProfile();
-
-    const passwordInput = await screen.findByTestId("password-input");
-    await user.type(passwordInput, "user@example.com");
+    const emailInput = await screen.findByTestId("password-input");
+    await userEvent.clear(emailInput);
+    await userEvent.type(emailInput, INITIAL_EMAIL);
 
     const form = screen.getByTestId("password-form");
     fireEvent.submit(form);
 
-    const msg = await screen.findByTestId("password-success");
-    expect(msg).toHaveTextContent(/sent|reset link/i);
+    await expectSuccessMessage(
+      "password-success",
+      /sent|reset link/i,
+      "text-green-500",
+      4000,
+    );
   });
 
-  it("disables submit buttons and shows loading spinner during mutation", async () => {
+  it("disables submit button and shows loading state during mutation", async () => {
     server.use(
       trpcMsw.user.updateEmail.mutation(async ({ input }) => {
         await new Promise((r) => setTimeout(r, 1200));
-        return { message: "Email updated successfully", email: input.email };
+        return { message: "Email updated", email: input.email };
       }),
     );
 
-    await renderProfile();
+    renderProfile();
 
     const emailInput = await screen.findByTestId("email-input");
-    await user.type(emailInput, "loading@example.com");
+    await userEvent.clear(emailInput);
+    await userEvent.type(emailInput, "loading@example.com");
 
     const form = screen.getByTestId("email-form");
     fireEvent.submit(form);
 
-    const submitBtn = screen.getByTestId("email-submit");
+    const submitBtn = await screen.findByTestId("email-submit");
     await waitFor(
       () => {
         expect(submitBtn).toBeDisabled();
         expect(submitBtn).toHaveTextContent(/updating/i);
       },
-      { timeout: 2000 },
+      { timeout: 1800 },
     );
 
     await waitFor(() => expect(submitBtn).not.toBeDisabled(), {
@@ -234,51 +217,70 @@ describe("Profile Route (/_authenticated/profile)", () => {
     });
   });
 
-  it("shows client-side validation error for invalid email format", async () => {
-    await renderProfile();
+  it("shows client-side validation error for invalid email", async () => {
+    renderProfile();
 
     const emailInput = await screen.findByTestId("email-input");
-    await user.type(emailInput, "invalid-email");
+    await userEvent.clear(emailInput);
+    await userEvent.type(emailInput, "invalid-email");
 
     const form = screen.getByTestId("email-form");
     fireEvent.submit(form);
 
-    const error = await screen.findByTestId("email-validation-error");
-    expect(error).toHaveTextContent(/valid email/i);
+    const errorEl = await screen.findByTestId("email-validation-error");
+    expect(errorEl).toHaveTextContent(/valid email/i);
   });
 
-  it("closes the modal and navigates to /lists on close button click", async () => {
-    const { history } = await renderProfile();
+  it("closes modal and navigates back to /lists", async () => {
+    const { history } = renderProfile();
 
     const closeBtn = await screen.findByLabelText(/close profile/i);
-    await user.click(closeBtn);
+    await userEvent.click(closeBtn);
 
-    await waitFor(() => {
-      expect(history.location.pathname).toBe("/lists");
+    await waitFor(() => expect(history.location.pathname).toBe("/lists"), {
+      timeout: 2000,
     });
   });
 
-  it("triggers logout on Logout button click", async () => {
+  it("triggers logout when Logout button is clicked", async () => {
     const mockLogout = vi.fn();
     vi.spyOn(useAuthStore.getState(), "logout").mockImplementation(mockLogout);
 
-    await renderProfile();
+    renderProfile();
 
     const logoutBtn = await screen.findByTestId("logout-button");
-    await user.click(logoutBtn);
+    await userEvent.click(logoutBtn);
 
     expect(mockLogout).toHaveBeenCalledTimes(1);
   });
 
-  it("handles case where current email fetch fails (shows fallback)", async () => {
+  it("shows fallback UI when current user fetch fails", async () => {
     server.use(
       trpcMsw.user.getCurrent.query(() => {
         throw new Error("Failed to fetch user");
       }),
     );
 
-    await renderProfile();
+    renderProfile();
 
-    await screen.findByText(/not available/i);
+    await waitFor(
+      () => {
+        // Title stays visible
+        expect(screen.getByText("User Profile")).toBeInTheDocument();
+
+        // Email display shows fallback text (your current behavior)
+        expect(screen.getByText("Not available")).toBeInTheDocument();
+        expect(screen.queryByTestId("current-email")).not.toBeInTheDocument();
+
+        // Forms are still rendered (current reality)
+        expect(screen.getByTestId("email-input")).toBeInTheDocument();
+        expect(screen.getByTestId("password-input")).toBeInTheDocument();
+
+        // But no success/error messages (since no mutation attempted)
+        expect(screen.queryByTestId("email-success")).not.toBeInTheDocument();
+        expect(screen.queryByTestId("email-error")).not.toBeInTheDocument();
+      },
+      { timeout: 2500 },
+    );
   });
 });
