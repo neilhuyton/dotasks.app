@@ -17,6 +17,7 @@ import { Route as ConfirmResetPasswordRouteImport } from './routes/confirm-reset
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedListsIndexRouteImport } from './routes/_authenticated/lists/index'
 import { Route as AuthenticatedListsNewRouteImport } from './routes/_authenticated/lists/new'
 import { Route as AuthenticatedListsListIdRouteImport } from './routes/_authenticated/lists/$listId'
@@ -64,6 +65,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedListsIndexRoute = AuthenticatedListsIndexRouteImport.update({
@@ -126,6 +132,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/lists/$listId': typeof AuthenticatedListsListIdRouteWithChildren
   '/lists/new': typeof AuthenticatedListsNewRoute
@@ -144,6 +151,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/lists/$listId': typeof AuthenticatedListsListIdRouteWithChildren
   '/lists/new': typeof AuthenticatedListsNewRoute
@@ -164,6 +172,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/lists/$listId': typeof AuthenticatedListsListIdRouteWithChildren
   '/_authenticated/lists/new': typeof AuthenticatedListsNewRoute
@@ -184,6 +193,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-password'
     | '/verify-email'
+    | '/dashboard'
     | '/profile'
     | '/lists/$listId'
     | '/lists/new'
@@ -202,6 +212,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-password'
     | '/verify-email'
+    | '/dashboard'
     | '/profile'
     | '/lists/$listId'
     | '/lists/new'
@@ -221,6 +232,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-password'
     | '/verify-email'
+    | '/_authenticated/dashboard'
     | '/_authenticated/profile'
     | '/_authenticated/lists/$listId'
     | '/_authenticated/lists/new'
@@ -299,6 +311,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof AuthenticatedProfileRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/lists/': {
@@ -396,6 +415,7 @@ const AuthenticatedListsListIdRouteWithChildren =
   )
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedListsListIdRoute: typeof AuthenticatedListsListIdRouteWithChildren
   AuthenticatedListsNewRoute: typeof AuthenticatedListsNewRoute
@@ -403,6 +423,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedListsListIdRoute: AuthenticatedListsListIdRouteWithChildren,
   AuthenticatedListsNewRoute: AuthenticatedListsNewRoute,
