@@ -18,9 +18,9 @@ export default function ListsTable() {
 
   if (isLoading) {
     return (
-      <div className="space-y-1.5">
-        {[...Array(8)].map((_, i) => (
-          <div key={i} className="h-8 bg-muted/30 rounded animate-pulse" />
+      <div className="space-y-3 min-h-[50vh] flex flex-col justify-start">
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="h-14 bg-muted/30 rounded animate-pulse" />
         ))}
       </div>
     );
@@ -36,8 +36,11 @@ export default function ListsTable() {
 
   if (lists.length === 0) {
     return (
-      <div className="py-12 text-center text-sm text-muted-foreground">
-        No lists yet.
+      <div className="py-16 text-center text-muted-foreground">
+        <p className="text-lg font-medium">No lists yet</p>
+        <p className="mt-2 text-sm">
+          Create your first list to start organizing tasks.
+        </p>
       </div>
     );
   }

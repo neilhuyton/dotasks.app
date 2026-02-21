@@ -2,11 +2,7 @@
 
 import { Link } from "@tanstack/react-router";
 import { ListActionsDropdown } from "./ListActionsDropdown";
-import {
-  Item,
-  ItemContent,
-  ItemTitle,
-} from "@/components/ui/item";
+import { Item, ItemContent, ItemTitle } from "@/components/ui/item";
 import { cn } from "@/lib/utils";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "server/trpc";
@@ -27,26 +23,30 @@ export function ListItem({ list }: ListItemProps) {
     >
       <Item
         variant="outline"
-        size="sm"
         className={cn(
-          "min-h-0 transition-colors duration-150",
+          "min-h-[52px]", // matches TaskItem height
+          "px-3 py-2", // matches TaskItem padding
+          "transition-colors duration-150",
           "border hover:bg-muted/30 dark:hover:bg-muted/40",
-          "cursor-pointer"
+          "cursor-pointer",
+          "bg-card/80 dark:bg-muted/30", // similar subtle background
         )}
       >
-        <div className="flex items-center gap-1.5 px-2.5 py-0.5 w-full">
-          {list.icon && (
-            <div className="shrink-0 text-sm opacity-70">{list.icon}</div>
-          )}
-
-          <ItemContent className="flex-1 min-w-0">
-            <ItemTitle className="text-sm font-medium leading-none truncate">
+        <div className="flex items-center justify-between w-full gap-3">
+          <ItemContent className="min-w-0 flex-1 py-0.5">
+            <ItemTitle className="text-sm font-medium leading-tight truncate">
               {list.title}
             </ItemTitle>
+
+            {list.description && (
+              <p className="mt-0.5 text-xs text-muted-foreground leading-tight line-clamp-1">
+                {list.description}
+              </p>
+            )}
           </ItemContent>
 
-          {/* Always visible ⋯ button – same as TaskActionsDropdown */}
-          <div className="flex items-center gap-0.5">
+          {/* Always visible – mobile friendly */}
+          <div className="flex items-center shrink-0">
             <ListActionsDropdown list={list} />
           </div>
         </div>

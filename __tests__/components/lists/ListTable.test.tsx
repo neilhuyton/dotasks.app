@@ -37,19 +37,21 @@ vi.mock("@tanstack/react-router", async () => {
 
   return {
     ...actual,
-    Link: vi.fn(({ children, className, title, "aria-label": ariaLabel, ...props }) => (
-      <a
-        data-testid="mocked-link"
-        className={className}
-        data-to={props.to}
-        data-params={JSON.stringify(props.params || {})}
-        title={title}
-        aria-label={ariaLabel}
-        {...props}
-      >
-        {children}
-      </a>
-    )),
+    Link: vi.fn(
+      ({ children, className, title, "aria-label": ariaLabel, ...props }) => (
+        <a
+          data-testid="mocked-link"
+          className={className}
+          data-to={props.to}
+          data-params={JSON.stringify(props.params || {})}
+          title={title}
+          aria-label={ariaLabel}
+          {...props}
+        >
+          {children}
+        </a>
+      ),
+    ),
     useNavigate: vi.fn(() => vi.fn()),
   };
 });
@@ -87,17 +89,20 @@ describe("ListsTable", () => {
           <QueryClientProvider client={queryClient}>
             <ListsTable />
           </QueryClientProvider>
-        </trpc.Provider>
+        </trpc.Provider>,
       );
     });
 
+    // Updated waitFor – uses the correct current empty state text without the dot
     await waitFor(
       () => {
         const hasContent = screen.queryByText("Groceries") !== null;
-        const hasEmpty = screen.queryByText("No lists yet.") !== null;
-        expect(hasContent || hasEmpty).toBe(true);
+        const hasEmpty = screen.queryByText("No lists yet") !== null; // ← fixed here
+        const hasError = screen.queryByText("Failed to load lists") !== null;
+
+        expect(hasContent || hasEmpty || hasError).toBe(true);
       },
-      { timeout: 5000 }
+      { timeout: 5000 },
     );
 
     return { renderResult, queryClient };
@@ -126,70 +131,81 @@ describe("ListsTable", () => {
   it("shows empty state UI when user has no lists", async () => {
     await setup(listGetEmptyHandler);
 
-    await waitFor(() => {
-      expect(screen.getByText("No lists yet.")).toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.getByText("No lists yet")).toBeInTheDocument();
+      },
+      { timeout: 5000 },
+    );
 
     expect(screen.queryByTestId("mocked-link")).not.toBeInTheDocument();
     expect(screen.queryByText("Groceries")).not.toBeInTheDocument();
   });
 
-  it("renders list items as cards with titles, icons and more actions button", async () => {
+  it("renders list items as cards with titles and more actions button", async () => {
     await setup();
 
-    await waitFor(() => {
-      // Titles
-      expect(screen.getByText("Groceries")).toBeInTheDocument();
-      expect(screen.getByText("Work Tasks")).toBeInTheDocument();
+    await waitFor(
+      () => {
+        // Titles
+        expect(screen.getByText("Groceries")).toBeInTheDocument();
+        expect(screen.getByText("Work Tasks")).toBeInTheDocument();
 
-      // Icon
-      expect(screen.getByText("shopping-cart")).toBeInTheDocument();
+        // More actions button exists for each list
+        const moreButtons = screen.getAllByTitle("More actions");
+        expect(moreButtons).toHaveLength(2);
 
-      // More actions button exists for each list
-      const moreButtons = screen.getAllByTitle("More actions");
-      expect(moreButtons).toHaveLength(2);
-
-      // Accessibility labels
-      expect(moreButtons[0]).toHaveAttribute(
-        "aria-label",
-        "More actions for list: Groceries"
-      );
-      expect(moreButtons[1]).toHaveAttribute(
-        "aria-label",
-        "More actions for list: Work Tasks"
-      );
-
-      // Optional: check data-testid if you added it
-      // expect(screen.getAllByTestId("list-more-actions")).toHaveLength(2);
-    }, { timeout: 5000 });
+        // Accessibility labels
+        expect(moreButtons[0]).toHaveAttribute(
+          "aria-label",
+          "More actions for list: Groceries",
+        );
+        expect(moreButtons[1]).toHaveAttribute(
+          "aria-label",
+          "More actions for list: Work Tasks",
+        );
+      },
+      { timeout: 5000 },
+    );
   });
 
   it("main link for each list points to /lists/$listId", async () => {
     await setup();
 
-    await waitFor(() => {
-      const mainLinks = screen
-        .getAllByTestId("mocked-link")
-        .filter((el) => el.getAttribute("data-to") === "/lists/$listId");
+    await waitFor(
+      () => {
+        const mainLinks = screen
+          .getAllByTestId("mocked-link")
+          .filter((el) => el.getAttribute("data-to") === "/lists/$listId");
 
-      expect(mainLinks).toHaveLength(2);
-      expect(mainLinks[0]).toHaveAttribute("data-params", expect.stringContaining('"listId":"l1"'));
-      expect(mainLinks[0]).toHaveTextContent("Groceries");
-    }, { timeout: 5000 });
+        expect(mainLinks).toHaveLength(2);
+        expect(mainLinks[0]).toHaveAttribute(
+          "data-params",
+          expect.stringContaining('"listId":"l1"'),
+        );
+        expect(mainLinks[0]).toHaveTextContent("Groceries");
+      },
+      { timeout: 5000 },
+    );
   });
 
-it("more actions dropdown contains Edit and Delete options", async () => {
-  await setup();
+  it("more actions dropdown contains Edit and Delete options", async () => {
+    await setup();
 
-  const moreButtons = await screen.findAllByTitle("More actions");
-  await user.click(moreButtons[0]);
+    const moreButtons = await screen.findAllByTitle("More actions");
+    await user.click(moreButtons[0]);
 
-  await waitFor(() => {
-    expect(screen.getByTestId("edit-list-l1")).toBeInTheDocument(); // or whatever your mock IDs are
-    expect(screen.getByTestId("delete-list-l1")).toBeInTheDocument();
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("edit-list-l1")).toBeInTheDocument(); // or whatever your mock IDs are
+        expect(screen.getByTestId("delete-list-l1")).toBeInTheDocument();
 
-    // Check destructive class directly on the item
-    expect(screen.getByTestId("delete-list-l1")).toHaveClass(/text-destructive/);
-  }, { timeout: 3000 });
-});
+        // Check destructive class directly on the item
+        expect(screen.getByTestId("delete-list-l1")).toHaveClass(
+          /text-destructive/,
+        );
+      },
+      { timeout: 3000 },
+    );
+  });
 });
