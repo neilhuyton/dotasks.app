@@ -261,7 +261,9 @@ describe("Edit Task Page (/_authenticated/lists/$listId/tasks/$taskId/edit)", ()
 
   it("navigates back on Back (ArrowLeft) button click", async () => {
     const { navigateSpy } = await renderEditTaskPage();
-    await user.click(screen.getByRole("button", { name: "Back to list" }));
+    await user.click(
+      screen.getByRole("button", { name: "Cancel and return to task list" })
+    );
     expect(navigateSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         to: "/lists/$listId",
@@ -271,44 +273,44 @@ describe("Edit Task Page (/_authenticated/lists/$listId/tasks/$taskId/edit)", ()
     );
   });
 
-it.todo("does not submit when title is empty (prevents mutation)", async () => {
-  resetMockTasks();
-  const initialTasks = getMockTasks();
-  const initialTask = initialTasks.find((t) => t.id === TEST_TASK_ID);
-  expect(initialTask?.title, "Mock data not reset before test").toBe(
-    ORIGINAL_TITLE,
-  );
+  it.todo("does not submit when title is empty (prevents mutation)", async () => {
+    resetMockTasks();
+    const initialTasks = getMockTasks();
+    const initialTask = initialTasks.find((t) => t.id === TEST_TASK_ID);
+    expect(initialTask?.title, "Mock data not reset before test").toBe(
+      ORIGINAL_TITLE,
+    );
 
-  const { navigateSpy } = await renderEditTaskPage();
+    const { navigateSpy } = await renderEditTaskPage();
 
-  const titleInput = screen.getByLabelText(/Task name/i);
-  const saveButton = screen.getByRole("button", { name: /Save Changes/i });
+    const titleInput = screen.getByLabelText(/Task name/i);
+    const saveButton = screen.getByRole("button", { name: /Save Changes/i });
 
-  // 1. Clear and force RHF / React to process it
-  await user.clear(titleInput);
+    // 1. Clear and force RHF / React to process it
+    await user.clear(titleInput);
 
-  // 2. Wait until input is truly empty AND button is disabled
-  await waitFor(
-    () => {
-      expect(titleInput).toHaveValue("");
-      expect(saveButton).toBeDisabled();
-    },
-    { timeout: 2000 }
-  );
+    // 2. Wait until input is truly empty AND button is disabled
+    await waitFor(
+      () => {
+        expect(titleInput).toHaveValue("");
+        expect(saveButton).toBeDisabled();
+      },
+      { timeout: 2000 }
+    );
 
-  // 3. Try to submit via click (should do nothing because disabled)
-  await user.click(saveButton);
+    // 3. Try to submit via click (should do nothing because disabled)
+    await user.click(saveButton);
 
-  // 4. Also try programmatic submit on the form (common hidden cause)
-  const form = screen.getByTestId("edit-task-form");
-  fireEvent.submit(form);
+    // 4. Also try programmatic submit on the form (common hidden cause)
+    const form = screen.getByTestId("edit-task-form");
+    fireEvent.submit(form);
 
-  // 5. Give generous time for any pending optimistic update to apply if it wrongly fired
-  await new Promise((r) => setTimeout(r, 1500));
+    // 5. Give generous time for any pending optimistic update to apply if it wrongly fired
+    await new Promise((r) => setTimeout(r, 1500));
 
-  // 6. Assert final state
-  const taskAfter = getMockTasks().find((t) => t.id === TEST_TASK_ID);
-  expect(taskAfter?.title).toBe(ORIGINAL_TITLE);
-  expect(navigateSpy).not.toHaveBeenCalled();
-});
+    // 6. Assert final state
+    const taskAfter = getMockTasks().find((t) => t.id === TEST_TASK_ID);
+    expect(taskAfter?.title).toBe(ORIGINAL_TITLE);
+    expect(navigateSpy).not.toHaveBeenCalled();
+  });
 });

@@ -233,7 +233,9 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
   it("navigates back to list on Back (ArrowLeft) button click", async () => {
     const { navigateSpy } = await renderDeleteTaskPage();
 
-    await user.click(screen.getByRole("button", { name: "Back to list" }));
+    await user.click(
+      screen.getByRole("button", { name: "Cancel and return to list" }),
+    );
 
     expect(navigateSpy).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -260,7 +262,7 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         } as Task,
-      ])
+      ]),
     );
 
     await renderDeleteTaskPage();

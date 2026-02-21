@@ -156,6 +156,7 @@ function EditListPage() {
                   >
                     List name <span className="text-destructive">*</span>
                   </label>
+                  {/* Removed h-12 text-lg → now matches login input style */}
                   <Input
                     id="list-title"
                     value={title}
@@ -164,7 +165,6 @@ function EditListPage() {
                     autoFocus
                     required
                     disabled={isPending}
-                    className="h-12 text-lg"
                   />
                 </div>
 
@@ -175,6 +175,7 @@ function EditListPage() {
                   >
                     Description (optional)
                   </label>
+                  {/* Removed resize-none text-base → now matches login-like textarea */}
                   <Textarea
                     id="list-desc"
                     value={description}
@@ -182,22 +183,11 @@ function EditListPage() {
                     placeholder="Any notes about this list..."
                     disabled={isPending}
                     rows={6}
-                    className="resize-none text-base"
                   />
                 </div>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 pt-8 justify-center">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleCancel}
-                  disabled={isPending}
-                  className="w-full sm:w-32"
-                >
-                  Cancel
-                </Button>
-
                 <Button
                   type="submit"
                   disabled={isPending || !title.trim()}
@@ -207,6 +197,16 @@ function EditListPage() {
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   )}
                   {isPending ? "Saving..." : "Save Changes"}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCancel}
+                  disabled={isPending}
+                  className="w-full sm:w-32"
+                >
+                  Cancel
                 </Button>
               </div>
             </form>

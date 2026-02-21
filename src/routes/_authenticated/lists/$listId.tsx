@@ -1,11 +1,9 @@
-// src/routes/_authenticated/lists/$listId.tsx
-
 import { createFileRoute } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import TaskList from "@/components/TaskList";
 import { useListTasks } from "@/hooks/useListTasks";
 import { trpc } from "@/trpc";
-import { Outlet } from "@tanstack/react-router";
+import { Outlet, useNavigate } from "@tanstack/react-router";
 import { FabButton } from "@/components/FabButton";
 
 export const Route = createFileRoute("/_authenticated/lists/$listId")({
@@ -14,7 +12,7 @@ export const Route = createFileRoute("/_authenticated/lists/$listId")({
 
 function ListDetail() {
   const { listId } = Route.useParams();
-  const navigate = Route.useNavigate();
+  const navigate = useNavigate();
 
   const { data: list, isLoading: listLoading } = trpc.list.getOne.useQuery(
     { id: listId },
@@ -34,8 +32,8 @@ function ListDetail() {
     setCurrentTaskPending,
     clearCurrentTask,
     clearCurrentTaskPending,
-    updateTaskOrder,          // ← added
-    isReordering,             // ← added
+    updateTaskOrder,
+    isReordering,
   } = useListTasks(listId);
 
   if (listLoading) {
@@ -55,7 +53,7 @@ function ListDetail() {
   if (!list) {
     return (
       <div
-        className="rounded-lg bg-red-50 p-8 text-center text-red-800"
+        className="rounded-lg bg-red-50 p-6 sm:p-8 text-center text-red-800"
         data-testid="list-not-found"
       >
         List not found or you don't have access.
@@ -64,46 +62,53 @@ function ListDetail() {
   }
 
   return (
-    <div className="space-y-8 relative pb-24 md:pb-28">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">{list?.title}</h1>
-      </div>
-
-      {list?.description && (
-        <p className="text-lg text-muted-foreground">{list.description}</p>
-      )}
-
-      {isLoadingTasks ? (
-        <div
-          className="flex min-h-[40vh] items-center justify-center"
-          data-testid="tasks-loading"
-        >
-          <Loader2
-            className="h-10 w-10 animate-spin text-primary"
-            data-testid="tasks-spinner"
-          />
+    <div className="min-h-[calc(100vh-4rem)] pb-24 md:pb-28">
+      {/* No extra px-* or max-w-* — parent layout handles alignment */}
+      <div className="space-y-6 sm:space-y-8">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            {list?.title}
+          </h1>
         </div>
-      ) : (
-        <TaskList
-          tasks={tasks}
-          toggleTask={toggleTask}
-          isToggling={toggleTaskPending}
-          onDelete={(taskId) =>
-            navigate({
-              to: "/lists/$listId/tasks/$taskId/delete",
-              params: { listId, taskId },
-            })
-          }
-          isDeleting={deleteTaskPending}
-          setCurrentTask={setCurrentTask}
-          isSettingCurrent={setCurrentTaskPending}
-          clearCurrentTask={clearCurrentTask}
-          clearCurrentTaskPending={clearCurrentTaskPending}
-          listId={listId}
-          updateTaskOrder={updateTaskOrder}      // ← added
-          isReordering={isReordering}            // ← added
-        />
-      )}
+
+        {list?.description && (
+          <p className="text-base sm:text-lg text-muted-foreground">
+            {list.description}
+          </p>
+        )}
+
+        {isLoadingTasks ? (
+          <div
+            className="flex min-h-[40vh] items-center justify-center"
+            data-testid="tasks-loading"
+          >
+            <Loader2
+              className="h-10 w-10 animate-spin text-primary"
+              data-testid="tasks-spinner"
+            />
+          </div>
+        ) : (
+          <TaskList
+            tasks={tasks}
+            toggleTask={toggleTask}
+            isToggling={toggleTaskPending}
+            onDelete={(taskId) =>
+              navigate({
+                to: "/lists/$listId/tasks/$taskId/delete",
+                params: { listId, taskId },
+              })
+            }
+            isDeleting={deleteTaskPending}
+            setCurrentTask={setCurrentTask}
+            isSettingCurrent={setCurrentTaskPending}
+            clearCurrentTask={clearCurrentTask}
+            clearCurrentTaskPending={clearCurrentTaskPending}
+            listId={listId}
+            updateTaskOrder={updateTaskOrder}
+            isReordering={isReordering}
+          />
+        )}
+      </div>
 
       <FabButton
         to="/lists/$listId/tasks/new"

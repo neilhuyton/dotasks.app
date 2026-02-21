@@ -1,5 +1,3 @@
-// src/routes/_authenticated/lists/$listId/tasks/new.tsx
-
 import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,11 +7,9 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/trpc";
 
-export const Route = createFileRoute("/_authenticated/lists/$listId/tasks/new")(
-  {
-    component: NewTaskPage,
-  },
-);
+export const Route = createFileRoute("/_authenticated/lists/$listId/tasks/new")({
+  component: NewTaskPage,
+});
 
 function NewTaskPage() {
   const { listId } = Route.useParams();
@@ -79,14 +75,17 @@ function NewTaskPage() {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) return;
 
+    const desc = description.trim() || undefined;
+
+    // Clear form immediately (optimistic UX)
+    setTitle("");
+    setDescription("");
+
     mutation.mutate({
       title: trimmedTitle,
       listId,
-      description: description.trim() || undefined,
+      description: desc,
     });
-
-    setTitle("");
-    setDescription("");
   };
 
   const handleCancel = () => {
@@ -127,8 +126,10 @@ function NewTaskPage() {
 
             <form
               onSubmit={handleSubmit}
+              data-testid="new-task-form"  // ← added this
               aria-labelledby="new-task-heading"
               className="space-y-8"
+              autoComplete="off"
             >
               <div className="space-y-6 text-left">
                 <div className="space-y-3">
@@ -141,13 +142,14 @@ function NewTaskPage() {
                   </label>
                   <Input
                     id="task-title"
+                    name="task-title-new"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Enter task title..."
                     autoFocus
                     required
                     disabled={isPending}
-                    className="h-14 text-lg"
+                    autoComplete="off"
                   />
                 </div>
 
@@ -160,12 +162,13 @@ function NewTaskPage() {
                   </label>
                   <Textarea
                     id="task-description"
+                    name="task-description-new"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Add any notes, steps, links, or extra context..."
                     rows={5}
                     disabled={isPending}
-                    className="resize-none text-base"
+                    autoComplete="off"
                   />
                 </div>
               </div>

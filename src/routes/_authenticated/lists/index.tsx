@@ -12,8 +12,11 @@ export const Route = createFileRoute("/_authenticated/lists/")({
 
 function ListsPage() {
   return (
-    <PageContainer className="relative pb-24 md:pb-28">
-      <ListsTable />
+    <PageContainer className="relative min-h-[calc(100vh-4rem)] pb-24 md:pb-28">
+      {/* Rely on the parent layout's padding + max-width */}
+      <div className="space-y-6">
+        <ListsTable />
+      </div>
 
       <FabButton
         to="/lists/new"
