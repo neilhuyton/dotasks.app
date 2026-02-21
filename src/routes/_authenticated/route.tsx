@@ -2,7 +2,7 @@
 
 import { createFileRoute, redirect, Outlet } from "@tanstack/react-router";
 import { useAuthStore } from "@/store/authStore";
-import Navigation from "@/components/Navigation";
+// import Navigation from "@/components/Navigation";
 import ProfileIcon from "@/components/ProfileIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ColorThemeToggle } from "@/components/ColorThemeToggle";
@@ -51,7 +51,7 @@ export const Route = createFileRoute("/_authenticated")({
         </main>
 
         {/* Bottom navigation – full width, no extra side padding */}
-        <Navigation />
+        {/* <Navigation /> */}
       </div>
     );
   },

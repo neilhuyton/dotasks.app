@@ -26,7 +26,7 @@ export function FabButton({
       asChild
       size="lg"
       className={`
-        fixed bottom-24 right-4 z-50
+        fixed bottom-8 right-6 z-50
         rounded-full w-14 h-14
         shadow-xl hover:shadow-2xl
         transition-all duration-200 hover:scale-110

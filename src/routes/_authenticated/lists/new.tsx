@@ -57,9 +57,7 @@ function CreateListPage() {
 
     onSuccess: (newList) => {
       utils.list.getAll.setData(undefined, (old = []) =>
-        old.map((l) =>
-          l.id.startsWith("temp-") ? { ...l, ...newList } : l
-        )
+        old.map((l) => (l.id.startsWith("temp-") ? { ...l, ...newList } : l)),
       );
 
       // Show success toast
@@ -115,9 +113,6 @@ function CreateListPage() {
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
                 Create New List
               </h1>
-              <p className="text-muted-foreground text-lg">
-                Give your list a name and optional description
-              </p>
             </div>
 
             <form
@@ -141,7 +136,7 @@ function CreateListPage() {
                     autoFocus
                     required
                     disabled={mutation.isPending}
-                    className="h-12 text-lg"
+                    autoComplete="off"
                   />
                 </div>
 
@@ -160,6 +155,7 @@ function CreateListPage() {
                     disabled={mutation.isPending}
                     rows={6}
                     className="resize-none text-base"
+                    autoComplete="off"
                   />
                 </div>
               </div>

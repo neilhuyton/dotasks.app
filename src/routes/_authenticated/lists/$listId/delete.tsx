@@ -114,16 +114,6 @@ function DeleteListConfirmPage() {
           className="mt-auto flex flex-col gap-4 sm:flex-row sm:justify-center w-full max-w-sm mx-auto pb-10"
         >
           <Button
-            type="button"
-            variant="outline"
-            onClick={handleCancel}
-            disabled={mutation.isPending || isListLoading}
-            className="w-full sm:w-32"
-          >
-            Cancel
-          </Button>
-
-          <Button
             type="submit"
             variant="destructive"
             disabled={mutation.isPending || isListLoading || !list}
@@ -133,6 +123,16 @@ function DeleteListConfirmPage() {
               <Loader2 className="mr-2 h-5 w-5 animate-spin" />
             )}
             {mutation.isPending ? "Deleting..." : "Delete List"}
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleCancel}
+            disabled={mutation.isPending || isListLoading}
+            className="w-full sm:w-32"
+          >
+            Cancel
           </Button>
         </form>
       </div>

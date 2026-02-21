@@ -4,8 +4,8 @@ import {
   Star,
   Trash2,
   Pencil,
-  Pin,
-  PinOff,
+  // Pin,
+  // PinOff,
   MoreHorizontal,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
@@ -42,40 +42,36 @@ export function TaskActionsDropdown({
 }: TaskActionsDropdownProps) {
   const utils = trpc.useUtils();
 
-const togglePinMutation = trpc.task.pinToggle.useMutation({
-onMutate: async ({ id }) => {
-  console.log(`[RQ optimistic] Starting pin toggle for task ${id} on list ${listId}`);
+  const togglePinMutation = trpc.task.pinToggle.useMutation({
+    onMutate: async ({ id }) => {
+      const input = { listId };
 
-  const input = { listId };
+      await utils.task.getByList.cancel(input);
 
-  await utils.task.getByList.cancel(input);
+      const previous = utils.task.getByList.getData(input) ?? [];
 
-  const previous = utils.task.getByList.getData(input) ?? [];
-  console.log("[RQ optimistic] Previous tasks:", previous.map(t => ({ id: t.id, pinned: t.isPinned })));
+      utils.task.getByList.setData(input, (old = []) => {
+        const next = old.map((t) =>
+          t.id === id ? { ...t, isPinned: !t.isPinned } : t,
+        );
+        return next;
+      });
 
-  utils.task.getByList.setData(input, (old = []) => {
-    const next = old.map((t) =>
-      t.id === id ? { ...t, isPinned: !t.isPinned } : t
-    );
-    console.log("[RQ optimistic] After optimistic update:", next.map(t => ({ id: t.id, pinned: t.isPinned })));
-    return next;
+      return { previous };
+    },
+
+    onError: (_, __, ctx) => {
+      const input = { listId };
+      if (ctx?.previous) {
+        utils.task.getByList.setData(input, ctx.previous);
+      }
+    },
+
+    onSettled: () => {
+      const input = { listId };
+      utils.task.getByList.invalidate(input);
+    },
   });
-
-  return { previous };
-},
-
-  onError: (_, __, ctx) => {
-    const input = { listId };
-    if (ctx?.previous) {
-      utils.task.getByList.setData(input, ctx.previous);
-    }
-  },
-
-  onSettled: () => {
-    const input = { listId };
-    utils.task.getByList.invalidate(input);
-  },
-});
 
   const handleToggleCurrent = () => {
     if (task.isCompleted || isPending) return;
@@ -86,10 +82,10 @@ onMutate: async ({ id }) => {
     }
   };
 
-  const handleTogglePin = () => {
-    if (isPending) return;
-    togglePinMutation.mutate({ id: task.id });
-  };
+  // const handleTogglePin = () => {
+  //   if (isPending) return;
+  //   togglePinMutation.mutate({ id: task.id });
+  // };
 
   return (
     <div className="flex items-center gap-0.5">
@@ -108,7 +104,7 @@ onMutate: async ({ id }) => {
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end" className="min-w-[180px]">
-          <DropdownMenuItem
+          {/* <DropdownMenuItem
             onClick={handleTogglePin}
             disabled={togglePinMutation.isPending || isPending}
             className={cn(
@@ -127,7 +123,7 @@ onMutate: async ({ id }) => {
                 <Pin className="mr-2 h-4 w-4" /> Pin to top
               </>
             )}
-          </DropdownMenuItem>
+          </DropdownMenuItem> */}
 
           {!task.isCompleted && (
             <DropdownMenuItem

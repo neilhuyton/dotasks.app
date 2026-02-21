@@ -138,9 +138,6 @@ function EditListPage() {
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
                 Edit List
               </h1>
-              <p className="text-muted-foreground text-lg">
-                Update the name and description of your list
-              </p>
             </div>
 
             <form
@@ -156,7 +153,6 @@ function EditListPage() {
                   >
                     List name <span className="text-destructive">*</span>
                   </label>
-                  {/* Removed h-12 text-lg → now matches login input style */}
                   <Input
                     id="list-title"
                     value={title}

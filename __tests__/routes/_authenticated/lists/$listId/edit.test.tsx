@@ -124,9 +124,6 @@ describe("Edit List Page (/_authenticated/lists/$listId/edit)", () => {
     await renderEditListPage();
 
     expect(screen.getByText("Edit List")).toBeInTheDocument();
-    expect(
-      screen.getByText("Update the name and description of your list"),
-    ).toBeInTheDocument();
 
     expect(screen.getByLabelText(/List name/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Work, Groceries, Ideas...")).toBeInTheDocument();
