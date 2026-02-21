@@ -54,7 +54,7 @@ export const taskRouter = router({
 
       return ctx.prisma.task.findMany({
         where: { listId: input.listId },
-        orderBy: [{ isPinned: "desc" }, { order: "asc" }],
+        orderBy: { order: "desc" }, // highest order (newest) at the bottom
       });
     }),
 
