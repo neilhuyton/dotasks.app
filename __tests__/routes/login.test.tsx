@@ -38,47 +38,6 @@ describe("LoginPage", () => {
     },
   });
 
-  const setup = async (initialPath = "/login") => {
-    const history = createMemoryHistory({ initialEntries: [initialPath] });
-    const testRouter = createRouter({ routeTree: router.routeTree, history });
-
-    await waitFor(() => {
-      render(
-        <trpc.Provider
-          client={trpc.createClient({
-            links: [
-              httpLink({
-                url: "http://localhost:8888/trpc",
-              }),
-            ],
-          })}
-          queryClient={queryClient}
-        >
-          <QueryClientProvider client={queryClient}>
-            <RouterProvider router={testRouter} />
-          </QueryClientProvider>
-        </trpc.Provider>,
-      );
-    });
-
-    return { history, testRouter };
-  };
-
-  const fillAndSubmitForm = async (email: string, password: string) => {
-    const emailInput = await screen.findByTestId("email-input");
-    const passwordInput = await screen.findByTestId("password-input");
-    const form = await screen.findByTestId("login-form");
-
-    await userEvent.clear(emailInput);
-    await userEvent.clear(passwordInput);
-    await userEvent.type(emailInput, email);
-    await userEvent.type(passwordInput, password);
-
-    form.dispatchEvent(
-      new Event("submit", { bubbles: true, cancelable: true }),
-    );
-  };
-
   beforeAll(() => {
     server.listen({ onUnhandledRequest: "bypass" });
 
@@ -127,34 +86,45 @@ describe("LoginPage", () => {
     process.removeAllListeners("unhandledRejection");
   });
 
-  it("renders form fields and controls", async () => {
-    await setup();
+  const setup = async (initialPath = "/login") => {
+    const history = createMemoryHistory({ initialEntries: [initialPath] });
+    const testRouter = createRouter({ routeTree: router.routeTree, history });
 
-    await waitFor(() => {
-      expect(
-        screen.getByRole("heading", { name: /login to your account/i }),
-      ).toBeInTheDocument();
-      expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: /login/i }),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole("link", { name: /sign up/i }),
-      ).toBeInTheDocument();
-      expect(screen.getByTestId("forgot-password-link")).toBeInTheDocument();
-    });
-  });
+    render(
+      <trpc.Provider
+        client={trpc.createClient({
+          links: [httpLink({ url: "http://localhost:8888/trpc" })],
+        })}
+        queryClient={queryClient}
+      >
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={testRouter} />
+        </QueryClientProvider>
+      </trpc.Provider>,
+    );
 
-  it("successfully logs in and updates auth store", async () => {
-    server.use(loginHandler);
+    return { history, testRouter };
+  };
 
-    await setup();
+  const waitForFormReady = async () =>
+    waitFor(() => screen.getByTestId("login-form"), { timeout: 2000 });
 
-    await waitFor(() => screen.getByTestId("login-form"), { timeout: 1500 });
+  const fillAndSubmit = async (email: string, password: string) => {
+    const emailInput = screen.getByTestId("email-input");
+    const passwordInput = screen.getByTestId("password-input");
 
-    await fillAndSubmitForm("testuser@example.com", "password123");
+    await userEvent.clear(emailInput);
+    await userEvent.clear(passwordInput);
+    await userEvent.type(emailInput, email);
+    await userEvent.type(passwordInput, password);
 
+    const form = screen.getByTestId("login-form");
+    form.dispatchEvent(
+      new Event("submit", { bubbles: true, cancelable: true }),
+    );
+  };
+
+  const expectAuthStoreUpdated = async () => {
     await waitFor(
       () => {
         const state = useAuthStore.getState();
@@ -165,9 +135,53 @@ describe("LoginPage", () => {
       },
       { timeout: 4000 },
     );
+  };
+
+  const expectErrorMessage = async (text: string | RegExp) => {
+    const message = await waitFor(() => screen.getByTestId("login-message"), {
+      timeout: 3500,
+    });
+    expect(message).toHaveTextContent(text);
+    expect(message).toHaveClass("text-red-500");
+  };
+
+  const expectLoadingState = async (isLoading: boolean) => {
+    await waitFor(
+      () => {
+        const btn = screen.getByTestId("login-button");
+        expect(btn).toHaveTextContent(isLoading ? "Logging in..." : "Login");
+        expect(btn).toHaveProperty("disabled", isLoading);
+      },
+      { timeout: 2500 },
+    );
+  };
+
+  it("renders form fields, heading, button, links", async () => {
+    await setup();
+    await waitForFormReady();
+
+    expect(
+      screen.getByRole("heading", { name: /login to your account/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /login/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /sign up/i })).toBeInTheDocument();
+    expect(screen.getByTestId("forgot-password-link")).toBeInTheDocument();
   });
 
-  it("shows error message on invalid credentials", async () => {
+  it("successful login → updates auth store", async () => {
+    server.use(loginHandler);
+
+    await setup();
+    await waitForFormReady();
+
+    await fillAndSubmit("testuser@example.com", "password123");
+
+    await expectAuthStoreUpdated();
+  });
+
+  it("invalid credentials → shows error, keeps store unauthenticated", async () => {
     server.use(
       trpcMsw.login.mutation(async () => {
         await new Promise((r) => setTimeout(r, 50));
@@ -179,47 +193,30 @@ describe("LoginPage", () => {
     );
 
     await setup();
+    await waitForFormReady();
 
-    await waitFor(() => screen.getByTestId("login-form"));
+    await fillAndSubmit("wronguser@example.com", "wrongpassword");
 
-    await fillAndSubmitForm("wronguser@example.com", "wrongpassword");
+    await expectErrorMessage("Invalid email or password");
+    expect(useAuthStore.getState().isLoggedIn).toBe(false);
+  });
+
+  it("client-side validation errors on invalid input", async () => {
+    await setup();
+    await waitForFormReady();
+
+    await fillAndSubmit("invalid-email", "short");
 
     await waitFor(
       () => {
-        const message = screen.getByTestId("login-message");
-        expect(message).toHaveTextContent(
-          "Login failed: Invalid email or password",
-        );
-        expect(message).toHaveClass("text-red-500");
-        expect(useAuthStore.getState().isLoggedIn).toBe(false);
+        expect(screen.getByText(/valid email address/i)).toBeInTheDocument();
+        expect(screen.getByText(/at least 8 characters/i)).toBeInTheDocument();
       },
-      { timeout: 3000 },
+      { timeout: 2000 },
     );
   });
 
-  it("shows validation errors for invalid input", async () => {
-    await setup();
-
-    await waitFor(() => screen.getByTestId("login-form"));
-
-    const emailInput = screen.getByTestId("email-input");
-    const passwordInput = screen.getByTestId("password-input");
-    const form = screen.getByTestId("login-form");
-
-    await userEvent.type(emailInput, "invalid-email");
-    await userEvent.type(passwordInput, "short");
-
-    form.dispatchEvent(
-      new Event("submit", { bubbles: true, cancelable: true }),
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText(/valid email address/i)).toBeInTheDocument();
-      expect(screen.getByText(/at least 8 characters/i)).toBeInTheDocument();
-    });
-  });
-
-  it("disables button and shows loading state during failed login", async () => {
+  it("shows loading state during submission (failed case)", async () => {
     server.use(
       trpcMsw.login.mutation(async () => {
         await new Promise((r) => setTimeout(r, 50));
@@ -231,40 +228,28 @@ describe("LoginPage", () => {
     );
 
     await setup();
-
-    await waitFor(() => screen.getByTestId("login-form"));
+    await waitForFormReady();
 
     const loginButton = screen.getByTestId("login-button");
     expect(loginButton).not.toBeDisabled();
     expect(loginButton).toHaveTextContent("Login");
 
-    await fillAndSubmitForm("wronguser@example.com", "wrongpassword");
+    await fillAndSubmit("wronguser@example.com", "wrongpassword");
 
-    await waitFor(() => {
-      expect(loginButton).toBeDisabled();
-      expect(loginButton).toHaveTextContent("Logging in...");
-    });
+    await expectLoadingState(true);
 
-    await waitFor(
-      () => {
-        expect(loginButton).not.toBeDisabled();
-        expect(loginButton).toHaveTextContent("Login");
-        expect(screen.getByTestId("login-message")).toHaveTextContent(
-          /invalid email or password/i,
-        );
-      },
-      { timeout: 3000 },
-    );
+    await waitFor(() => expectLoadingState(false), { timeout: 3000 });
+
+    await expectErrorMessage(/invalid email or password/i);
   });
 
-  it("renders forgot password link correctly", async () => {
+  it("forgot password link is rendered correctly", async () => {
     await setup();
+    await waitForFormReady();
 
-    await waitFor(() => {
-      const link = screen.getByTestId("forgot-password-link");
-      expect(link).toBeInTheDocument();
-      expect(link).toHaveAttribute("href", "#");
-      expect(link).toHaveTextContent("Forgot your password?");
-    });
+    const link = screen.getByTestId("forgot-password-link");
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute("href", "#");
+    expect(link).toHaveTextContent("Forgot your password?");
   });
 });

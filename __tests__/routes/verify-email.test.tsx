@@ -1,4 +1,4 @@
-// __tests__/VerifyEmailPage.test.tsx
+// __tests__/routes/verify-email.test.tsx
 
 import {
   describe,
@@ -7,62 +7,34 @@ import {
   beforeAll,
   beforeEach,
   afterEach,
+  afterAll,
   vi,
 } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { httpLink } from "@trpc/client";
-import { trpc } from "../../src/trpc";
+import { screen, waitFor } from "@testing-library/react";
 import { server } from "../../__mocks__/server";
 import "@testing-library/jest-dom";
 
 import { verifyEmailHandler } from "../../__mocks__/handlers/verifyEmail";
-import { mockUsers, type MockUser } from "../../__mocks__/mockUsers";
+import { mockUsers } from "../../__mocks__/mockUsers";
 import { TEST_VERIFICATION_TOKENS } from "../test-constants";
 import { useAuthStore } from "../../src/store/authStore";
-import { createRouter, RouterProvider } from "@tanstack/react-router";
-import { createMemoryHistory } from "@tanstack/history";
 import { router } from "../../src/router/router";
 
+import {
+  renderWithTrpcRouter,
+  expectSuccessMessage,
+  expectErrorMessage,
+} from "../utils/test-helpers";
+
+function renderVerifyEmail(token: string) {
+  renderWithTrpcRouter({
+    initialPath: `/verify-email?token=${token}`,
+    routeTree: router.routeTree,
+  });
+}
+
 describe("VerifyEmailPage", () => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, gcTime: 0, staleTime: 0 },
-      mutations: { retry: false },
-    },
-  });
-
-  const trpcClient = trpc.createClient({
-    links: [httpLink({ url: "http://localhost:8888/trpc" })],
-  });
-
-  const initialMockUsers: MockUser[] = JSON.parse(JSON.stringify(mockUsers));
-
-  const renderVerifyEmail = (token: string) => {
-    const history = createMemoryHistory({
-      initialEntries: [`/verify-email?token=${token}`],
-    });
-
-    const testRouter = createRouter({
-      routeTree: router.routeTree,
-      history,
-      context: {
-        queryClient,
-        trpcClient,
-      },
-      defaultPreload: "intent",
-    });
-
-    render(
-      <trpc.Provider client={trpcClient} queryClient={queryClient}>
-        <QueryClientProvider client={queryClient}>
-          <RouterProvider router={testRouter} />
-        </QueryClientProvider>
-      </trpc.Provider>
-    );
-
-    return testRouter;
-  };
+  const initialMockUsers = structuredClone(mockUsers);
 
   beforeAll(() => {
     server.listen({ onUnhandledRequest: "warn" });
@@ -70,11 +42,10 @@ describe("VerifyEmailPage", () => {
 
   beforeEach(() => {
     server.use(verifyEmailHandler);
-    queryClient.clear();
     vi.clearAllMocks();
 
     mockUsers.length = 0;
-    mockUsers.push(...JSON.parse(JSON.stringify(initialMockUsers)));
+    mockUsers.push(...structuredClone(initialMockUsers));
 
     useAuthStore.setState({
       isLoggedIn: false,
@@ -84,75 +55,82 @@ describe("VerifyEmailPage", () => {
     });
   });
 
-  afterEach(() => {
-    server.resetHandlers();
-    queryClient.clear();
-  });
+  afterEach(() => server.resetHandlers());
+  afterAll(() => server.close());
 
-  afterAll(() => {
-    server.close();
-  });
-
-  it("successfully verifies email with valid token", async () => {
+  it("shows loading then success for valid delayed token", async () => {
     renderVerifyEmail(TEST_VERIFICATION_TOKENS.DELAYED_SUCCESS);
 
     await waitFor(
+      () =>
+        expect(screen.getByTestId("verify-email-loading")).toBeInTheDocument(),
+      { timeout: 1200 },
+    );
+
+    await waitFor(
       () => {
-        expect(screen.getByText("Email Verification")).toBeInTheDocument();
-        const message = screen.getByTestId("verify-message");
-        expect(message).toBeInTheDocument();
-        expect(message).toHaveTextContent("Email verified successfully!");
-        expect(message).toHaveClass("text-green-800");
+        expect(
+          screen.queryByTestId("verify-email-loading"),
+        ).not.toBeInTheDocument();
+        expect(screen.getByTestId("verify-message")).toBeInTheDocument();
       },
-      { timeout: 3000 }
+      { timeout: 3500 },
+    );
+
+    await expectSuccessMessage(
+      "verify-message",
+      "Email verified successfully!",
+      "text-green-800",
+      4000,
     );
   });
 
-  it("displays error message for invalid or expired verification token", async () => {
+  it("shows error for invalid token", async () => {
     renderVerifyEmail(TEST_VERIFICATION_TOKENS.INVALID);
 
     await waitFor(
       () => {
-        const message = screen.getByTestId("verify-message");
-        expect(message).toBeInTheDocument();
-        expect(message).toHaveTextContent("Invalid or expired verification token");
-        expect(message).toHaveClass("text-red-800");
+        expect(
+          screen.queryByTestId("verify-email-loading"),
+        ).not.toBeInTheDocument();
+        expect(screen.getByTestId("verify-message")).toBeInTheDocument();
       },
-      { timeout: 3000 }
+      { timeout: 3500 },
+    );
+
+    await expectErrorMessage(
+      "verify-message",
+      "Invalid or expired verification token",
+      "text-red-800",
     );
   });
 
-  it("displays error message for already verified email", async () => {
+  it("shows error for already verified email", async () => {
     renderVerifyEmail(TEST_VERIFICATION_TOKENS.ALREADY_VERIFIED);
 
     await waitFor(
       () => {
-        const message = screen.getByTestId("verify-message");
-        expect(message).toBeInTheDocument();
-        expect(message).toHaveTextContent("Email already verified");
-        expect(message).toHaveClass("text-red-800");
+        expect(
+          screen.queryByTestId("verify-email-loading"),
+        ).not.toBeInTheDocument();
+        expect(screen.getByTestId("verify-message")).toBeInTheDocument();
       },
-      { timeout: 3000 }
+      { timeout: 3500 },
+    );
+
+    await expectErrorMessage(
+      "verify-message",
+      "Email already verified",
+      "text-red-800",
     );
   });
 
-  it("displays verifying message during verification process", async () => {
+  it("displays the page title", async () => {
     renderVerifyEmail(TEST_VERIFICATION_TOKENS.DELAYED_SUCCESS);
 
     await waitFor(
-      () => {
-        expect(screen.getByTestId("verify-email-loading")).toBeInTheDocument();
-      },
-      { timeout: 1000 }
-    );
-
-    await waitFor(
-      () => {
-        const message = screen.getByTestId("verify-message");
-        expect(message).toBeInTheDocument();
-        expect(message).toHaveTextContent("Email verified successfully!");
-      },
-      { timeout: 3000 }
+      () => expect(screen.getByText("Email Verification")).toBeInTheDocument(),
+      { timeout: 1500 },
     );
   });
 });

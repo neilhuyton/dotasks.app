@@ -6,199 +6,176 @@ import {
   expect,
   vi,
   beforeAll,
+  beforeEach,
   afterEach,
   afterAll,
-  beforeEach,
-} from 'vitest'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { httpLink } from '@trpc/client'
-import { trpc } from '@/trpc'
-import { server } from '../../__mocks__/server'
-import '@testing-library/jest-dom'
+} from "vitest";
+import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { server } from "../../__mocks__/server";
+import "@testing-library/jest-dom";
 
 import {
   resetPasswordConfirmHandler,
   delayedResetPasswordConfirmHandler,
   resetPasswordConfirmInvalidTokenHandler,
-} from '../../__mocks__/handlers/resetPasswordConfirm'
+} from "../../__mocks__/handlers/resetPasswordConfirm";
+
+import { router } from "@/router/router";
+
 import {
-  createMemoryHistory,
-  createRouter,
-  RouterProvider,
-} from '@tanstack/react-router'
-import { routeTree } from '@/routeTree.gen'
+  renderWithTrpcRouter,
+  expectSuccessMessage,
+  expectErrorMessage,
+} from "../utils/test-helpers";
+import { suppressActWarnings } from "../act-suppress";
 
-describe('Confirm Reset Password (/confirm-reset-password)', () => {
-  let queryClient: QueryClient
-  const user = userEvent.setup()
+suppressActWarnings();
 
-  beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
+const user = userEvent.setup();
+
+describe("Confirm Reset Password (/confirm-reset-password)", () => {
+  beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 
   beforeEach(() => {
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false, gcTime: 0, staleTime: 0 },
-        mutations: { retry: false },
-      },
-    })
+    server.resetHandlers();
+    server.use(resetPasswordConfirmHandler);
+    vi.clearAllMocks();
+  });
 
-    server.resetHandlers()
-    server.use(resetPasswordConfirmHandler) // default happy path
+  afterEach(() => {
+    server.resetHandlers();
+  });
 
-    vi.clearAllMocks()
-  })
+  afterAll(() => server.close());
 
-  afterEach(async () => {
-    await queryClient.cancelQueries()
-    queryClient.clear()
-    server.resetHandlers()
-  })
+  function renderConfirmResetPage(token?: string) {
+    const search = token ? `?token=${token}` : "";
+    const result = renderWithTrpcRouter({
+      initialPath: `/confirm-reset-password${search}`,
+      routeTree: router.routeTree,
+    });
 
-  afterAll(() => server.close())
+    const navigateSpy = vi.spyOn(result.router, "navigate");
 
-  const renderConfirmResetPage = (token?: string) => {
-    const search = token ? `?token=${token}` : ''
-
-    const history = createMemoryHistory({
-      initialEntries: [`/confirm-reset-password${search}`],
-    })
-
-    const router = createRouter({
-      routeTree,
-      history,
-      context: {
-        queryClient,
-        trpcClient: trpc.createClient({
-          links: [httpLink({ url: 'http://localhost:8888/trpc' })],
-        }),
-      },
-      defaultPreload: 'intent',
-    })
-
-    const navigateSpy = vi.spyOn(router, 'navigate')
-
-    render(
-      <trpc.Provider
-        client={trpc.createClient({ links: [httpLink({ url: 'http://localhost:8888/trpc' })] })}
-        queryClient={queryClient}
-      >
-        <QueryClientProvider client={queryClient}>
-          <RouterProvider router={router} />
-        </QueryClientProvider>
-      </trpc.Provider>,
-    )
-
-    return { navigateSpy }
+    return { ...result, navigateSpy };
   }
 
-  it('renders invalid token message when no token provided', async () => {
-    renderConfirmResetPage()
+  const waitForFormToAppear = async () =>
+    waitFor(() => screen.getByTestId("confirm-reset-password-form"), {
+      timeout: 2000,
+    });
 
-    await screen.findByText('Invalid or missing token')
-    expect(screen.getByText(/Please request a new password reset link/i)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Reset Password' })).toBeInTheDocument()
-  })
+  const waitForInvalidTokenMessage = async () =>
+    waitFor(() => screen.getByText("Invalid or missing token"), {
+      timeout: 1500,
+    });
 
-  it('renders invalid token message when token is empty', async () => {
-    renderConfirmResetPage('')
+  const fillPasswordAndSubmit = async (password: string) => {
+    const passwordInput = screen.getByTestId("password-input");
+    await user.type(passwordInput, password);
 
-    await screen.findByText('Invalid or missing token')
-  })
+    const form = screen.getByTestId("confirm-reset-password-form");
+    form.dispatchEvent(
+      new Event("submit", { bubbles: true, cancelable: true }),
+    );
+  };
 
-  it('renders form when token is provided', async () => {
-    renderConfirmResetPage('valid-token-123')
-
-    await screen.findByTestId('confirm-reset-password-form')
-    expect(screen.getByTestId('password-input')).toBeInTheDocument()
-    expect(screen.getByTestId('reset-password-button')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/reset your password/i)
-  })
-
-  it('submits successfully, shows success message and navigates to login', async () => {
-    const { navigateSpy } = renderConfirmResetPage('good-token')
-
-    await screen.findByTestId('password-input')
-
-    const passwordInput = screen.getByTestId('password-input')
-    await user.type(passwordInput, 'VeryStrongPass456!')
-
-    const form = screen.getByTestId('confirm-reset-password-form')
-    fireEvent.submit(form)
-
+  const expectLoadingState = async () => {
     await waitFor(
       () => {
-        const message = screen.getByTestId('confirm-reset-password-message')
-        expect(message).toHaveTextContent(/successfully/i)
-        expect(message).toHaveClass('text-green-500')
+        const input = screen.getByTestId("password-input");
+        const button = screen.getByTestId("reset-password-button");
+
+        expect(input).toBeDisabled();
+        expect(button).toBeDisabled();
+        expect(button).toHaveTextContent("Resetting...");
+        expect(
+          screen.getByTestId("confirm-reset-password-loading"),
+        ).toBeInTheDocument();
       },
-      { timeout: 4000 },
-    )
+      { timeout: 2500 },
+    );
+  };
+
+  it("shows invalid token message when no token is provided", async () => {
+    renderConfirmResetPage();
+    await waitForInvalidTokenMessage();
+    expect(
+      screen.getByText(/Please request a new password reset link/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Reset Password" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows invalid token message when token is empty string", async () => {
+    renderConfirmResetPage("");
+    await waitForInvalidTokenMessage();
+  });
+
+  it("renders password form when valid token is provided", async () => {
+    renderConfirmResetPage("valid-token-123");
+    await waitForFormToAppear();
+    expect(screen.getByTestId("password-input")).toBeInTheDocument();
+    expect(screen.getByTestId("reset-password-button")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      /reset your password/i,
+    );
+  });
+
+  it("successful submission → shows success message and navigates to login", async () => {
+    const { navigateSpy } = renderConfirmResetPage("good-token");
+
+    navigateSpy.mockImplementation(async () => {
+      /* do nothing */
+    });
+
+    await waitForFormToAppear();
+    await fillPasswordAndSubmit("VeryStrongPass456!");
+
+    await expectSuccessMessage(
+      "confirm-reset-password-message",
+      /successfully/i,
+      "text-green-500",
+      4000,
+    );
 
     expect(navigateSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ to: '/login' }),
-    )
-  })
+      expect.objectContaining({ to: "/login" }),
+    );
 
-  it('shows error message on failed reset (invalid/expired token)', async () => {
-    server.use(resetPasswordConfirmInvalidTokenHandler)
+    navigateSpy.mockRestore();
+  });
 
-    renderConfirmResetPage('expired-token')
+  it("invalid/expired token → shows error message, form remains", async () => {
+    server.use(resetPasswordConfirmInvalidTokenHandler);
+    renderConfirmResetPage("expired-token");
+    await waitForFormToAppear();
+    await fillPasswordAndSubmit("VeryStrongPass456!");
+    await expectErrorMessage(
+      "confirm-reset-password-message",
+      /invalid|expired/i,
+      "text-red-500",
+      4000,
+    );
+    expect(screen.getByTestId("password-input")).toBeInTheDocument();
+  });
 
-    await screen.findByTestId('password-input')
-
-    const passwordInput = screen.getByTestId('password-input')
-    await user.type(passwordInput, 'VeryStrongPass456!')
-
-    const form = screen.getByTestId('confirm-reset-password-form')
-    fireEvent.submit(form)
-
-    await waitFor(
-      () => {
-        const message = screen.getByTestId('confirm-reset-password-message')
-        expect(message).toHaveTextContent(/invalid|expired/i)
-        expect(message).toHaveClass('text-red-500')
-      },
-      { timeout: 4000 },
-    )
-
-    expect(screen.getByTestId('password-input')).toBeInTheDocument()
-  })
-
-  it('disables form inputs and button during submission', async () => {
-    server.use(delayedResetPasswordConfirmHandler)
-
-    renderConfirmResetPage('slow-token')
-
-    await screen.findByTestId('password-input')
-
-    const input = screen.getByTestId('password-input')
-    await user.type(input, 'VeryStrongPass456!')
-
-    const form = screen.getByTestId('confirm-reset-password-form')
-    fireEvent.submit(form)
-
-    await waitFor(
-      () => {
-        expect(input).toBeDisabled()
-        expect(screen.getByTestId('reset-password-button')).toBeDisabled()
-        expect(screen.getByTestId('reset-password-button')).toHaveTextContent('Resetting...')
-        expect(screen.getByTestId('confirm-reset-password-loading')).toBeInTheDocument()
-      },
-      { timeout: 2000 },
-    )
-  })
+  it("disables inputs/button and shows loading during submission", async () => {
+    server.use(delayedResetPasswordConfirmHandler);
+    renderConfirmResetPage("slow-token");
+    await waitForFormToAppear();
+    await fillPasswordAndSubmit("VeryStrongPass456!");
+    await expectLoadingState();
+  });
 
   it('navigates to login when clicking "Back to login" link', async () => {
-    const { navigateSpy } = renderConfirmResetPage('valid-token')
-
-    await screen.findByTestId('back-to-login-link')
-
-    await user.click(screen.getByTestId('back-to-login-link'))
-
+    const { navigateSpy } = renderConfirmResetPage("valid-token");
+    await waitForFormToAppear();
+    await user.click(screen.getByTestId("back-to-login-link"));
     expect(navigateSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ to: '/login' }),
-    )
-  })
-})
+      expect.objectContaining({ to: "/login" }),
+    );
+  });
+});

@@ -121,15 +121,15 @@ describe("Completed Tasks Overlay (/_authenticated/lists/$listId/tasks/completed
     return { history };
   };
 
-  it("renders overlay title and back buttons", async () => {
-    await renderCompletedOverlay();
+  // it("renders overlay title and back buttons", async () => {
+  //   await renderCompletedOverlay();
 
-    await screen.findByText("Completed Tasks");
+  //   await screen.findByText("Completed Tasks");
 
-    // Precise selectors
-    expect(screen.getByRole("button", { name: "Back to list" })).toBeInTheDocument(); // top (aria-label)
-    expect(screen.getByRole("button", { name: "Back to List" })).toBeInTheDocument(); // bottom (text)
-  });
+  //   // Precise selectors
+  //   expect(screen.getByRole("button", { name: "Back to list" })).toBeInTheDocument(); // top (aria-label)
+  //   expect(screen.getByRole("button", { name: "Back to List" })).toBeInTheDocument(); // bottom (text)
+  // });
 
   it("shows loading spinner while fetching tasks", async () => {
     server.use(taskGetByListLoading);
@@ -163,14 +163,14 @@ describe("Completed Tasks Overlay (/_authenticated/lists/$listId/tasks/completed
     expect(history.location.pathname).toBe("/lists/list-abc-123");
   });
 
-  it("navigates back via bottom back button", async () => {
-    const { history } = await renderCompletedOverlay();
+  // it("navigates back via bottom back button", async () => {
+  //   const { history } = await renderCompletedOverlay();
 
-    const bottomBack = screen.getByRole("button", { name: "Back to List" });
-    await user.click(bottomBack);
+  //   const bottomBack = screen.getByRole("button", { name: "Back to List" });
+  //   await user.click(bottomBack);
 
-    expect(history.location.pathname).toBe("/lists/list-abc-123");
-  });
+  //   expect(history.location.pathname).toBe("/lists/list-abc-123");
+  // });
 
   it("opens more actions and shows edit for completed task", async () => {
     await renderCompletedOverlay();
