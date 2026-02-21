@@ -115,18 +115,6 @@ function CompletedTasksOverlay() {
           </div>
         )}
       </div>
-
-      {/* Bottom back button (visible when scrolled) */}
-      <div className="fixed bottom-6 inset-x-0 flex justify-center z-10 pointer-events-none">
-        <Button
-          variant="secondary"
-          size="lg"
-          className="pointer-events-auto shadow-xl rounded-full px-10"
-          onClick={handleBack}
-        >
-          Back to List
-        </Button>
-      </div>
     </div>
   );
 }
