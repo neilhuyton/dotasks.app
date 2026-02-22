@@ -81,7 +81,7 @@ export async function sendVerificationEmail(to: string, verificationToken: strin
     <p>If you didn’t register, please ignore this email.</p>
   `;
 
-  return sendMailWithDebug(to, "Verify Your Email Address boop", html);
+  return sendMailWithDebug(to, "Verify Your Email Address", html);
 }
 
 export async function sendResetPasswordEmail(to: string, resetToken: string) {
