@@ -1,4 +1,6 @@
-import { useMemo } from "react";
+// src/hooks/useListTasks.ts
+
+import { useMemo, useState } from "react";
 import { trpc } from "@/trpc";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/../server/trpc";
@@ -13,7 +15,7 @@ export function useListTasks(listId: string | null | undefined) {
   const queryKey = useMemo(() => ({ listId: listId! }), [listId]);
 
   const {
-    data: tasks = [],           // ← renamed rawTasks → tasks, no sorting applied
+    data: tasks = [],
     isFetching,
     isLoading,
   } = trpc.task.getByList.useQuery(queryKey, {
@@ -21,9 +23,13 @@ export function useListTasks(listId: string | null | undefined) {
     staleTime: 60_000, // 1 minute
   });
 
-  // const optimisticUpdate = (updater: (prev: Task[]) => Task[]) => {
-  //   utils.task.getByList.setData(queryKey, (prev = []) => updater([...prev]));
-  // };
+  const [pendingReorder, setPendingReorder] = useState<Task[] | null>(null);
+
+  const displayedTasks = pendingReorder ?? tasks;
+
+  const optimisticUpdate = (updater: (prev: Task[]) => Task[]) => {
+    utils.task.getByList.setData(queryKey, (prev = []) => updater([...prev]));
+  };
 
   const rollbackTo = (previous?: Task[]) => {
     if (previous) {
@@ -31,7 +37,9 @@ export function useListTasks(listId: string | null | undefined) {
     }
   };
 
-  // Reordering (drag & drop)
+  // ──────────────────────────────────────────────
+  // Reordering (drag & drop) – smooth, no flicker
+  // ──────────────────────────────────────────────
   const reorderTasks = trpc.task.reorder.useMutation({
     onMutate: async (updates: { id: string; order: number }[]) => {
       if (!enabled || updates.length === 0) return { previous: [] as Task[] };
@@ -39,49 +47,45 @@ export function useListTasks(listId: string | null | undefined) {
       await utils.task.getByList.cancel(queryKey);
       const previous = utils.task.getByList.getData(queryKey) ?? [];
 
-      // optimisticUpdate((prev) =>
-      //   prev.map((t) => {
-      //     const update = updates.find((u) => u.id === t.id);
-      //     return update ? { ...t, order: update.order } : t;
-      //   }),
-      // );
+      const newTasks = previous.map((t) => {
+        const update = updates.find((u) => u.id === t.id);
+        return update ? { ...t, order: update.order } : t;
+      }).sort((a, b) => a.order - b.order);
+
+      setPendingReorder(newTasks);
+
+      optimisticUpdate(() => newTasks);
 
       return { previous };
+    },
+
+    onSuccess: (result) => {
+      if (result.updated) {
+        optimisticUpdate((prev) =>
+          prev.map((t) => {
+            const update = result.updated.find((u) => u.id === t.id);
+            return update ? { ...t, order: update.order } : t;
+          }).sort((a, b) => a.order - b.order)
+        );
+      }
     },
 
     onError: (_, __, context) => {
       rollbackTo(context?.previous);
       console.error("Reorder failed");
+      toast.error("Failed to reorder tasks");
     },
 
     onSettled: () => {
+      setPendingReorder(null);
       utils.task.getByList.invalidate(queryKey);
     },
   });
 
-  // Create – no optimistic anymore (as per previous request)
+  // ──────────────────────────────────────────────
+  // Create task – NO optimistic update
+  // ──────────────────────────────────────────────
   const create = trpc.task.create.useMutation({
-    onMutate: async ({ id }) => {
-      if (!enabled) return { previous: [] as Task[] };
-
-      await utils.task.getByList.cancel(queryKey);
-      const previous = utils.task.getByList.getData(queryKey) ?? [];
-
-      // optimisticUpdate((prev) =>
-      //   prev.map((t) =>
-      //     t.id === id
-      //       ? {
-      //           ...t,
-      //           isCompleted: !t.isCompleted,
-      //           isCurrent: false,   // keep if you still want auto-clear current
-      //         }
-      //       : t,
-      //   ),
-      // );
-
-      return { previous };
-    },
-    
     onSuccess: () => {
       toast.success("Task created");
     },
@@ -90,12 +94,14 @@ export function useListTasks(listId: string | null | undefined) {
       toast.error("Failed to create task");
     },
 
-    // onSettled: () => {
-    //   utils.task.getByList.invalidate(queryKey);
-    // },
+    onSettled: () => {
+      utils.task.getByList.invalidate(queryKey);
+    },
   });
 
+  // ──────────────────────────────────────────────
   // Toggle complete
+  // ──────────────────────────────────────────────
   const toggle = trpc.task.toggle.useMutation({
     onMutate: async ({ id }) => {
       if (!enabled) return { previous: [] as Task[] };
@@ -103,26 +109,29 @@ export function useListTasks(listId: string | null | undefined) {
       await utils.task.getByList.cancel(queryKey);
       const previous = utils.task.getByList.getData(queryKey) ?? [];
 
-      // optimisticUpdate((prev) =>
-      //   prev.map((t) =>
-      //     t.id === id
-      //       ? {
-      //           ...t,
-      //           isCompleted: !t.isCompleted,
-      //           isCurrent: false,   // keep if you still want auto-clear current
-      //         }
-      //       : t,
-      //   ),
-      // );
+      optimisticUpdate((prev) =>
+        prev.map((t) =>
+          t.id === id
+            ? {
+                ...t,
+                isCompleted: !t.isCompleted,
+                isCurrent: false,
+              }
+            : t
+        )
+      );
 
       return { previous };
     },
 
     onError: (_, __, context) => rollbackTo(context?.previous),
+
     onSettled: () => utils.task.getByList.invalidate(queryKey),
   });
 
-  // Delete
+  // ──────────────────────────────────────────────
+  // Delete task
+  // ──────────────────────────────────────────────
   const remove = trpc.task.delete.useMutation({
     onMutate: async ({ id }) => {
       if (!enabled) return { previous: [] as Task[] };
@@ -130,16 +139,19 @@ export function useListTasks(listId: string | null | undefined) {
       await utils.task.getByList.cancel(queryKey);
       const previous = utils.task.getByList.getData(queryKey) ?? [];
 
-      // optimisticUpdate((prev) => prev.filter((t) => t.id !== id));
+      optimisticUpdate((prev) => prev.filter((t) => t.id !== id));
 
       return { previous };
     },
 
     onError: (_, __, context) => rollbackTo(context?.previous),
+
     onSettled: () => utils.task.getByList.invalidate(queryKey),
   });
 
-  // Set current
+  // ──────────────────────────────────────────────
+  // Set current task
+  // ──────────────────────────────────────────────
   const setCurrentMutation = trpc.task.setCurrent.useMutation({
     onMutate: async ({ id }) => {
       if (!enabled) return { previous: [] as Task[] };
@@ -147,21 +159,24 @@ export function useListTasks(listId: string | null | undefined) {
       await utils.task.getByList.cancel(queryKey);
       const previous = utils.task.getByList.getData(queryKey) ?? [];
 
-      // optimisticUpdate((prev) =>
-      //   prev.map((t) => ({
-      //     ...t,
-      //     isCurrent: t.id === id,
-      //   })),
-      // );
+      optimisticUpdate((prev) =>
+        prev.map((t) => ({
+          ...t,
+          isCurrent: t.id === id,
+        }))
+      );
 
       return { previous };
     },
 
     onError: (_, __, context) => rollbackTo(context?.previous),
+
     onSettled: () => utils.task.getByList.invalidate(queryKey),
   });
 
-  // Clear current
+  // ──────────────────────────────────────────────
+  // Clear current task
+  // ──────────────────────────────────────────────
   const clearCurrentMutation = trpc.task.clearCurrent.useMutation({
     onMutate: async () => {
       if (!enabled) return { previous: [] as Task[] };
@@ -169,23 +184,24 @@ export function useListTasks(listId: string | null | undefined) {
       await utils.task.getByList.cancel(queryKey);
       const previous = utils.task.getByList.getData(queryKey) ?? [];
 
-      // optimisticUpdate((prev) =>
-      //   prev.map((t) => ({
-      //     ...t,
-      //     isCurrent: false,
-      //   })),
-      // );
+      optimisticUpdate((prev) =>
+        prev.map((t) => ({
+          ...t,
+          isCurrent: false,
+        }))
+      );
 
       return { previous };
     },
 
     onError: (_, __, context) => rollbackTo(context?.previous),
+
     onSettled: () => utils.task.getByList.invalidate(queryKey),
   });
 
   return {
-    tasks,   // ← directly from query, no sorting applied
-    isLoadingTasks: isLoading || (enabled && isFetching && tasks.length === 0),
+    tasks: displayedTasks,
+    isLoadingTasks: isLoading || (enabled && isFetching && displayedTasks.length === 0),
 
     createTask: create.mutate,
     createTaskPending: create.isPending,

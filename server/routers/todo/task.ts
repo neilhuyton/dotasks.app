@@ -7,7 +7,7 @@ import { Prisma } from "@prisma/client";
 
 export const taskRouter = router({
   // ──────────────────────────────────────────────
-  // NEW: getOne – Fetch a single task by ID
+  // getOne – Fetch a single task by ID
   // ──────────────────────────────────────────────
   getOne: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
@@ -16,7 +16,7 @@ export const taskRouter = router({
         where: { id: input.id },
         include: {
           list: {
-            select: { userId: true }, // only need this for ownership check
+            select: { userId: true },
           },
         },
       });
@@ -54,7 +54,7 @@ export const taskRouter = router({
 
       return ctx.prisma.task.findMany({
         where: { listId: input.listId },
-        orderBy: { order: "desc" }, // highest order (newest) at the bottom
+        orderBy: { order: "asc" }, // lowest order at top, highest (newest) at bottom
       });
     }),
 
@@ -66,7 +66,6 @@ export const taskRouter = router({
         description: z.string().optional(),
         dueDate: z.date().optional().nullable(),
         priority: z.number().int().min(0).max(5).optional(),
-        // order is intentionally NOT in input — server computes it
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -79,7 +78,7 @@ export const taskRouter = router({
         throw new TRPCError({ code: "FORBIDDEN" });
       }
 
-      // Find the current highest order in this list
+      // Find the current HIGHEST order in this list
       const lastTask = await ctx.prisma.task.findFirst({
         where: { listId: input.listId },
         select: { order: true },
@@ -339,14 +338,10 @@ export const taskRouter = router({
   reorder: protectedProcedure
     .input(
       z.array(
-        z.object({
-          id: z.string().uuid(),
-          order: z.number().int().min(0),
-        }),
+        z.object({ id: z.string().uuid(), order: z.number().int().min(0) }),
       ),
     )
     .mutation(async ({ ctx, input }) => {
-      // Bulk update in a transaction for atomicity & performance
       await ctx.prisma.$transaction(
         input.map(({ id, order }) =>
           ctx.prisma.task.update({
@@ -356,6 +351,6 @@ export const taskRouter = router({
         ),
       );
 
-      return { success: true };
+      return { success: true, updated: input }; // ← return what we applied
     }),
 });
