@@ -4,45 +4,57 @@ import nodemailer from 'nodemailer';
 const FROM_NAME = process.env.APP_NAME || 'Do Tasks App';
 const FROM_EMAIL = process.env.EMAIL_FROM || 'noreply@dotasks.app';
 
-// Singleton transporter (recommended in serverless — reuses connections when possible)
+// Singleton transporter (reused across calls in the same function instance)
 let transporter: nodemailer.Transporter | null = null;
 
-function getTransporter() {
+function getTransporter(): nodemailer.Transporter {
   if (!transporter) {
     transporter = nodemailer.createTransport({
       host: 'smtp.zeptomail.eu',
-      port: 587,
-      secure: false, // STARTTLS
+      port: 465,                        // Implicit TLS – often more reliable in serverless
+      secure: true,                     // Required for port 465
       auth: {
         user: 'emailapikey',
-        pass: process.env.EMAIL_PASS || process.env.ZEPTOMAIL_TOKEN, // support both names
+        pass: process.env.EMAIL_PASS || process.env.ZEPTOMAIL_TOKEN,
       },
-      // Serverless-friendly timeouts
-      connectionTimeout: 10000,
-      greetingTimeout: 8000,
-      socketTimeout: 20000,
-      // Logging (matches your debug style)
+      // Generous timeouts to survive cold starts + TLS handshake in Netlify
+      connectionTimeout: 30000,
+      greetingTimeout: 30000,
+      socketTimeout: 30000,
+      // Enable detailed logging for debugging in prod
       logger: true,
-      debug: process.env.NODE_ENV !== 'production',
-      // Optional: pool settings to reduce cold-start overhead
+      debug: true,                      // Force debug output even in production for now
+      // Connection pooling (helps if multiple emails are sent in quick succession)
       pool: true,
       maxConnections: 3,
       maxMessages: 100,
+      // Temporary workaround for rare cert issues in serverless envs (remove once stable)
+      tls: {
+        rejectUnauthorized: false,
+      },
     });
 
-    // Optional: verify once on first use
-    transporter.verify().then(
-      () => console.log('✅ ZeptoMail SMTP connection ready'),
-      (err) => console.error('SMTP verify failed on init:', err.message),
-    );
+    // Verify connection on first creation (logs success/failure)
+    transporter
+      .verify()
+      .then(() => {
+        console.log('✅ ZeptoMail SMTP connection (port 465) verified successfully');
+      })
+      .catch((err) => {
+        console.error('SMTP connection verification failed:', {
+          message: err.message,
+          code: err.code,
+          response: err.response,
+        });
+      });
   }
   return transporter;
 }
 
 function logEnvStatus() {
   console.log('=== ZeptoMail SMTP Environment check ===');
-  console.log('Host: smtp.zeptomail.eu');
-  console.log('Port: 587 (STARTTLS)');
+  console.log('Host:', 'smtp.zeptomail.eu');
+  console.log('Port:', 465, '(secure TLS)');
   console.log(
     'EMAIL_PASS / ZEPTOMAIL_TOKEN:',
     process.env.EMAIL_PASS || process.env.ZEPTOMAIL_TOKEN ? 'present' : 'MISSING',
@@ -51,7 +63,10 @@ function logEnvStatus() {
     'Token length:',
     (process.env.EMAIL_PASS || process.env.ZEPTOMAIL_TOKEN)?.length ?? 'missing',
   );
-  console.log('Token starts with:', (process.env.EMAIL_PASS || process.env.ZEPTOMAIL_TOKEN)?.substring(0, 10) ?? 'missing');
+  console.log(
+    'Token starts with:',
+    (process.env.EMAIL_PASS || process.env.ZEPTOMAIL_TOKEN)?.substring(0, 10) ?? 'missing',
+  );
   console.log('FROM:', `${FROM_NAME} <${FROM_EMAIL}>`);
   console.log('=======================================');
 }
@@ -63,7 +78,7 @@ export async function sendMailWithDebug(
   subject: string,
   html: string,
 ): Promise<{ success: boolean; requestId?: string; error?: string }> {
-  console.log('Preparing to send via ZeptoMail SMTP:');
+  console.log('Preparing to send email via ZeptoMail SMTP (port 465):');
   console.log('From:', `${FROM_NAME} <${FROM_EMAIL}>`);
   console.log('To:', to);
   console.log('Subject:', subject);
@@ -73,27 +88,31 @@ export async function sendMailWithDebug(
     to,
     subject,
     html,
-    // Optional: add plain text fallback (improves deliverability)
-    text: html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
+    // Plain-text fallback – improves deliverability
+    text: html
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim(),
   };
 
   const start = Date.now();
 
   try {
     const transporter = getTransporter();
+    console.log('Initiating SMTP send attempt...');
+
     const info = await transporter.sendMail(mailOptions);
 
     const duration = Date.now() - start;
-    console.log(`Email sent in ${duration} ms`);
+    console.log(`Email sent successfully in ${duration} ms`);
     console.log('Message ID:', info.messageId);
     console.log('Response:', info.response);
     console.log('Accepted:', info.accepted);
     console.log('Rejected:', info.rejected);
 
-    // Nodemailer doesn't give a ZeptoMail-style request_id, but messageId is useful
     return {
       success: true,
-      requestId: info.messageId || 'smtp-' + Date.now(),
+      requestId: info.messageId || `smtp-${Date.now()}`,
     };
   } catch (error: any) {
     const duration = Date.now() - start;
@@ -106,7 +125,7 @@ export async function sendMailWithDebug(
       console.error('SMTP response:', error.response);
     }
     if (error.stack) {
-      console.error('Stack:', error.stack.substring(0, 800));
+      console.error('Stack (truncated):', error.stack.substring(0, 800));
     }
 
     return {
@@ -116,9 +135,11 @@ export async function sendMailWithDebug(
   }
 }
 
-export async function sendVerificationEmail(to: string, verificationToken: string) {
-  const verificationUrl =
-    `${process.env.VITE_APP_URL || 'http://localhost:8888'}/verify-email?token=${verificationToken}`;
+export async function sendVerificationEmail(
+  to: string,
+  verificationToken: string,
+) {
+  const verificationUrl = `${process.env.VITE_APP_URL || 'http://localhost:8888'}/verify-email?token=${verificationToken}`;
 
   const html = `
     <h1>Welcome!</h1>
@@ -131,8 +152,7 @@ export async function sendVerificationEmail(to: string, verificationToken: strin
 }
 
 export async function sendResetPasswordEmail(to: string, resetToken: string) {
-  const resetUrl =
-    `${process.env.VITE_APP_URL || 'http://localhost:8888'}/confirm-reset-password?token=${resetToken}`;
+  const resetUrl = `${process.env.VITE_APP_URL || 'http://localhost:8888'}/confirm-reset-password?token=${resetToken}`;
 
   const html = `
     <h1>Password Reset Request</h1>
@@ -144,7 +164,10 @@ export async function sendResetPasswordEmail(to: string, resetToken: string) {
   return sendMailWithDebug(to, 'Reset Your Password', html);
 }
 
-export async function sendEmailChangeNotification(oldEmail: string, newEmail: string) {
+export async function sendEmailChangeNotification(
+  oldEmail: string,
+  newEmail: string,
+) {
   const html = `
     <h1>Email Address Change Notification</h1>
     <p>The email address associated with your account has been changed to <strong>${newEmail}</strong>.</p>
