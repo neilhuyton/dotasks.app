@@ -10,6 +10,8 @@ function logEnvStatus() {
     "EMAIL_PASS (token):",
     process.env.EMAIL_PASS ? "present" : "MISSING",
   );
+  console.log("EMAIL_PASS length:", process.env.EMAIL_PASS?.length ?? "missing");
+  console.log("EMAIL_PASS starts with:", process.env.EMAIL_PASS?.substring(0, 10) ?? "missing");
   console.log("EMAIL_FROM:", process.env.EMAIL_FROM || "MISSING");
   console.log("APP_NAME:", process.env.APP_NAME || "MISSING");
   console.log("=======================================");
@@ -102,8 +104,11 @@ export async function sendMailWithDebug(
     console.error("Error message:", error.message);
     if (error.code) console.error("Error code:", error.code);
     if (error.response) {
-      console.error("Response status:", error.response.status);
-      console.error("Response data:", JSON.stringify(error.response.data, null, 2));
+      console.error("Axios response status:", error.response.status);
+      console.error("Axios response data:", JSON.stringify(error.response.data, null, 2));
+    }
+    if (error.request) {
+      console.error("Axios no response received - request details:", error.request);
     }
     if (error.stack) console.error("Stack:", error.stack.substring(0, 800));
     return {
