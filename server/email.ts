@@ -47,28 +47,40 @@ export async function sendMailWithDebug(
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
     controller.abort();
-    console.warn("ZeptoMail fetch timed out after 12 seconds");
-  }, 12000);
+    console.warn("ZeptoMail fetch aborted after 15 seconds (AbortController)");
+  }, 15000);
 
   try {
     console.log("Calling ZeptoMail API...");
+    console.log("Headers (token redacted):", {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Authorization: `Zoho-enczapikey ${process.env.EMAIL_PASS ? '[present]' : '[MISSING]'}`,
+    });
+
     const start = Date.now();
 
-    const response = await fetch(ZEPTOMAIL_API_URL, {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: `Zoho-enczapikey ${process.env.EMAIL_PASS}`,
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
+    // Force timeout even if abort doesn't trigger cleanly in Lambda
+    const response = await Promise.race([
+      fetch(ZEPTOMAIL_API_URL, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Zoho-enczapikey ${process.env.EMAIL_PASS}`,
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Hard 15s timeout on ZeptoMail fetch")), 15000)
+      ),
+    ]);
 
     clearTimeout(timeoutId);
 
     const duration = Date.now() - start;
-    console.log(`ZeptoMail API responded in ${duration} ms`);
+    console.log(`ZeptoMail API responded in ${duration} ms - Status: ${response.status}`);
 
     const data = await response.json();
 
@@ -77,10 +89,10 @@ export async function sendMailWithDebug(
       console.log("Request ID:", data.request_id || "N/A");
       return { success: true, requestId: data.request_id };
     } else {
-      console.error("❌ ZeptoMail API error:", response.status, data);
+      console.error("❌ ZeptoMail API error:", response.status, JSON.stringify(data, null, 2));
       return {
         success: false,
-        error: data.message || data.error?.message || "API error",
+        error: data.message || data.error?.message || `API error ${response.status}`,
       };
     }
   } catch (error: any) {
@@ -89,10 +101,10 @@ export async function sendMailWithDebug(
     console.error("Error name:", error.name);
     console.error("Error message:", error.message);
     if (error.code) console.error("Error code:", error.code);
-    if (error.stack) console.error("Stack:", error.stack.substring(0, 500));
+    if (error.stack) console.error("Stack:", error.stack?.substring(0, 800));
     return {
       success: false,
-      error: error.message || "Network / timeout error",
+      error: error.message || "Network / timeout / abort error",
     };
   }
 }
