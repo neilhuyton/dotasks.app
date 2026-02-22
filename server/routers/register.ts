@@ -6,6 +6,7 @@ import { TRPCError } from "@trpc/server";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
+import { sendVerificationEmail } from "../email";   // ← Import the real email function
 
 export const registerRouter = router({
   register: publicProcedure
@@ -74,21 +75,21 @@ export const registerRouter = router({
         },
       });
 
-      // Queue background email instead of direct call
-      fetch(
-        `${process.env.URL || "http://localhost:8888"}/.netlify/functions/send-email-background`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "verification",
-            to: email,
-            token: verificationToken,
-          }),
-        },
-      ).catch((err) => {
-        console.error("Failed to queue verification email:", err);
-      });
+      // Send verification email SYNCHRONOUSLY (no background fetch)
+      try {
+        const emailResult = await sendVerificationEmail(email, verificationToken);
+
+        if (!emailResult.success) {
+          console.error("Verification email failed to send:", emailResult.error);
+          // Optional: you can still return success to user, or throw if you want to fail registration
+          // For now: log only, continue registration
+        } else {
+          console.log("Verification email queued/sent:", emailResult.requestId);
+        }
+      } catch (emailErr) {
+        console.error("Email send error during registration:", emailErr);
+        // Again: log only — don't fail registration on email error
+      }
 
       const accessToken = jwt.sign(
         { userId: user.id, email: user.email },
