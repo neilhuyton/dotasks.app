@@ -17,7 +17,7 @@ const FROM_EMAIL = process.env.EMAIL_FROM || "noreply@dotasks.app";
 
 const FROM = `${FROM_NAME} <${FROM_EMAIL}>`;
 
-async function sendMailWithDebug(to: string, subject: string, html: string) {
+export async function sendMailWithDebug(to: string, subject: string, html: string) {
   console.log("Preparing to send via ZeptoMail API:");
   console.log("From:", FROM);
   console.log("To:", to);

@@ -1,10 +1,11 @@
-import { publicProcedure, router } from '../trpc-base';
-import { z } from 'zod';
-import { TRPCError } from '@trpc/server';
-import bcrypt from 'bcryptjs';
-import crypto from 'node:crypto';
-import jwt from 'jsonwebtoken';
-import { sendVerificationEmail } from '../email';
+// server/routers/register.ts
+
+import { publicProcedure, router } from "../trpc-base";
+import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+import bcrypt from "bcryptjs";
+import crypto from "node:crypto";
+import jwt from "jsonwebtoken";
 
 export const registerRouter = router({
   register: publicProcedure
@@ -12,23 +13,22 @@ export const registerRouter = router({
       z.object({
         email: z
           .string()
-          .email({ message: 'Invalid email address' })
+          .email({ message: "Invalid email address" })
           .trim()
           .toLowerCase(),
         password: z
           .string()
-          .min(8, { message: 'Password must be at least 8 characters' })
-          .max(128, { message: 'Password is too long' }),
+          .min(8, { message: "Password must be at least 8 characters" })
+          .max(128, { message: "Password is too long" }),
       }),
     )
     .mutation(async ({ input, ctx }) => {
       const { email, password } = input;
 
-      // Fail fast: check critical configuration before doing anything expensive
       if (!process.env.JWT_SECRET) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Server configuration error',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Server configuration error",
         });
       }
 
@@ -39,8 +39,8 @@ export const registerRouter = router({
 
       if (existingUser) {
         throw new TRPCError({
-          code: 'CONFLICT',
-          message: 'This email is already registered',
+          code: "CONFLICT",
+          message: "This email is already registered",
         });
       }
 
@@ -62,28 +62,38 @@ export const registerRouter = router({
         },
       });
 
-      // Create first refresh token record
       const hashedRefresh = crypto
-        .createHash('sha256')
+        .createHash("sha256")
         .update(refreshToken)
-        .digest('hex');
+        .digest("hex");
 
       await ctx.prisma.refreshToken.create({
         data: {
           hashedToken: hashedRefresh,
           userId: user.id,
-          // expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
         },
       });
 
-      sendVerificationEmail(email, verificationToken).catch((err) => {
-        console.error('Failed to send verification email:', err);
+      // Queue background email instead of direct call
+      fetch(
+        `${process.env.URL || "http://localhost:8888"}/.netlify/functions/send-email-background`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "verification",
+            to: email,
+            token: verificationToken,
+          }),
+        },
+      ).catch((err) => {
+        console.error("Failed to queue verification email:", err);
       });
 
       const accessToken = jwt.sign(
         { userId: user.id, email: user.email },
         process.env.JWT_SECRET,
-        { expiresIn: '15m' },
+        { expiresIn: "15m" },
       );
 
       return {
@@ -94,7 +104,7 @@ export const registerRouter = router({
         accessToken,
         refreshToken,
         message:
-          'Registration successful! Please check your email to verify your account.',
+          "Registration successful! Please check your email to verify your account.",
       };
     }),
 });

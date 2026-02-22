@@ -1,46 +1,43 @@
 // server/routers/user.ts
 
-import { protectedProcedure, router } from '../trpc-base';
-import { z } from 'zod';
-import { TRPCError } from '@trpc/server';
-import { sendEmailChangeNotification } from '../email';
+import { protectedProcedure, router } from "../trpc-base";
+import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 
 export const userRouter = router({
-  getCurrent: protectedProcedure
-    .query(async ({ ctx }) => {
-      const user = await ctx.prisma.user.findUnique({
-        where: { id: ctx.userId },
-        select: {
-          id: true,
-          email: true,
-          // You can add more fields later if needed, e.g.:
-          // name: true,
-          // createdAt: true,
-          // avatarUrl: true,
-        },
+  getCurrent: protectedProcedure.query(async ({ ctx }) => {
+    const user = await ctx.prisma.user.findUnique({
+      where: { id: ctx.userId },
+      select: {
+        id: true,
+        email: true,
+      },
+    });
+
+    if (!user) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "User not found",
       });
+    }
 
-      if (!user) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'User not found',
-        });
-      }
-
-      return user;
-    }),
+    return user;
+  }),
 
   updateEmail: protectedProcedure
     .input(
       z.object({
-        email: z.string().email({ message: 'Invalid email address' }).trim().toLowerCase(),
+        email: z
+          .string()
+          .email({ message: "Invalid email address" })
+          .trim()
+          .toLowerCase(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
       const { email } = input;
-      const userId = ctx.userId; // guaranteed string by protectedProcedure
+      const userId = ctx.userId;
 
-      // 1. Fetch current user's email
       const currentUser = await ctx.prisma.user.findUnique({
         where: { id: userId },
         select: { email: true },
@@ -48,22 +45,20 @@ export const userRouter = router({
 
       if (!currentUser) {
         throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'User not found',
+          code: "NOT_FOUND",
+          message: "User not found",
         });
       }
 
       const oldEmail = currentUser.email;
 
-      // Early return if no change → avoids unnecessary DB write & email
       if (oldEmail === email) {
         return {
-          message: 'Email is already up to date',
+          message: "Email is already up to date",
           email,
         };
       }
 
-      // 2. Check for email conflict
       const conflictingUser = await ctx.prisma.user.findUnique({
         where: { email },
         select: { id: true },
@@ -71,34 +66,42 @@ export const userRouter = router({
 
       if (conflictingUser && conflictingUser.id !== userId) {
         throw new TRPCError({
-          code: 'CONFLICT',
-          message: 'This email is already in use by another account',
+          code: "CONFLICT",
+          message: "This email is already in use by another account",
         });
       }
 
-      // 3. Update email in database
       const updatedUser = await ctx.prisma.user.update({
         where: { id: userId },
         data: { email },
         select: { email: true },
       });
 
-      // 4. Send notification to old email (fire-and-forget, non-blocking)
+      // Queue background notification to old email
       if (oldEmail !== email) {
-        sendEmailChangeNotification(oldEmail, email).catch((err) => {
-          // Log failure without affecting the response
-          // Replace console.error with your actual logger (winston, pino, etc.)
-          console.error('Failed to send email change notification:', {
+        fetch(
+          `${process.env.URL || "http://localhost:8888"}/.netlify/functions/send-email-background`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "email-change",
+              oldEmail,
+              newEmail: email,
+            }),
+          },
+        ).catch((err) => {
+          console.error("Failed to queue email change notification:", {
             userId,
             oldEmail,
             newEmail: email,
-            error: err instanceof Error ? err.message : String(err),
+            error: err,
           });
         });
       }
 
       return {
-        message: 'Email updated successfully',
+        message: "Email updated successfully",
         email: updatedUser.email,
       };
     }),

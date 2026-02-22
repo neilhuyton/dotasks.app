@@ -1,82 +1,81 @@
 // src/routes/verify-email.tsx
 
-import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
-import { trpc } from '@/trpc' // adjust to your actual trpc client import path
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { trpc } from "@/trpc"; // adjust to your actual trpc client import path
 
-
-export const Route = createFileRoute('/verify-email')({
+export const Route = createFileRoute("/verify-email")({
   validateSearch: (search: Record<string, unknown>) => ({
-    token: typeof search.token === 'string' && search.token.trim().length > 0
-      ? search.token.trim()
-      : undefined,
+    token:
+      typeof search.token === "string" && search.token.trim().length > 0
+        ? search.token.trim()
+        : undefined,
   }),
   component: RouteComponent,
-})
+});
 
 function RouteComponent() {
-  const { token } = Route.useSearch()
-  const navigate = Route.useNavigate()
+  const { token } = Route.useSearch();
+  const navigate = Route.useNavigate();
 
-  const mutation = trpc.verifyEmail.useMutation()
+  const mutation = trpc.verifyEmail.useMutation();
 
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
-  const [message, setMessage] = useState('Verifying your email...')
+  const [status, setStatus] = useState<"loading" | "success" | "error">(
+    "loading",
+  );
+  const [message, setMessage] = useState("Verifying your email...");
 
   useEffect(() => {
     if (!token) {
-      setStatus('error')
-      setMessage('No verification token provided')
-      return
+      setStatus("error");
+      setMessage("No verification token provided");
+      return;
     }
 
-    let cancelled = false
+    let cancelled = false;
 
     const verify = async () => {
       try {
-        const result = await mutation.mutateAsync({ token })
+        const result = await mutation.mutateAsync({ token });
 
-        if (cancelled) return
+        if (cancelled) return;
 
-        // Since no error was thrown → success
-        // (TRPC throws on BAD_REQUEST / NOT_FOUND etc.)
-        setStatus('success')
-        setMessage(result.message || 'Email verified successfully! You can now log in.')
-
-        // No user.id returned → no auto-login possible without extra changes.
-        // If you want auto-login later:
-        // - Update backend to return { message, user: { id, ... } }
-        // - Or add a follow-up query: const { data: user } = trpc.getMe.useQuery(undefined, { enabled: true })
+        setStatus("success");
+        setMessage(
+          result.message || "Email verified successfully! You can now log in.",
+        );
 
         setTimeout(() => {
-          navigate({ to: '/login' }) // or '/' if dashboard is public-ish
-        }, 2200)
+          navigate({ to: "/login" });
+        }, 2200);
       } catch (err) {
-        if (cancelled) return
+        if (cancelled) return;
 
-        setStatus('error')
+        setStatus("error");
         setMessage(
-          err instanceof Error && 'message' in err
+          err instanceof Error && "message" in err
             ? (err as { message: string }).message
-            : 'Verification failed. The link may be invalid or expired.'
-        )
+            : "Verification failed. The link may be invalid or expired.",
+        );
       }
-    }
+    };
 
-    verify()
+    verify();
 
     return () => {
-      cancelled = true
-    }
-  }, [token, mutation.mutateAsync, navigate])
+      cancelled = true;
+    };
+  }, [token, mutation.mutateAsync, navigate]);
 
-  const isLoading = status === 'loading'
-  const isSuccess = status === 'success'
+  const isLoading = status === "loading";
+  const isSuccess = status === "success";
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-background">
       <div className="w-full max-w-md">
-        <h1 className="mb-8 text-3xl font-bold text-center">Email Verification</h1>
+        <h1 className="mb-8 text-3xl font-bold text-center">
+          Email Verification
+        </h1>
 
         {isLoading && (
           <div
@@ -92,8 +91,8 @@ function RouteComponent() {
             data-testid="verify-message"
             className={`rounded-xl p-8 text-center text-lg font-medium shadow-sm border ${
               isSuccess
-                ? 'bg-green-50 text-green-800 border-green-200'
-                : 'bg-red-50 text-red-800 border-red-200'
+                ? "bg-green-50 text-green-800 border-green-200"
+                : "bg-red-50 text-red-800 border-red-200"
             }`}
           >
             {message}
@@ -107,5 +106,5 @@ function RouteComponent() {
         )}
       </div>
     </div>
-  )
+  );
 }
