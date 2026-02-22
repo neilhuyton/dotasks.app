@@ -1,3 +1,5 @@
+// src/routes/_authenticated/lists/$listId/tasks/new.tsx
+
 import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +8,7 @@ import { Loader2, ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/trpc";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/lists/$listId/tasks/new")(
   {
@@ -55,6 +58,7 @@ function NewTaskPage() {
       if (context?.previousTasks) {
         utils.task.getByList.setData({ listId }, context.previousTasks);
       }
+      toast.error("Failed to create task");
       console.error("Failed to create task:", err);
     },
 
@@ -62,7 +66,8 @@ function NewTaskPage() {
       utils.task.getByList.invalidate({ listId });
     },
 
-    onSuccess: () => {
+    onSuccess: (createdTask) => {
+      toast.success(`Task "${createdTask.title}" added`);
       navigate({
         to: "/lists/$listId",
         params: { listId },
@@ -128,7 +133,7 @@ function NewTaskPage() {
 
             <form
               onSubmit={handleSubmit}
-              data-testid="new-task-form" // ← added this
+              data-testid="new-task-form"
               aria-labelledby="new-task-heading"
               className="space-y-8"
               autoComplete="off"

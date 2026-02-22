@@ -8,6 +8,7 @@ import { Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/trpc";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute(
   "/_authenticated/lists/$listId/tasks/$taskId/edit",
@@ -77,6 +78,7 @@ function EditTaskPage() {
       if (context?.previousTasks) {
         utils.task.getByList.setData({ listId }, context.previousTasks);
       }
+      toast.error("Failed to update task");
       console.error("Failed to update task:", err);
     },
 
@@ -84,7 +86,8 @@ function EditTaskPage() {
       utils.task.getByList.invalidate({ listId });
     },
 
-    onSuccess: () => {
+    onSuccess: (updatedTask) => {
+      toast.success(`Task "${updatedTask.title}" updated`);
       navigate({
         to: "/lists/$listId",
         params: { listId },

@@ -1,73 +1,81 @@
 // src/routes/_authenticated/lists/$listId/tasks/$taskId/delete.tsx
 
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/trpc";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
-export const Route = createFileRoute('/_authenticated/lists/$listId/tasks/$taskId/delete')({
+export const Route = createFileRoute(
+  "/_authenticated/lists/$listId/tasks/$taskId/delete",
+)({
   component: DeleteTaskConfirmPage,
-})
+});
 
 function DeleteTaskConfirmPage() {
-  const { listId, taskId } = Route.useParams()
+  const { listId, taskId } = Route.useParams();
 
-  const navigate = Route.useNavigate()
-  const utils = trpc.useUtils()
+  const navigate = Route.useNavigate();
+  const utils = trpc.useUtils();
 
-  const tasks = utils.task.getByList.getData({ listId }) ?? []
-  const cachedTask = tasks.find(t => t.id === taskId)
+  const tasks = utils.task.getByList.getData({ listId }) ?? [];
+  const cachedTask = tasks.find((t) => t.id === taskId);
 
   // ALL hooks go here, unconditionally
-  const [title, setTitle] = useState<string | null>(null)
+  const [title, setTitle] = useState<string | null>(null);
 
   useEffect(() => {
     if (cachedTask && title === null) {
-      setTitle(cachedTask.title ?? "this task")
+      setTitle(cachedTask.title ?? "this task");
     }
-  }, [cachedTask, title])  // note: title in deps to prevent re-run after set
+  }, [cachedTask, title]); // note: title in deps to prevent re-run after set
 
   const mutation = trpc.task.delete.useMutation({
     onMutate: async ({ id }) => {
-      await utils.task.getByList.cancel({ listId })
-      const previousTasks = utils.task.getByList.getData({ listId }) ?? []
+      await utils.task.getByList.cancel({ listId });
+      const previousTasks = utils.task.getByList.getData({ listId }) ?? [];
       utils.task.getByList.setData({ listId }, (old = []) =>
-        old.filter((task) => task.id !== id)
-      )
-      return { previousTasks }
+        old.filter((task) => task.id !== id),
+      );
+      return { previousTasks };
     },
+
     onError: (err, _vars, context) => {
       if (context?.previousTasks) {
-        utils.task.getByList.setData({ listId }, context.previousTasks)
+        utils.task.getByList.setData({ listId }, context.previousTasks);
       }
-      console.error("Failed to delete task:", err)
+      toast.error("Failed to delete task");
+      console.error("Failed to delete task:", err);
     },
+
     onSettled: () => {
-      utils.task.getByList.invalidate({ listId })
+      utils.task.getByList.invalidate({ listId });
     },
+
     onSuccess: () => {
+      toast.success(`Task "${title ?? "deleted"}" removed`);
       navigate({
         to: "/lists/$listId",
         params: { listId },
         replace: true,
-      })
+      });
     },
-  })
+  });
 
   const handleCancel = () => {
     navigate({
       to: "/lists/$listId",
       params: { listId },
       replace: true,
-    })
-  }
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    mutation.mutate({ id: taskId })
-  }
+    e.preventDefault();
+    mutation.mutate({ id: taskId });
+  };
 
   // Only now do conditional render — hooks are already called
   if (title === null) {
@@ -75,7 +83,7 @@ function DeleteTaskConfirmPage() {
       <div className="fixed inset-0 flex items-center justify-center bg-background">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
-    )
+    );
   }
 
   return (
@@ -140,5 +148,5 @@ function DeleteTaskConfirmPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
