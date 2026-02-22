@@ -1,14 +1,33 @@
 // server/email.ts
 const ZEPTOMAIL_API_URL = "https://api.zeptomail.eu/v1.1/email";
 
+function logEnvStatus() {
+  console.log("=== ZeptoMail API Environment check ===");
+  console.log("ZEPTOMAIL_API_URL:", ZEPTOMAIL_API_URL);
+  console.log(
+    "EMAIL_PASS (token):",
+    process.env.EMAIL_PASS ? "present" : "MISSING",
+  );
+  console.log("EMAIL_FROM:", process.env.EMAIL_FROM || "MISSING");
+  console.log("APP_NAME:", process.env.APP_NAME || "MISSING");
+  console.log("=======================================");
+}
+
+logEnvStatus();
+
 const FROM_NAME = process.env.APP_NAME || "Do Tasks App";
 const FROM_EMAIL = process.env.EMAIL_FROM || "noreply@dotasks.app";
 
-export async function sendEmail(
+export async function sendMailWithDebug(
   to: string,
   subject: string,
   html: string,
-): Promise<{ success: boolean; requestId?: string; error?: string }> {
+) {
+  console.log("Preparing to send via ZeptoMail API:");
+  console.log("From:", `${FROM_NAME} <${FROM_EMAIL}>`);
+  console.log("To:", to);
+  console.log("Subject:", subject);
+
   const payload = {
     from: {
       address: FROM_EMAIL,
@@ -26,9 +45,15 @@ export async function sendEmail(
   };
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 12000);
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+    console.warn("ZeptoMail fetch timed out after 12 seconds");
+  }, 12000);
 
   try {
+    console.log("Calling ZeptoMail API...");
+    const start = Date.now();
+
     const response = await fetch(ZEPTOMAIL_API_URL, {
       method: "POST",
       headers: {
@@ -42,58 +67,32 @@ export async function sendEmail(
 
     clearTimeout(timeoutId);
 
+    const duration = Date.now() - start;
+    console.log(`ZeptoMail API responded in ${duration} ms`);
+
     const data = await response.json();
 
     if (response.ok) {
+      console.log("✅ Email accepted by ZeptoMail!");
+      console.log("Request ID:", data.request_id || "N/A");
       return { success: true, requestId: data.request_id };
+    } else {
+      console.error("❌ ZeptoMail API error:", response.status, data);
+      return {
+        success: false,
+        error: data.message || data.error?.message || "API error",
+      };
     }
-
-    console.error("ZeptoMail API error", {
-      status: response.status,
-      response: data,
-      to,
-      subject,
-    });
-
-    return {
-      success: false,
-      error: data.message || data.error?.message || `HTTP ${response.status}`,
-    };
-  } catch (error: unknown) {
+  } catch (error: any) {
     clearTimeout(timeoutId);
-
-    let errorMessage = "Unknown error";
-    let errorCode: string | undefined;
-    let errorName: string | undefined;
-
-    if (error instanceof Error) {
-      errorMessage = error.message;
-      errorName = error.name;
-
-      // Some fetch/network errors expose .code (non-standard but common)
-      if (
-        "code" in error &&
-        typeof (error as Record<string, unknown>).code === "string"
-      ) {
-        errorCode = (error as Record<string, unknown>).code as string;
-      }
-    } else if (typeof error === "string") {
-      errorMessage = error;
-    } else if (error && typeof error === "object" && "message" in error) {
-      errorMessage = String((error as { message: unknown }).message);
-    }
-
-    console.error("ZeptoMail send failed", {
-      message: errorMessage,
-      code: errorCode,
-      name: errorName,
-      to,
-      subject,
-    });
-
+    console.error("=== ZeptoMail API call FAILED ===");
+    console.error("Error name:", error.name);
+    console.error("Error message:", error.message);
+    if (error.code) console.error("Error code:", error.code);
+    if (error.stack) console.error("Stack:", error.stack.substring(0, 500));
     return {
       success: false,
-      error: errorMessage || "Network / timeout error",
+      error: error.message || "Network / timeout error",
     };
   }
 }
@@ -111,7 +110,7 @@ export async function sendVerificationEmail(
     <p>If you didn’t register, please ignore this email.</p>
   `;
 
-  return sendEmail(to, "Verify Your Email Address", html);
+  return sendMailWithDebug(to, "Verify Your Email Address", html);
 }
 
 export async function sendResetPasswordEmail(to: string, resetToken: string) {
@@ -124,7 +123,7 @@ export async function sendResetPasswordEmail(to: string, resetToken: string) {
     <p>This link will expire in 1 hour. If you didn’t request a password reset, please ignore this email.</p>
   `;
 
-  return sendEmail(to, "Reset Your Password", html);
+  return sendMailWithDebug(to, "Reset Your Password", html);
 }
 
 export async function sendEmailChangeNotification(
@@ -138,7 +137,11 @@ export async function sendEmailChangeNotification(
     <p>Thank you,<br>Do Tasks App Team</p>
   `;
 
-  return sendEmail(oldEmail, "Your Email Address Has Been Changed", html);
+  return sendMailWithDebug(
+    oldEmail,
+    "Your Email Address Has Been Changed",
+    html,
+  );
 }
 
 export async function sendPasswordChangeNotification(to: string) {
@@ -149,5 +152,5 @@ export async function sendPasswordChangeNotification(to: string) {
     <p>Thank you,<br>Do Tasks App Team</p>
   `;
 
-  return sendEmail(to, "Your Password Has Been Changed", html);
+  return sendMailWithDebug(to, "Your Password Has Been Changed", html);
 }

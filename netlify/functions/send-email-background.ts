@@ -1,6 +1,6 @@
 // netlify/functions/send-email-background.ts
 
-import { sendEmail } from '../../server/email';
+import { sendMailWithDebug } from "../../server/email";
 
 export default async (req: Request): Promise<Response> => {
   if (req.method !== "POST") {
@@ -79,7 +79,7 @@ export default async (req: Request): Promise<Response> => {
   }
 
   // Fire-and-forget the send
-  sendEmail(to, subject, html).catch((err) => {
+  sendMailWithDebug(to, subject, html).catch((err) => {
     console.error(`Failed to send ${type} email to ${to}:`, err.message || err);
   });
 
