@@ -1,7 +1,5 @@
 // server/email.ts
-import dns from 'dns/promises'; // Node built-in for DNS debug
-
-const ZEPTOMAIL_API_URL = "https://api.zeptomail.com/v1.1/email"; // ← Changed to US endpoint (more reliable on Netlify/Lambda)
+const ZEPTOMAIL_API_URL = "https://api.zeptomail.eu/v1.1/email";
 
 function logEnvStatus() {
   console.log("=== ZeptoMail API Environment check ===");
@@ -49,49 +47,28 @@ export async function sendMailWithDebug(
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
     controller.abort();
-    console.warn("ZeptoMail fetch aborted after 15 seconds (AbortController)");
-  }, 15000);
+    console.warn("ZeptoMail fetch timed out after 12 seconds");
+  }, 12000);
 
   try {
-    // Debug: Try to resolve hostname (helps spot DNS issues in Lambda)
-    console.log("Resolving ZeptoMail hostname...");
-    try {
-      const addresses = await dns.resolve(new URL(ZEPTOMAIL_API_URL).hostname);
-      console.log("DNS resolved successfully:", addresses);
-    } catch (dnsErr: any) {
-      console.error("DNS resolution failed:", dnsErr.message || dnsErr);
-    }
-
     console.log("Calling ZeptoMail API...");
-    console.log("Headers (token redacted):", {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      Authorization: `Zoho-enczapikey ${process.env.EMAIL_PASS ? '[present]' : '[MISSING]'}`,
-    });
-
     const start = Date.now();
 
-    // Race fetch with hard timeout in case abort doesn't fire
-    const response = await Promise.race([
-      fetch(ZEPTOMAIL_API_URL, {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: `Zoho-enczapikey ${process.env.EMAIL_PASS}`, // Official examples use capital Z
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      }),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Hard 15s timeout on fetch")), 15000)
-      ),
-    ]);
+    const response = await fetch(ZEPTOMAIL_API_URL, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Zoho-enczapikey ${process.env.EMAIL_PASS}`,
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
 
     clearTimeout(timeoutId);
 
     const duration = Date.now() - start;
-    console.log(`ZeptoMail API responded in ${duration} ms - Status: ${response.status}`);
+    console.log(`ZeptoMail API responded in ${duration} ms`);
 
     const data = await response.json();
 
@@ -103,7 +80,7 @@ export async function sendMailWithDebug(
       console.error("❌ ZeptoMail API error:", response.status, data);
       return {
         success: false,
-        error: data.message || data.error?.message || `API error ${response.status}`,
+        error: data.message || data.error?.message || "API error",
       };
     }
   } catch (error: any) {
@@ -112,16 +89,13 @@ export async function sendMailWithDebug(
     console.error("Error name:", error.name);
     console.error("Error message:", error.message);
     if (error.code) console.error("Error code:", error.code);
-    if (error.stack) console.error("Stack:", error.stack.substring(0, 800));
+    if (error.stack) console.error("Stack:", error.stack.substring(0, 500));
     return {
       success: false,
-      error: error.message || "Network / timeout / abort error",
+      error: error.message || "Network / timeout error",
     };
   }
 }
-
-// The other functions (sendVerificationEmail, etc.) remain unchanged — they call sendMailWithDebug
-// Just re-export them as before
 
 export async function sendVerificationEmail(
   to: string,
