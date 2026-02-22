@@ -1,128 +1,124 @@
 // server/email.ts
-import axios from 'axios';
+import nodemailer from 'nodemailer';
 
-const ZEPTOMAIL_API_URL = "https://api.zeptomail.eu/v1.1/email";
+const FROM_NAME = process.env.APP_NAME || 'Do Tasks App';
+const FROM_EMAIL = process.env.EMAIL_FROM || 'noreply@dotasks.app';
+
+// Singleton transporter (recommended in serverless — reuses connections when possible)
+let transporter: nodemailer.Transporter | null = null;
+
+function getTransporter() {
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      host: 'smtp.zeptomail.eu',
+      port: 587,
+      secure: false, // STARTTLS
+      auth: {
+        user: 'emailapikey',
+        pass: process.env.EMAIL_PASS || process.env.ZEPTOMAIL_TOKEN, // support both names
+      },
+      // Serverless-friendly timeouts
+      connectionTimeout: 10000,
+      greetingTimeout: 8000,
+      socketTimeout: 20000,
+      // Logging (matches your debug style)
+      logger: true,
+      debug: process.env.NODE_ENV !== 'production',
+      // Optional: pool settings to reduce cold-start overhead
+      pool: true,
+      maxConnections: 3,
+      maxMessages: 100,
+    });
+
+    // Optional: verify once on first use
+    transporter.verify().then(
+      () => console.log('✅ ZeptoMail SMTP connection ready'),
+      (err) => console.error('SMTP verify failed on init:', err.message),
+    );
+  }
+  return transporter;
+}
 
 function logEnvStatus() {
-  console.log("=== ZeptoMail API Environment check ===");
-  console.log("ZEPTOMAIL_API_URL:", ZEPTOMAIL_API_URL);
+  console.log('=== ZeptoMail SMTP Environment check ===');
+  console.log('Host: smtp.zeptomail.eu');
+  console.log('Port: 587 (STARTTLS)');
   console.log(
-    "EMAIL_PASS (token):",
-    process.env.EMAIL_PASS ? "present" : "MISSING",
+    'EMAIL_PASS / ZEPTOMAIL_TOKEN:',
+    process.env.EMAIL_PASS || process.env.ZEPTOMAIL_TOKEN ? 'present' : 'MISSING',
   );
-  console.log("EMAIL_PASS length:", process.env.EMAIL_PASS?.length ?? "missing");
-  console.log("EMAIL_PASS starts with:", process.env.EMAIL_PASS?.substring(0, 10) ?? "missing");
-  console.log("EMAIL_FROM:", process.env.EMAIL_FROM || "MISSING");
-  console.log("APP_NAME:", process.env.APP_NAME || "MISSING");
-  console.log("=======================================");
+  console.log(
+    'Token length:',
+    (process.env.EMAIL_PASS || process.env.ZEPTOMAIL_TOKEN)?.length ?? 'missing',
+  );
+  console.log('Token starts with:', (process.env.EMAIL_PASS || process.env.ZEPTOMAIL_TOKEN)?.substring(0, 10) ?? 'missing');
+  console.log('FROM:', `${FROM_NAME} <${FROM_EMAIL}>`);
+  console.log('=======================================');
 }
 
 logEnvStatus();
-
-const FROM_NAME = process.env.APP_NAME || "Do Tasks App";
-const FROM_EMAIL = process.env.EMAIL_FROM || "noreply@dotasks.app";
 
 export async function sendMailWithDebug(
   to: string,
   subject: string,
   html: string,
-) {
-  console.log("Preparing to send via ZeptoMail API:");
-  console.log("From:", `${FROM_NAME} <${FROM_EMAIL}>`);
-  console.log("To:", to);
-  console.log("Subject:", subject);
+): Promise<{ success: boolean; requestId?: string; error?: string }> {
+  console.log('Preparing to send via ZeptoMail SMTP:');
+  console.log('From:', `${FROM_NAME} <${FROM_EMAIL}>`);
+  console.log('To:', to);
+  console.log('Subject:', subject);
 
-  const payload = {
-    from: {
-      address: FROM_EMAIL,
-      name: FROM_NAME,
-    },
-    to: [
-      {
-        email_address: {
-          address: to,
-        },
-      },
-    ],
+  const mailOptions = {
+    from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
+    to,
     subject,
-    htmlbody: html,
+    html,
+    // Optional: add plain text fallback (improves deliverability)
+    text: html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
   };
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => {
-    controller.abort();
-    console.warn("ZeptoMail request aborted after 15 seconds (AbortController)");
-  }, 15000);
+  const start = Date.now();
 
   try {
-    console.log("Calling ZeptoMail API...");
-    console.log("Headers (token redacted):", {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      Authorization: `Zoho-enczapikey ${process.env.EMAIL_PASS ? '[present]' : '[MISSING]'}`,
-    });
-
-    const start = Date.now();
-
-    const response = await Promise.race([
-      axios.post(ZEPTOMAIL_API_URL, payload, {
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: `Zoho-enczapikey ${process.env.EMAIL_PASS}`,
-        },
-        timeout: 15000,
-        signal: controller.signal,
-      }),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Hard 15s timeout on ZeptoMail request")), 15000)
-      ),
-    ]);
-
-    clearTimeout(timeoutId);
+    const transporter = getTransporter();
+    const info = await transporter.sendMail(mailOptions);
 
     const duration = Date.now() - start;
-    console.log(`ZeptoMail API responded in ${duration} ms - Status: ${response.status}`);
+    console.log(`Email sent in ${duration} ms`);
+    console.log('Message ID:', info.messageId);
+    console.log('Response:', info.response);
+    console.log('Accepted:', info.accepted);
+    console.log('Rejected:', info.rejected);
 
-    const data = response.data;
-
-    if (response.status >= 200 && response.status < 300) {
-      console.log("✅ Email accepted by ZeptoMail!");
-      console.log("Request ID:", data.request_id || "N/A");
-      return { success: true, requestId: data.request_id };
-    } else {
-      console.error("❌ ZeptoMail API error:", response.status, JSON.stringify(data, null, 2));
-      return {
-        success: false,
-        error: data.message || data.error?.message || `API error ${response.status}`,
-      };
-    }
+    // Nodemailer doesn't give a ZeptoMail-style request_id, but messageId is useful
+    return {
+      success: true,
+      requestId: info.messageId || 'smtp-' + Date.now(),
+    };
   } catch (error: any) {
-    clearTimeout(timeoutId);
-    console.error("=== ZeptoMail API call FAILED ===");
-    console.error("Error name:", error.name);
-    console.error("Error message:", error.message);
-    if (error.code) console.error("Error code:", error.code);
+    const duration = Date.now() - start;
+    console.error('=== ZeptoMail SMTP send FAILED ===');
+    console.error('Duration:', `${duration} ms`);
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error code:', error.code);
     if (error.response) {
-      console.error("Axios response status:", error.response.status);
-      console.error("Axios response data:", JSON.stringify(error.response.data, null, 2));
+      console.error('SMTP response:', error.response);
     }
-    if (error.request) {
-      console.error("Axios no response received - request details:", error.request);
+    if (error.stack) {
+      console.error('Stack:', error.stack.substring(0, 800));
     }
-    if (error.stack) console.error("Stack:", error.stack.substring(0, 800));
+
     return {
       success: false,
-      error: error.message || "Network / timeout / abort error",
+      error: error.message || 'SMTP send error',
     };
   }
 }
 
-export async function sendVerificationEmail(
-  to: string,
-  verificationToken: string,
-) {
-  const verificationUrl = `${process.env.VITE_APP_URL || "http://localhost:8888"}/verify-email?token=${verificationToken}`;
+export async function sendVerificationEmail(to: string, verificationToken: string) {
+  const verificationUrl =
+    `${process.env.VITE_APP_URL || 'http://localhost:8888'}/verify-email?token=${verificationToken}`;
 
   const html = `
     <h1>Welcome!</h1>
@@ -131,11 +127,12 @@ export async function sendVerificationEmail(
     <p>If you didn’t register, please ignore this email.</p>
   `;
 
-  return sendMailWithDebug(to, "Verify Your Email Address", html);
+  return sendMailWithDebug(to, 'Verify Your Email Address', html);
 }
 
 export async function sendResetPasswordEmail(to: string, resetToken: string) {
-  const resetUrl = `${process.env.VITE_APP_URL || "http://localhost:8888"}/confirm-reset-password?token=${resetToken}`;
+  const resetUrl =
+    `${process.env.VITE_APP_URL || 'http://localhost:8888'}/confirm-reset-password?token=${resetToken}`;
 
   const html = `
     <h1>Password Reset Request</h1>
@@ -144,13 +141,10 @@ export async function sendResetPasswordEmail(to: string, resetToken: string) {
     <p>This link will expire in 1 hour. If you didn’t request a password reset, please ignore this email.</p>
   `;
 
-  return sendMailWithDebug(to, "Reset Your Password", html);
+  return sendMailWithDebug(to, 'Reset Your Password', html);
 }
 
-export async function sendEmailChangeNotification(
-  oldEmail: string,
-  newEmail: string,
-) {
+export async function sendEmailChangeNotification(oldEmail: string, newEmail: string) {
   const html = `
     <h1>Email Address Change Notification</h1>
     <p>The email address associated with your account has been changed to <strong>${newEmail}</strong>.</p>
@@ -160,7 +154,7 @@ export async function sendEmailChangeNotification(
 
   return sendMailWithDebug(
     oldEmail,
-    "Your Email Address Has Been Changed",
+    'Your Email Address Has Been Changed',
     html,
   );
 }
@@ -173,5 +167,5 @@ export async function sendPasswordChangeNotification(to: string) {
     <p>Thank you,<br>Do Tasks App Team</p>
   `;
 
-  return sendMailWithDebug(to, "Your Password Has Been Changed", html);
+  return sendMailWithDebug(to, 'Your Password Has Been Changed', html);
 }
