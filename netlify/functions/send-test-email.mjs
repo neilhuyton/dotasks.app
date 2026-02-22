@@ -45,7 +45,7 @@ export default async function handler(request) {
 
   const mailOptions = {
     from: '"Do Tasks App" <noreply@dotasks.app>',
-    to: 'hello@dotasks.app',          // ← change this to whatever inbox you want to test
+    to: 'hi@nehu.me',          // ← change this to whatever inbox you want to test
     subject: 'Prod SMTP Test – Modern Version',
     html: `
       <h1>Modern Nodemailer Test from Netlify Prod</h1>
