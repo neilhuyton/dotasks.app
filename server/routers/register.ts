@@ -6,7 +6,7 @@ import { TRPCError } from "@trpc/server";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
-import { sendVerificationEmail } from "../email";   // ← Import the real email function
+import { sendVerificationEmail } from "../email";
 
 export const registerRouter = router({
   register: publicProcedure
@@ -46,7 +46,6 @@ export const registerRouter = router({
       }
 
       const hashedPassword = await bcrypt.hash(password, 12);
-
       const verificationToken = crypto.randomUUID();
       const refreshToken = crypto.randomUUID();
 
@@ -75,21 +74,15 @@ export const registerRouter = router({
         },
       });
 
-      // Send verification email SYNCHRONOUSLY (no background fetch)
-      try {
-        const emailResult = await sendVerificationEmail(email, verificationToken);
-
-        if (!emailResult.success) {
-          console.error("Verification email failed to send:", emailResult.error);
-          // Optional: you can still return success to user, or throw if you want to fail registration
-          // For now: log only, continue registration
-        } else {
-          console.log("Verification email queued/sent:", emailResult.requestId);
-        }
-      } catch (emailErr) {
-        console.error("Email send error during registration:", emailErr);
-        // Again: log only — don't fail registration on email error
-      }
+      // Attempt to send verification email (non-blocking)
+      sendVerificationEmail(email, verificationToken).catch((err) => {
+        // In production, replace with structured logging (Sentry, Logflare, etc.)
+        console.error("Failed to send verification email", {
+          userId: user.id,
+          email,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
 
       const accessToken = jwt.sign(
         { userId: user.id, email: user.email },
