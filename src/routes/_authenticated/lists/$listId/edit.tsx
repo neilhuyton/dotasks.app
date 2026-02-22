@@ -8,6 +8,7 @@ import { Loader2, X } from "lucide-react";
 import { useState, useEffect, type SyntheticEvent } from "react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/trpc";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/lists/$listId/edit")({
   component: EditListPage,
@@ -80,14 +81,31 @@ function EditListPage() {
       if (ctx?.prevAll) utils.list.getAll.setData(undefined, ctx.prevAll);
       if (ctx?.prevDetail)
         utils.list.getOne.setData({ id: listId }, ctx.prevDetail);
-      console.error("Failed to update list", ctx);
+      toast.error("Failed to update list");
     },
 
-    onSuccess: (updatedList) => {
+    onSuccess: (updatedList, variables) => {
       utils.list.getAll.setData(undefined, (old = []) =>
-        old.map((l) => (l.id === updatedList.id ? updatedList : l)),
+        old.map((l) =>
+          l.id === variables.id
+            ? {
+                ...l,
+                title: updatedList.title ?? l.title,
+                description: updatedList.description ?? l.description,
+                updatedAt: updatedList.updatedAt ?? l.updatedAt,
+                // keep _count, tasks, color, icon, isPinned, etc.
+              }
+            : l,
+        ),
       );
-      utils.list.getOne.setData({ id: listId }, updatedList);
+
+      utils.list.getOne.setData({ id: listId }, (old) =>
+        old ? { ...old, ...updatedList } : updatedList,
+      );
+
+      toast.success(
+        `List "${updatedList.title || title}" updated successfully`,
+      );
 
       navigate({ to: "/lists", replace: true });
     },
@@ -171,7 +189,6 @@ function EditListPage() {
                   >
                     Description (optional)
                   </label>
-                  {/* Removed resize-none text-base → now matches login-like textarea */}
                   <Textarea
                     id="list-desc"
                     value={description}

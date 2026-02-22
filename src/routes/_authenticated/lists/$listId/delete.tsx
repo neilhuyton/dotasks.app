@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { trpc } from "@/trpc";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/lists/$listId/delete")({
   component: DeleteListConfirmPage,
@@ -34,16 +35,21 @@ function DeleteListConfirmPage() {
       );
       return { previousLists };
     },
+
     onError: (err, _vars, context) => {
       if (context?.previousLists) {
         utils.list.getAll.setData(undefined, context.previousLists);
       }
+      toast.error("Failed to delete list");
       console.error("Failed to delete list:", err);
     },
+
     onSettled: () => {
       utils.list.getAll.invalidate();
     },
+
     onSuccess: () => {
+      toast.success("List deleted successfully");
       navigate({ to: "/lists", replace: true });
     },
   });
