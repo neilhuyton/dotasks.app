@@ -10,10 +10,10 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute(
   "/_authenticated/lists/$listId/tasks/completed",
 )({
-  component: CompletedTasksOverlay,
+  component: CompletedTasksPage,
 });
 
-function CompletedTasksOverlay() {
+function CompletedTasksPage() {
   const { listId } = Route.useParams();
   const navigate = Route.useNavigate();
 
@@ -41,7 +41,7 @@ function CompletedTasksOverlay() {
 
   if (isLoadingTasks) {
     return (
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
@@ -50,14 +50,12 @@ function CompletedTasksOverlay() {
   return (
     <div
       className={cn(
-        "fixed inset-0 z-[9999] isolate pointer-events-auto",
-        "h-dvh w-dvw max-h-none max-w-none",
-        "m-0 p-0 left-0 top-0 right-0 bottom-0 translate-x-0 translate-y-0",
-        "rounded-none border-0 shadow-none",
-        "bg-background overscroll-none touch-none overflow-y-auto",
+        "fixed inset-0 z-50 bg-background",
+        "flex flex-col min-h-full",
+        "overflow-y-auto overscroll-none",
       )}
     >
-      <div className="relative flex min-h-full flex-col px-5 pb-28 pt-16 md:px-8 md:pb-32">
+      <div className="relative flex-1 px-5 pb-28 pt-16 md:px-8 md:pb-32">
         {/* Back button */}
         <Button
           variant="ghost"
@@ -91,7 +89,7 @@ function CompletedTasksOverlay() {
             </div>
           </div>
         ) : (
-          <div className="space-y-3 pb-16">
+          <div className="space-y-3">
             {completedTasks.map((task) => (
               <TaskItem
                 key={task.id}

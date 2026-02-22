@@ -4,27 +4,16 @@ import {
   describe,
   it,
   expect,
-  vi,
   beforeAll,
   afterAll,
   beforeEach,
   afterEach,
 } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  RouterProvider,
-  createMemoryHistory,
-  createRouter,
-} from "@tanstack/react-router";
-import { trpc } from "@/trpc";
-import { httpLink } from "@trpc/client";
+
 import { server } from "../../../../../__mocks__/server";
-import { routeTree } from "@/routeTree.gen";
-import { useAuthStore } from "@/store/authStore";
-import { trpcMsw } from "../../../../../__mocks__/trpcMsw";
-import { TRPCError } from "@trpc/server";
+import { renderWithTrpcRouter } from "../../../../utils/test-helpers";
 
 import {
   resetMockLists,
@@ -35,18 +24,18 @@ import {
   listUpdateHandler,
   delayedListUpdateHandler,
 } from "../../../../../__mocks__/handlers/lists";
+
+import { routeTree } from "@/routeTree.gen";
+import { useAuthStore } from "@/store/authStore";
 import { suppressActWarnings } from "../../../../act-suppress";
+import { trpcMsw } from "../../../../../__mocks__/trpcMsw";
+import { TRPCError } from "@trpc/server";
 
 suppressActWarnings();
 
 describe("Edit List Page (/_authenticated/lists/$listId/edit)", () => {
-  let queryClient: QueryClient;
-  const user = userEvent.setup();
-
   const TEST_LIST_ID = "list-abc-123";
   const ORIGINAL_TITLE = "My Important Projects";
-
-  let history: ReturnType<typeof createMemoryHistory>;
 
   beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 
@@ -58,34 +47,19 @@ describe("Edit List Page (/_authenticated/lists/$listId/edit)", () => {
       refreshToken: "mock-refresh",
     });
 
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false, gcTime: 0, staleTime: 0 },
-        mutations: { retry: false },
-      },
-    });
-
     server.resetHandlers();
     resetMockLists();
     prepareDetailPageTestList();
 
     server.use(listGetAllHandler);
     server.use(listGetOneSuccessHandler);
-
-    // Prevent MSW warnings for unrelated queries (e.g. tasks in layout)
-    server.use(trpcMsw.task.getByList.query(() => []));
-
-    // Use the exported mutating handler for update (this is what fixes unhandled POST)
     server.use(listUpdateHandler);
 
-    history = createMemoryHistory({
-      initialEntries: [`/lists/${TEST_LIST_ID}/edit`],
-    });
+    // Prevent MSW warnings for unrelated queries (e.g. tasks)
+    server.use(trpcMsw.task.getByList.query(() => []));
   });
 
   afterEach(async () => {
-    await queryClient.cancelQueries();
-    queryClient.clear();
     server.resetHandlers();
     useAuthStore.setState({
       isLoggedIn: false,
@@ -98,26 +72,16 @@ describe("Edit List Page (/_authenticated/lists/$listId/edit)", () => {
   afterAll(() => server.close());
 
   const renderEditListPage = async () => {
-    const router = createRouter({ routeTree, history });
-    const navigateSpy = vi.spyOn(router, "navigate");
+    const { history } = renderWithTrpcRouter({
+      initialPath: `/lists/${TEST_LIST_ID}/edit`,
+      routeTree,
+    });
 
-    render(
-      <trpc.Provider
-        client={trpc.createClient({
-          links: [httpLink({ url: "http://localhost:8888/trpc" })],
-        })}
-        queryClient={queryClient}
-      >
-        <QueryClientProvider client={queryClient}>
-          <RouterProvider router={router} />
-        </QueryClientProvider>
-      </trpc.Provider>,
-    );
-
+    // Wait for page to load
     await screen.findByText("Edit List");
     await screen.findByDisplayValue(ORIGINAL_TITLE);
 
-    return { navigateSpy };
+    return { history };
   };
 
   it("renders page title, description, inputs and buttons", async () => {
@@ -126,9 +90,13 @@ describe("Edit List Page (/_authenticated/lists/$listId/edit)", () => {
     expect(screen.getByText("Edit List")).toBeInTheDocument();
 
     expect(screen.getByLabelText(/List name/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Work, Groceries, Ideas...")).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText("Work, Groceries, Ideas..."),
+    ).toBeInTheDocument();
 
-    expect(screen.getByLabelText(/Description \(optional\)/i)).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/Description \(optional\)/i),
+    ).toBeInTheDocument();
 
     expect(
       screen.getByRole("button", { name: "Cancel and return to lists" }),
@@ -147,14 +115,14 @@ describe("Edit List Page (/_authenticated/lists/$listId/edit)", () => {
 
     const titleInput = screen.getByLabelText(/List name/i);
 
-    await user.clear(titleInput);
+    await userEvent.clear(titleInput);
     expect(saveButton).toBeDisabled();
 
-    await user.type(titleInput, "   ");
+    await userEvent.type(titleInput, "   ");
     expect(saveButton).toBeDisabled();
 
-    await user.clear(titleInput);
-    await user.type(titleInput, "Valid updated name");
+    await userEvent.clear(titleInput);
+    await userEvent.type(titleInput, "Valid updated name");
     expect(saveButton).not.toBeDisabled();
   });
 
@@ -164,7 +132,7 @@ describe("Edit List Page (/_authenticated/lists/$listId/edit)", () => {
     await renderEditListPage();
 
     const titleInput = screen.getByLabelText(/List name/i);
-    await user.type(titleInput, " Weekend Update");
+    await userEvent.type(titleInput, " Weekend Update");
 
     const form = screen.getByTestId("edit-list-form");
     fireEvent.submit(form);
@@ -174,25 +142,23 @@ describe("Edit List Page (/_authenticated/lists/$listId/edit)", () => {
   });
 
   it("updates list with optimistic update and navigates on success", async () => {
-    const { navigateSpy } = await renderEditListPage();
+    const { history } = await renderEditListPage();
 
     const titleInput = screen.getByLabelText(/List name/i);
     const descInput = screen.getByLabelText(/Description/i);
 
-    await user.clear(titleInput);
-    await user.type(titleInput, "Updated Project List");
+    await userEvent.clear(titleInput);
+    await userEvent.type(titleInput, "Updated Project List");
 
-    await user.clear(descInput);
-    await user.type(descInput, "New description here");
+    await userEvent.clear(descInput);
+    await userEvent.type(descInput, "New description here");
 
     const form = screen.getByTestId("edit-list-form");
     fireEvent.submit(form);
 
     await waitFor(
       () => {
-        expect(navigateSpy).toHaveBeenCalledWith(
-          expect.objectContaining({ to: "/lists", replace: true }),
-        );
+        expect(history.location.pathname).toBe("/lists");
       },
       { timeout: 5000 },
     );
@@ -213,10 +179,10 @@ describe("Edit List Page (/_authenticated/lists/$listId/edit)", () => {
       }),
     );
 
-    const { navigateSpy } = await renderEditListPage();
+    const { history } = await renderEditListPage();
 
-    await user.clear(screen.getByLabelText(/List name/i));
-    await user.type(screen.getByLabelText(/List name/i), "Will fail");
+    await userEvent.clear(screen.getByLabelText(/List name/i));
+    await userEvent.type(screen.getByLabelText(/List name/i), "Will fail");
 
     const form = screen.getByTestId("edit-list-form");
     fireEvent.submit(form);
@@ -230,32 +196,32 @@ describe("Edit List Page (/_authenticated/lists/$listId/edit)", () => {
       { timeout: 5000 },
     );
 
-    expect(navigateSpy).not.toHaveBeenCalled();
+    expect(history.location.pathname).not.toBe("/lists");
   });
 
   it("navigates back to /lists on Cancel button click", async () => {
-    const { navigateSpy } = await renderEditListPage();
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(navigateSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ to: "/lists", replace: true }),
-    );
+    const { history } = await renderEditListPage();
+
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(history.location.pathname).toBe("/lists");
   });
 
   it("navigates back to /lists on Close (X) button click", async () => {
-    const { navigateSpy } = await renderEditListPage();
-    await user.click(
+    const { history } = await renderEditListPage();
+
+    await userEvent.click(
       screen.getByRole("button", { name: "Cancel and return to lists" }),
     );
-    expect(navigateSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ to: "/lists", replace: true }),
-    );
+
+    expect(history.location.pathname).toBe("/lists");
   });
 
   it.skip("does not submit when title is empty (prevents mutation)", async () => {
-    const { navigateSpy } = await renderEditListPage();
+    const { history } = await renderEditListPage();
 
     const titleInput = screen.getByLabelText(/List name/i);
-    await user.clear(titleInput);
+    await userEvent.clear(titleInput);
 
     const saveButton = screen.getByRole("button", { name: /Save Changes/i });
     expect(saveButton).toBeDisabled();
@@ -272,6 +238,6 @@ describe("Edit List Page (/_authenticated/lists/$listId/edit)", () => {
       { timeout: 1500 },
     );
 
-    expect(navigateSpy).not.toHaveBeenCalled();
+    expect(history.location.pathname).not.toBe("/lists");
   });
 });

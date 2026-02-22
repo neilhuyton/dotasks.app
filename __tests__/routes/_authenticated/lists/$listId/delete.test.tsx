@@ -4,49 +4,37 @@ import {
   describe,
   it,
   expect,
-  vi,
   beforeAll,
   afterAll,
   beforeEach,
   afterEach,
 } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  RouterProvider,
-  createMemoryHistory,
-  createRouter,
-} from "@tanstack/react-router";
-import { trpc } from "@/trpc";
-import { httpLink } from "@trpc/client";
-import { server } from "../../../../../__mocks__/server";
-import { routeTree } from "@/routeTree.gen";
-import { useAuthStore } from "@/store/authStore";
-import { trpcMsw } from "../../../../../__mocks__/trpcMsw";
-import { TRPCError } from "@trpc/server";
 
-// Reusable list handlers
+import { server } from "../../../../../__mocks__/server";
+import { renderWithTrpcRouter } from "../../../../utils/test-helpers";
+
 import {
   resetMockLists,
+  prepareDetailPageTestList,
+  listGetAllHandler,
   listGetOneSuccessHandler,
+  getMockLists,
   listDeleteHandler,
   delayedListDeleteHandler,
-  getMockLists,
-  listGetAllHandler,
-  prepareDetailPageTestList,
 } from "../../../../../__mocks__/handlers/lists";
+
+import { routeTree } from "@/routeTree.gen";
+import { useAuthStore } from "@/store/authStore";
 import { suppressActWarnings } from "../../../../act-suppress";
+import { trpcMsw } from "../../../../../__mocks__/trpcMsw";
+import { TRPCError } from "@trpc/server";
 
 suppressActWarnings();
 
 describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)", () => {
-  let queryClient: QueryClient;
-  const user = userEvent.setup();
-
   const TEST_LIST_ID = "list-abc-123";
-
-  let history: ReturnType<typeof createMemoryHistory>;
 
   beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 
@@ -58,13 +46,6 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
       refreshToken: "mock-refresh",
     });
 
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false, gcTime: 0, staleTime: 0 },
-        mutations: { retry: false },
-      },
-    });
-
     server.resetHandlers();
     resetMockLists();
     prepareDetailPageTestList(); // Ensures the list with id "list-abc-123" exists
@@ -73,14 +54,11 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
     server.use(listGetOneSuccessHandler);
     server.use(listDeleteHandler);
 
-    history = createMemoryHistory({
-      initialEntries: [`/lists/${TEST_LIST_ID}/delete`],
-    });
+    // Prevent MSW warnings for unrelated queries (e.g. tasks)
+    server.use(trpcMsw.task.getByList.query(() => []));
   });
 
   afterEach(async () => {
-    await queryClient.cancelQueries();
-    queryClient.clear();
     server.resetHandlers();
     useAuthStore.setState({
       isLoggedIn: false,
@@ -93,25 +71,15 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
   afterAll(() => server.close());
 
   const renderDeletePage = async () => {
-    const router = createRouter({ routeTree, history });
-    const navigateSpy = vi.spyOn(router, "navigate");
+    const { history } = renderWithTrpcRouter({
+      initialPath: `/lists/${TEST_LIST_ID}/delete`,
+      routeTree,
+    });
 
-    render(
-      <trpc.Provider
-        client={trpc.createClient({
-          links: [httpLink({ url: "http://localhost:8888/trpc" })],
-        })}
-        queryClient={queryClient}
-      >
-        <QueryClientProvider client={queryClient}>
-          <RouterProvider router={router} />
-        </QueryClientProvider>
-      </trpc.Provider>,
-    );
-
+    // Wait for confirmation heading to confirm page loaded
     await screen.findByRole("heading", { name: /Delete/i });
 
-    return { navigateSpy };
+    return { history };
   };
 
   it("renders confirmation message, list title, and buttons", async () => {
@@ -125,7 +93,7 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
 
     expect(
       screen.getByText(
-        "This action cannot be undone. All tasks in this list will be permanently deleted."
+        "This action cannot be undone. All tasks in this list will be permanently deleted.",
       ),
     ).toBeInTheDocument();
 
@@ -140,10 +108,12 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
 
     await renderDeletePage();
 
-    // Use fireEvent to submit the form
-    fireEvent.submit(screen.getByRole("form"));
+    // Submit the form (your delete page uses <form onSubmit={handleSubmit}>)
+    fireEvent.submit(
+      screen.getByRole("form", { name: /delete list confirmation/i }),
+    );
 
-    await screen.findByText("Deleting...");
+    await screen.findByText("Deleting...", {}, { timeout: 2000 });
 
     const deleteButton = screen.getByRole("button", { name: "Deleting..." });
     expect(deleteButton).toBeDisabled();
@@ -153,18 +123,15 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
 
   it("deletes list with optimistic update and navigates on success", async () => {
     const initialCount = getMockLists().length;
-    const { navigateSpy } = await renderDeletePage();
+    const { history } = await renderDeletePage();
 
-    fireEvent.submit(screen.getByRole("form"));
+    fireEvent.submit(
+      screen.getByRole("form", { name: /delete list confirmation/i }),
+    );
 
     await waitFor(
       () => {
-        expect(navigateSpy).toHaveBeenCalledWith(
-          expect.objectContaining({
-            to: "/lists",
-            replace: true,
-          }),
-        );
+        expect(history.location.pathname).toBe("/lists");
       },
       { timeout: 3000 },
     );
@@ -184,9 +151,11 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
     );
 
     const initialCount = getMockLists().length;
-    const { navigateSpy } = await renderDeletePage();
+    const { history } = await renderDeletePage();
 
-    fireEvent.submit(screen.getByRole("form"));
+    fireEvent.submit(
+      screen.getByRole("form", { name: /delete list confirmation/i }),
+    );
 
     await waitFor(
       () => {
@@ -196,32 +165,25 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
       { timeout: 3000 },
     );
 
-    expect(navigateSpy).not.toHaveBeenCalled();
+    expect(history.location.pathname).not.toBe("/lists");
   });
 
   it("navigates back to /lists on Cancel button click", async () => {
-    const { navigateSpy } = await renderDeletePage();
+    const { history } = await renderDeletePage();
 
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
-    expect(navigateSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: "/lists",
-        replace: true,
-      }),
-    );
+    expect(history.location.pathname).toBe("/lists");
   });
 
   it("navigates back to /lists on Back (ArrowLeft) button click", async () => {
-    const { navigateSpy } = await renderDeletePage();
+    const { history } = await renderDeletePage();
 
-    await user.click(screen.getByRole("button", { name: "Back to lists" }));
-
-    expect(navigateSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: "/lists",
-        replace: true,
-      }),
+    // The back button has aria-label="Back to lists"
+    await userEvent.click(
+      screen.getByRole("button", { name: "Back to lists" }),
     );
+
+    expect(history.location.pathname).toBe("/lists");
   });
 });

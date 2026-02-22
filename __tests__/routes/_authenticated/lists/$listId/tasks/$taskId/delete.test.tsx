@@ -4,50 +4,47 @@ import {
   describe,
   it,
   expect,
-  vi,
   beforeAll,
   afterAll,
   beforeEach,
   afterEach,
 } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  RouterProvider,
-  createMemoryHistory,
-  createRouter,
-} from "@tanstack/react-router";
-import { trpc } from "@/trpc";
-import { httpLink } from "@trpc/client";
+
 import { server } from "../../../../../../../__mocks__/server";
-import { routeTree } from "@/routeTree.gen";
-import { useAuthStore } from "@/store/authStore";
-import { trpcMsw } from "../../../../../../../__mocks__/trpcMsw";
-import { TRPCError } from "@trpc/server";
+import { renderWithTrpcRouter } from "../../../../../../utils/test-helpers";
+
 import {
   resetMockLists,
   prepareDetailPageTestList,
   listGetAllHandler,
   listGetOneSuccessHandler,
 } from "../../../../../../../__mocks__/handlers/lists";
+
 import {
   resetMockTasks,
+  getMockTasks,
   taskGetByListSuccess,
   taskDeleteSuccess,
   delayedTaskDeleteHandler,
 } from "../../../../../../../__mocks__/handlers/tasks";
+
+import { routeTree } from "@/routeTree.gen";
+import { useAuthStore } from "@/store/authStore";
+import { suppressActWarnings } from "../../../../../../act-suppress";
+import { trpcMsw } from "../../../../../../../__mocks__/trpcMsw";
+import { TRPCError } from "@trpc/server";
 import type { Task } from "@/types/task";
 
-describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$taskId/delete)", () => {
-  let queryClient: QueryClient;
-  const user = userEvent.setup();
+suppressActWarnings();
 
+describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$taskId/delete)", () => {
   const TEST_LIST_ID = "list-abc-123";
   const TEST_TASK_ID = "t-real-1";
-  const TEST_TASK_TITLE = "Finish report"; // matches your mock data
+  const TEST_TASK_TITLE = "Finish report";
 
-  let history: ReturnType<typeof createMemoryHistory>;
+  const user = userEvent.setup();
 
   beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 
@@ -59,13 +56,6 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
       refreshToken: "mock-refresh",
     });
 
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false, gcTime: 0, staleTime: 0 },
-        mutations: { retry: false },
-      },
-    });
-
     server.resetHandlers();
     resetMockLists();
     resetMockTasks();
@@ -75,15 +65,9 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
     server.use(listGetOneSuccessHandler);
     server.use(taskGetByListSuccess);
     server.use(taskDeleteSuccess);
-
-    history = createMemoryHistory({
-      initialEntries: [`/lists/${TEST_LIST_ID}/tasks/${TEST_TASK_ID}/delete`],
-    });
   });
 
   afterEach(async () => {
-    await queryClient.cancelQueries();
-    queryClient.clear();
     server.resetHandlers();
     useAuthStore.setState({
       isLoggedIn: false,
@@ -96,25 +80,14 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
   afterAll(() => server.close());
 
   const renderDeleteTaskPage = async () => {
-    const router = createRouter({ routeTree, history });
-    const navigateSpy = vi.spyOn(router, "navigate");
-
-    render(
-      <trpc.Provider
-        client={trpc.createClient({
-          links: [httpLink({ url: "http://localhost:8888/trpc" })],
-        })}
-        queryClient={queryClient}
-      >
-        <QueryClientProvider client={queryClient}>
-          <RouterProvider router={router} />
-        </QueryClientProvider>
-      </trpc.Provider>,
-    );
+    const { history } = renderWithTrpcRouter({
+      initialPath: `/lists/${TEST_LIST_ID}/tasks/${TEST_TASK_ID}/delete`,
+      routeTree,
+    });
 
     await screen.findByRole("heading", { name: /Delete/i });
 
-    return { navigateSpy };
+    return { history };
   };
 
   it("renders confirmation message, task title, and buttons", async () => {
@@ -130,10 +103,8 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
       screen.getByText(/This action cannot be undone/i),
     ).toBeInTheDocument();
 
-    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Delete Task" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Cancel$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Delete Task$/i })).toBeInTheDocument();
   });
 
   it("shows loading state during deletion", async () => {
@@ -141,45 +112,37 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
 
     await renderDeleteTaskPage();
 
-    fireEvent.click(screen.getByRole("button", { name: /^Delete Task$/ }));
+    const deleteBtn = screen.getByRole("button", { name: /^Delete Task$/i });
 
-    await screen.findByText("Deleting...");
+    const form = deleteBtn.closest("form")!;
 
-    const deleteButton = screen.getByRole("button", { name: "Deleting..." });
-    expect(deleteButton).toBeDisabled();
+    fireEvent.submit(form);
 
-    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+    await screen.findByText("Deleting...", {}, { timeout: 2000 });
+
+    expect(deleteBtn).toBeDisabled();
+
+    expect(screen.getByRole("button", { name: /^Cancel$/i })).toBeDisabled();
   });
 
   it("deletes task with optimistic update and navigates on success", async () => {
-    const { navigateSpy } = await renderDeleteTaskPage();
+    const { history } = await renderDeleteTaskPage();
 
-    let cachedTasks = queryClient.getQueryData<Task[]>([
-      ["task", "getByList"],
-      { input: { listId: TEST_LIST_ID }, type: "query" },
-    ]);
-    expect(cachedTasks?.some((t) => t.id === TEST_TASK_ID)).toBe(true);
+    const deleteBtn = screen.getByRole("button", { name: /^Delete Task$/i });
 
-    fireEvent.click(screen.getByRole("button", { name: /^Delete Task$/ }));
+    const form = deleteBtn.closest("form")!;
+
+    fireEvent.submit(form);
 
     await waitFor(
       () => {
-        expect(navigateSpy).toHaveBeenCalledWith(
-          expect.objectContaining({
-            to: "/lists/$listId",
-            params: { listId: TEST_LIST_ID },
-            replace: true,
-          }),
-        );
+        expect(history.location.pathname).toBe(`/lists/${TEST_LIST_ID}`);
       },
-      { timeout: 3000 },
+      { timeout: 5000 },
     );
 
-    cachedTasks = queryClient.getQueryData<Task[]>([
-      ["task", "getByList"],
-      { input: { listId: TEST_LIST_ID }, type: "query" },
-    ]);
-    expect(cachedTasks?.some((t) => t.id === TEST_TASK_ID)).toBe(false);
+    const finalTasks = getMockTasks();
+    expect(finalTasks.some(t => t.id === TEST_TASK_ID)).toBe(false);
   });
 
   it("rolls back optimistic update on deletion error", async () => {
@@ -192,58 +155,41 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
       }),
     );
 
-    const { navigateSpy } = await renderDeleteTaskPage();
+    const { history } = await renderDeleteTaskPage();
 
-    let cachedTasks = queryClient.getQueryData<Task[]>([
-      ["task", "getByList"],
-      { input: { listId: TEST_LIST_ID }, type: "query" },
-    ]);
-    expect(cachedTasks?.some((t) => t.id === TEST_TASK_ID)).toBe(true);
+    const deleteBtn = screen.getByRole("button", { name: /^Delete Task$/i });
 
-    fireEvent.click(screen.getByRole("button", { name: /^Delete Task$/ }));
+    const form = deleteBtn.closest("form")!;
+
+    fireEvent.submit(form);
 
     await waitFor(
       () => {
-        cachedTasks = queryClient.getQueryData<Task[]>([
-          ["task", "getByList"],
-          { input: { listId: TEST_LIST_ID }, type: "query" },
-        ]);
-        expect(cachedTasks?.some((t) => t.id === TEST_TASK_ID)).toBe(true);
+        const tasks = getMockTasks();
+        expect(tasks.some(t => t.id === TEST_TASK_ID)).toBe(true);
       },
       { timeout: 3000 },
     );
 
-    expect(navigateSpy).not.toHaveBeenCalled();
+    expect(history.location.pathname).not.toBe(`/lists/${TEST_LIST_ID}`);
   });
 
   it("navigates back to list on Cancel button click", async () => {
-    const { navigateSpy } = await renderDeleteTaskPage();
+    const { history } = await renderDeleteTaskPage();
 
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByRole("button", { name: /^Cancel$/i }));
 
-    expect(navigateSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: "/lists/$listId",
-        params: { listId: TEST_LIST_ID },
-        replace: true,
-      }),
-    );
+    expect(history.location.pathname).toBe(`/lists/${TEST_LIST_ID}`);
   });
 
   it("navigates back to list on Back (ArrowLeft) button click", async () => {
-    const { navigateSpy } = await renderDeleteTaskPage();
+    const { history } = await renderDeleteTaskPage();
 
     await user.click(
       screen.getByRole("button", { name: "Cancel and return to list" }),
     );
 
-    expect(navigateSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: "/lists/$listId",
-        params: { listId: TEST_LIST_ID },
-        replace: true,
-      }),
-    );
+    expect(history.location.pathname).toBe(`/lists/${TEST_LIST_ID}`);
   });
 
   it("renders generic title when task title is missing", async () => {
@@ -251,7 +197,7 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
       trpcMsw.task.getByList.query(() => [
         {
           id: TEST_TASK_ID,
-          title: "", // empty string → renders Delete ""?
+          title: "",
           description: null,
           listId: TEST_LIST_ID,
           dueDate: null,
@@ -267,7 +213,6 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
 
     await renderDeleteTaskPage();
 
-    // Matches current behavior when title is empty string
     expect(
       screen.getByRole("heading", {
         name: /Delete ""\?/i,

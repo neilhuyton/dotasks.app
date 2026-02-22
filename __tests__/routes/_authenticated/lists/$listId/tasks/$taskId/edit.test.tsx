@@ -4,33 +4,24 @@ import {
   describe,
   it,
   expect,
-  vi,
   beforeAll,
   afterAll,
   beforeEach,
   afterEach,
 } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  RouterProvider,
-  createMemoryHistory,
-  createRouter,
-} from "@tanstack/react-router";
-import { trpc } from "@/trpc";
-import { httpLink } from "@trpc/client";
+
 import { server } from "../../../../../../../__mocks__/server";
-import { routeTree } from "@/routeTree.gen";
-import { useAuthStore } from "@/store/authStore";
-import { trpcMsw } from "../../../../../../../__mocks__/trpcMsw";
-import { TRPCError } from "@trpc/server";
+import { renderWithTrpcRouter } from "../../../../../../utils/test-helpers";
+
 import {
   resetMockLists,
   prepareDetailPageTestList,
   listGetAllHandler,
   listGetOneSuccessHandler,
 } from "../../../../../../../__mocks__/handlers/lists";
+
 import {
   resetMockTasks,
   taskGetByListSuccess,
@@ -39,15 +30,20 @@ import {
   delayedTaskUpdateHandler,
 } from "../../../../../../../__mocks__/handlers/tasks";
 
-describe("Edit Task Page (/_authenticated/lists/$listId/tasks/$taskId/edit)", () => {
-  let queryClient: QueryClient;
-  const user = userEvent.setup();
+import { routeTree } from "@/routeTree.gen";
+import { useAuthStore } from "@/store/authStore";
+import { suppressActWarnings } from "../../../../../../act-suppress";
+import { trpcMsw } from "../../../../../../../__mocks__/trpcMsw";
+import { TRPCError } from "@trpc/server";
 
+suppressActWarnings();
+
+describe("Edit Task Page (/_authenticated/lists/$listId/tasks/$taskId/edit)", () => {
   const TEST_LIST_ID = "list-abc-123";
   const TEST_TASK_ID = "t-real-1";
   const ORIGINAL_TITLE = "Finish report";
 
-  let history: ReturnType<typeof createMemoryHistory>;
+  const user = userEvent.setup();
 
   beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 
@@ -59,13 +55,6 @@ describe("Edit Task Page (/_authenticated/lists/$listId/tasks/$taskId/edit)", ()
       refreshToken: "mock-refresh",
     });
 
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false, gcTime: 0, staleTime: 0 },
-        mutations: { retry: false },
-      },
-    });
-
     server.resetHandlers();
     resetMockLists();
     resetMockTasks();
@@ -74,15 +63,10 @@ describe("Edit Task Page (/_authenticated/lists/$listId/tasks/$taskId/edit)", ()
     server.use(listGetAllHandler);
     server.use(listGetOneSuccessHandler);
     server.use(taskGetByListSuccess);
-
-    history = createMemoryHistory({
-      initialEntries: [`/lists/${TEST_LIST_ID}/tasks/${TEST_TASK_ID}/edit`],
-    });
+    server.use(taskUpdateHandler);
   });
 
   afterEach(async () => {
-    await queryClient.cancelQueries();
-    queryClient.clear();
     server.resetHandlers();
     useAuthStore.setState({
       isLoggedIn: false,
@@ -95,26 +79,16 @@ describe("Edit Task Page (/_authenticated/lists/$listId/tasks/$taskId/edit)", ()
   afterAll(() => server.close());
 
   const renderEditTaskPage = async () => {
-    const router = createRouter({ routeTree, history });
-    const navigateSpy = vi.spyOn(router, "navigate");
+    const { history } = renderWithTrpcRouter({
+      initialPath: `/lists/${TEST_LIST_ID}/tasks/${TEST_TASK_ID}/edit`,
+      routeTree,
+    });
 
-    render(
-      <trpc.Provider
-        client={trpc.createClient({
-          links: [httpLink({ url: "http://localhost:8888/trpc" })],
-        })}
-        queryClient={queryClient}
-      >
-        <QueryClientProvider client={queryClient}>
-          <RouterProvider router={router} />
-        </QueryClientProvider>
-      </trpc.Provider>,
-    );
-
+    // Wait for page to load
     await screen.findByText("Edit Task");
     await screen.findByDisplayValue(ORIGINAL_TITLE);
 
-    return { navigateSpy };
+    return { history };
   };
 
   it("renders page title, inputs, and buttons", async () => {
@@ -141,28 +115,19 @@ describe("Edit Task Page (/_authenticated/lists/$listId/tasks/$taskId/edit)", ()
     await renderEditTaskPage();
 
     const saveButton = screen.getByRole("button", { name: /Save Changes/i });
-
-    await waitFor(() => {
-      expect(saveButton).not.toBeDisabled();
-    });
+    expect(saveButton).not.toBeDisabled();
 
     const titleInput = screen.getByLabelText(/Task name/i);
 
     await user.clear(titleInput);
-    await waitFor(() => {
-      expect(saveButton).toBeDisabled();
-    });
+    await waitFor(() => expect(saveButton).toBeDisabled());
 
     await user.type(titleInput, "   ");
-    await waitFor(() => {
-      expect(saveButton).toBeDisabled();
-    });
+    await waitFor(() => expect(saveButton).toBeDisabled());
 
     await user.clear(titleInput);
     await user.type(titleInput, "Valid updated title");
-    await waitFor(() => {
-      expect(saveButton).not.toBeDisabled();
-    });
+    await waitFor(() => expect(saveButton).not.toBeDisabled());
   });
 
   it("shows loading state during task update", async () => {
@@ -184,7 +149,7 @@ describe("Edit Task Page (/_authenticated/lists/$listId/tasks/$taskId/edit)", ()
   it("updates task with optimistic update and navigates on success", async () => {
     server.use(taskUpdateHandler);
 
-    const { navigateSpy } = await renderEditTaskPage();
+    const { history } = await renderEditTaskPage();
 
     const titleInput = screen.getByLabelText(/Task name/i);
     const descInput = screen.getByLabelText(/Description/i);
@@ -200,13 +165,7 @@ describe("Edit Task Page (/_authenticated/lists/$listId/tasks/$taskId/edit)", ()
 
     await waitFor(
       () => {
-        expect(navigateSpy).toHaveBeenCalledWith(
-          expect.objectContaining({
-            to: "/lists/$listId",
-            params: { listId: TEST_LIST_ID },
-            replace: true,
-          }),
-        );
+        expect(history.location.pathname).toBe(`/lists/${TEST_LIST_ID}`);
       },
       { timeout: 5000 },
     );
@@ -227,7 +186,7 @@ describe("Edit Task Page (/_authenticated/lists/$listId/tasks/$taskId/edit)", ()
       }),
     );
 
-    const { navigateSpy } = await renderEditTaskPage();
+    const { history } = await renderEditTaskPage();
 
     await user.clear(screen.getByLabelText(/Task name/i));
     await user.type(screen.getByLabelText(/Task name/i), "Will fail");
@@ -244,73 +203,68 @@ describe("Edit Task Page (/_authenticated/lists/$listId/tasks/$taskId/edit)", ()
       { timeout: 3000 },
     );
 
-    expect(navigateSpy).not.toHaveBeenCalled();
+    expect(history.location.pathname).not.toBe(`/lists/${TEST_LIST_ID}`);
   });
 
   it("navigates back to list on Cancel button click", async () => {
-    const { navigateSpy } = await renderEditTaskPage();
+    const { history } = await renderEditTaskPage();
+
     await user.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(navigateSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: "/lists/$listId",
-        params: { listId: TEST_LIST_ID },
-        replace: true,
-      }),
-    );
+
+    expect(history.location.pathname).toBe(`/lists/${TEST_LIST_ID}`);
   });
 
   it("navigates back on Back (ArrowLeft) button click", async () => {
-    const { navigateSpy } = await renderEditTaskPage();
+    const { history } = await renderEditTaskPage();
+
     await user.click(
-      screen.getByRole("button", { name: "Cancel and return to task list" })
+      screen.getByRole("button", { name: "Cancel and return to task list" }),
     );
-    expect(navigateSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: "/lists/$listId",
-        params: { listId: TEST_LIST_ID },
-        replace: true,
-      }),
-    );
+
+    expect(history.location.pathname).toBe(`/lists/${TEST_LIST_ID}`);
   });
 
-  it.todo("does not submit when title is empty (prevents mutation)", async () => {
-    resetMockTasks();
-    const initialTasks = getMockTasks();
-    const initialTask = initialTasks.find((t) => t.id === TEST_TASK_ID);
-    expect(initialTask?.title, "Mock data not reset before test").toBe(
-      ORIGINAL_TITLE,
-    );
+  it.todo(
+    "does not submit when title is empty (prevents mutation)",
+    async () => {
+      resetMockTasks();
+      const initialTasks = getMockTasks();
+      const initialTask = initialTasks.find((t) => t.id === TEST_TASK_ID);
+      expect(initialTask?.title, "Mock data not reset before test").toBe(
+        ORIGINAL_TITLE,
+      );
 
-    const { navigateSpy } = await renderEditTaskPage();
+      const { history } = await renderEditTaskPage();
 
-    const titleInput = screen.getByLabelText(/Task name/i);
-    const saveButton = screen.getByRole("button", { name: /Save Changes/i });
+      const titleInput = screen.getByLabelText(/Task name/i);
+      const saveButton = screen.getByRole("button", { name: /Save Changes/i });
 
-    // 1. Clear and force RHF / React to process it
-    await user.clear(titleInput);
+      // 1. Clear and force RHF / React to process it
+      await user.clear(titleInput);
 
-    // 2. Wait until input is truly empty AND button is disabled
-    await waitFor(
-      () => {
-        expect(titleInput).toHaveValue("");
-        expect(saveButton).toBeDisabled();
-      },
-      { timeout: 2000 }
-    );
+      // 2. Wait until input is truly empty AND button is disabled
+      await waitFor(
+        () => {
+          expect(titleInput).toHaveValue("");
+          expect(saveButton).toBeDisabled();
+        },
+        { timeout: 2000 },
+      );
 
-    // 3. Try to submit via click (should do nothing because disabled)
-    await user.click(saveButton);
+      // 3. Try to submit via click (should do nothing because disabled)
+      await user.click(saveButton);
 
-    // 4. Also try programmatic submit on the form (common hidden cause)
-    const form = screen.getByTestId("edit-task-form");
-    fireEvent.submit(form);
+      // 4. Also try programmatic submit on the form (common hidden cause)
+      const form = screen.getByTestId("edit-task-form");
+      fireEvent.submit(form);
 
-    // 5. Give generous time for any pending optimistic update to apply if it wrongly fired
-    await new Promise((r) => setTimeout(r, 1500));
+      // 5. Give generous time for any pending optimistic update to apply if it wrongly fired
+      await new Promise((r) => setTimeout(r, 1500));
 
-    // 6. Assert final state
-    const taskAfter = getMockTasks().find((t) => t.id === TEST_TASK_ID);
-    expect(taskAfter?.title).toBe(ORIGINAL_TITLE);
-    expect(navigateSpy).not.toHaveBeenCalled();
-  });
+      // 6. Assert final state
+      const taskAfter = getMockTasks().find((t) => t.id === TEST_TASK_ID);
+      expect(taskAfter?.title).toBe(ORIGINAL_TITLE);
+      expect(history.location.pathname).not.toBe(`/lists/${TEST_LIST_ID}`);
+    },
+  );
 });

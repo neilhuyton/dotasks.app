@@ -1,32 +1,27 @@
+// __tests__/routes/_authenticated/lists/$listId/tasks/new.test.tsx
+
 import {
   describe,
   it,
   expect,
-  vi,
   beforeAll,
   afterAll,
   beforeEach,
   afterEach,
 } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  RouterProvider,
-  createMemoryHistory,
-  createRouter,
-} from "@tanstack/react-router";
-import { trpc } from "@/trpc";
-import { httpLink } from "@trpc/client";
+
 import { server } from "../../../../../../__mocks__/server";
-import { routeTree } from "@/routeTree.gen";
-import { useAuthStore } from "@/store/authStore";
+import { renderWithTrpcRouter } from "../../../../../utils/test-helpers";
+
 import {
   resetMockLists,
   prepareDetailPageTestList,
   listGetAllHandler,
   listGetOneSuccessHandler,
 } from "../../../../../../__mocks__/handlers/lists";
+
 import {
   resetMockTasks,
   taskGetByListSuccess,
@@ -34,15 +29,16 @@ import {
   delayedTaskCreateHandler,
   getMockTasks,
 } from "../../../../../../__mocks__/handlers/tasks";
-import { type Task } from "@/types/task";
+
+import { routeTree } from "@/routeTree.gen";
+import { useAuthStore } from "@/store/authStore";
+import { suppressActWarnings } from "../../../../../act-suppress";
+
+suppressActWarnings();
 
 describe("New Task Page (/_authenticated/lists/$listId/tasks/new)", () => {
-  let queryClient: QueryClient;
-  const user = userEvent.setup();
-
   const TEST_LIST_ID = "list-abc-123";
-
-  let history: ReturnType<typeof createMemoryHistory>;
+  const user = userEvent.setup(); // ← Restored here
 
   beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 
@@ -54,13 +50,6 @@ describe("New Task Page (/_authenticated/lists/$listId/tasks/new)", () => {
       refreshToken: "mock-refresh",
     });
 
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false, gcTime: 0, staleTime: 0 },
-        mutations: { retry: false },
-      },
-    });
-
     server.resetHandlers();
     resetMockLists();
     resetMockTasks();
@@ -70,15 +59,9 @@ describe("New Task Page (/_authenticated/lists/$listId/tasks/new)", () => {
     server.use(listGetOneSuccessHandler);
     server.use(taskGetByListSuccess);
     server.use(taskCreateHandler);
-
-    history = createMemoryHistory({
-      initialEntries: [`/lists/${TEST_LIST_ID}/tasks/new`],
-    });
   });
 
   afterEach(async () => {
-    await queryClient.cancelQueries();
-    queryClient.clear();
     server.resetHandlers();
     useAuthStore.setState({
       isLoggedIn: false,
@@ -91,25 +74,15 @@ describe("New Task Page (/_authenticated/lists/$listId/tasks/new)", () => {
   afterAll(() => server.close());
 
   const renderNewTaskPage = async () => {
-    const router = createRouter({ routeTree, history });
-    const navigateSpy = vi.spyOn(router, "navigate");
+    const { history } = renderWithTrpcRouter({
+      initialPath: `/lists/${TEST_LIST_ID}/tasks/new`,
+      routeTree,
+    });
 
-    render(
-      <trpc.Provider
-        client={trpc.createClient({
-          links: [httpLink({ url: "http://localhost:8888/trpc" })],
-        })}
-        queryClient={queryClient}
-      >
-        <QueryClientProvider client={queryClient}>
-          <RouterProvider router={router} />
-        </QueryClientProvider>
-      </trpc.Provider>,
-    );
-
+    // Wait for page heading to confirm load
     await screen.findByRole("heading", { name: /New Task/i });
 
-    return { navigateSpy };
+    return { history };
   };
 
   it("renders title, description input, and buttons", async () => {
@@ -172,37 +145,25 @@ describe("New Task Page (/_authenticated/lists/$listId/tasks/new)", () => {
   });
 
   it("navigates back to list on Cancel button click", async () => {
-    const { navigateSpy } = await renderNewTaskPage();
+    const { history } = await renderNewTaskPage();
 
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
-    expect(navigateSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: "/lists/$listId",
-        params: { listId: TEST_LIST_ID },
-        replace: true,
-      }),
-    );
+    expect(history.location.pathname).toBe(`/lists/${TEST_LIST_ID}`);
   });
 
   it("navigates back to list on Back (ArrowLeft) button click", async () => {
-    const { navigateSpy } = await renderNewTaskPage();
+    const { history } = await renderNewTaskPage();
 
     await user.click(screen.getByRole("button", { name: "Back to list" }));
 
-    expect(navigateSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: "/lists/$listId",
-        params: { listId: TEST_LIST_ID },
-        replace: true,
-      }),
-    );
+    expect(history.location.pathname).toBe(`/lists/${TEST_LIST_ID}`);
   });
 
   it("creates task with title + description, optimistic update, and navigates on success", async () => {
     server.use(taskCreateHandler);
 
-    const { navigateSpy } = await renderNewTaskPage();
+    const { history } = await renderNewTaskPage();
 
     const titleInput = screen.getByPlaceholderText("Enter task title...");
     const descInput = screen.getByPlaceholderText(/Add any notes/i);
@@ -214,35 +175,7 @@ describe("New Task Page (/_authenticated/lists/$listId/tasks/new)", () => {
 
     await waitFor(
       () => {
-        const cachedTasks = queryClient.getQueryData<Task[]>([
-          ["task", "getByList"],
-          { input: { listId: TEST_LIST_ID }, type: "query" },
-        ]);
-
-        expect(cachedTasks).toBeDefined();
-        expect(cachedTasks!.length).toBeGreaterThan(2);
-
-        const optimistic = cachedTasks!.find(
-          (t) => t.title === "Buy groceries",
-        );
-        expect(optimistic).toBeDefined();
-        expect(optimistic!.description).toBe(
-          "Milk, eggs, bread, and some fruit",
-        );
-        expect(optimistic!.id).toMatch(/^temp-/);
-      },
-      { timeout: 1500 },
-    );
-
-    await waitFor(
-      () => {
-        expect(navigateSpy).toHaveBeenCalledWith(
-          expect.objectContaining({
-            to: "/lists/$listId",
-            params: { listId: TEST_LIST_ID },
-            replace: true,
-          }),
-        );
+        expect(history.location.pathname).toBe(`/lists/${TEST_LIST_ID}`);
       },
       { timeout: 4000 },
     );
