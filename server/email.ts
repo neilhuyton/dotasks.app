@@ -1,4 +1,6 @@
 // server/email.ts
+import fetch from 'node-fetch';  // ← Add this import (npm install node-fetch)
+
 const ZEPTOMAIL_API_URL = "https://api.zeptomail.eu/v1.1/email";
 
 function logEnvStatus() {
@@ -60,7 +62,7 @@ export async function sendMailWithDebug(
 
     const start = Date.now();
 
-    // Force timeout even if abort doesn't trigger cleanly in Lambda
+    // Use node-fetch with race for safety
     const response = await Promise.race([
       fetch(ZEPTOMAIL_API_URL, {
         method: "POST",
@@ -71,7 +73,7 @@ export async function sendMailWithDebug(
         },
         body: JSON.stringify(payload),
         signal: controller.signal,
-      }),
+      }) as Promise<Response>,  // Type assertion since node-fetch returns its own Response type
       new Promise((_, reject) =>
         setTimeout(() => reject(new Error("Hard 15s timeout on ZeptoMail fetch")), 15000)
       ),
