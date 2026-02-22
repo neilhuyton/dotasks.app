@@ -1,10 +1,13 @@
 // server/email.ts
-const ZEPTOMAIL_API_URL = "https://api.zeptomail.eu/v1.1/email"; // .eu because your SMTP is smtp.zeptomail.eu
+const ZEPTOMAIL_API_URL = "https://api.zeptomail.eu/v1.1/email";
 
 function logEnvStatus() {
   console.log("=== ZeptoMail API Environment check ===");
   console.log("ZEPTOMAIL_API_URL:", ZEPTOMAIL_API_URL);
-  console.log("EMAIL_PASS (token):", process.env.EMAIL_PASS ? "present" : "MISSING");
+  console.log(
+    "EMAIL_PASS (token):",
+    process.env.EMAIL_PASS ? "present" : "MISSING",
+  );
   console.log("EMAIL_FROM:", process.env.EMAIL_FROM || "MISSING");
   console.log("APP_NAME:", process.env.APP_NAME || "MISSING");
   console.log("=======================================");
@@ -15,11 +18,13 @@ logEnvStatus();
 const FROM_NAME = process.env.APP_NAME || "Do Tasks App";
 const FROM_EMAIL = process.env.EMAIL_FROM || "noreply@dotasks.app";
 
-const FROM = `${FROM_NAME} <${FROM_EMAIL}>`;
-
-export async function sendMailWithDebug(to: string, subject: string, html: string) {
+export async function sendMailWithDebug(
+  to: string,
+  subject: string,
+  html: string,
+) {
   console.log("Preparing to send via ZeptoMail API:");
-  console.log("From:", FROM);
+  console.log("From:", `${FROM_NAME} <${FROM_EMAIL}>`);
   console.log("To:", to);
   console.log("Subject:", subject);
 
@@ -39,17 +44,31 @@ export async function sendMailWithDebug(to: string, subject: string, html: strin
     htmlbody: html,
   };
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+    console.warn("ZeptoMail fetch timed out after 12 seconds");
+  }, 12000);
+
   try {
     console.log("Calling ZeptoMail API...");
+    const start = Date.now();
+
     const response = await fetch(ZEPTOMAIL_API_URL, {
       method: "POST",
       headers: {
-        "Accept": "application/json",
+        Accept: "application/json",
         "Content-Type": "application/json",
-        "Authorization": `Zoho-enczapikey ${process.env.EMAIL_PASS}`,
+        Authorization: `Zoho-enczapikey ${process.env.EMAIL_PASS}`,
       },
       body: JSON.stringify(payload),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
+
+    const duration = Date.now() - start;
+    console.log(`ZeptoMail API responded in ${duration} ms`);
 
     const data = await response.json();
 
@@ -59,19 +78,29 @@ export async function sendMailWithDebug(to: string, subject: string, html: strin
       return { success: true, requestId: data.request_id };
     } else {
       console.error("❌ ZeptoMail API error:", response.status, data);
-      return { success: false, error: data.message || data.error?.message || "API error" };
+      return {
+        success: false,
+        error: data.message || data.error?.message || "API error",
+      };
     }
   } catch (error: any) {
-    console.error("=== ZeptoMail API FAILED ===");
-    console.error("Error:", error.message);
-    if (error.stack) console.error("Stack:", error.stack);
-    return { success: false, error: error.message };
+    clearTimeout(timeoutId);
+    console.error("=== ZeptoMail API call FAILED ===");
+    console.error("Error name:", error.name);
+    console.error("Error message:", error.message);
+    if (error.code) console.error("Error code:", error.code);
+    if (error.stack) console.error("Stack:", error.stack.substring(0, 500));
+    return {
+      success: false,
+      error: error.message || "Network / timeout error",
+    };
   }
 }
 
-// ====================== YOUR EXISTING FUNCTIONS ======================
-
-export async function sendVerificationEmail(to: string, verificationToken: string) {
+export async function sendVerificationEmail(
+  to: string,
+  verificationToken: string,
+) {
   const verificationUrl = `${process.env.VITE_APP_URL || "http://localhost:8888"}/verify-email?token=${verificationToken}`;
 
   const html = `
@@ -97,7 +126,10 @@ export async function sendResetPasswordEmail(to: string, resetToken: string) {
   return sendMailWithDebug(to, "Reset Your Password", html);
 }
 
-export async function sendEmailChangeNotification(oldEmail: string, newEmail: string) {
+export async function sendEmailChangeNotification(
+  oldEmail: string,
+  newEmail: string,
+) {
   const html = `
     <h1>Email Address Change Notification</h1>
     <p>The email address associated with your account has been changed to <strong>${newEmail}</strong>.</p>
@@ -105,7 +137,11 @@ export async function sendEmailChangeNotification(oldEmail: string, newEmail: st
     <p>Thank you,<br>Do Tasks App Team</p>
   `;
 
-  return sendMailWithDebug(oldEmail, "Your Email Address Has Been Changed", html);
+  return sendMailWithDebug(
+    oldEmail,
+    "Your Email Address Has Been Changed",
+    html,
+  );
 }
 
 export async function sendPasswordChangeNotification(to: string) {
