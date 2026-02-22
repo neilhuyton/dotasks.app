@@ -1,166 +1,120 @@
 // server/email.ts
-
-import nodemailer from "nodemailer";
+const ZEPTOMAIL_API_URL = "https://api.zeptomail.eu/v1.1/email"; // .eu because your SMTP is smtp.zeptomail.eu
 
 function logEnvStatus() {
-  console.log("=== Environment variables check ===");
-  console.log("EMAIL_HOST:", process.env.EMAIL_HOST || "MISSING");
-  console.log("EMAIL_PORT:", process.env.EMAIL_PORT || "MISSING");
-  console.log("EMAIL_USER:", process.env.EMAIL_USER ? "present" : "MISSING");
-  console.log("EMAIL_PASS:", process.env.EMAIL_PASS ? "present (hidden)" : "MISSING");
+  console.log("=== ZeptoMail API Environment check ===");
+  console.log("ZEPTOMAIL_API_URL:", ZEPTOMAIL_API_URL);
+  console.log("EMAIL_PASS (token):", process.env.EMAIL_PASS ? "present" : "MISSING");
   console.log("EMAIL_FROM:", process.env.EMAIL_FROM || "MISSING");
-  console.log("APP_NAME:", process.env.APP_NAME || "MISSING (will use empty)");
-  console.log("VITE_APP_URL:", process.env.VITE_APP_URL || "using fallback localhost");
-  console.log("===================================");
+  console.log("APP_NAME:", process.env.APP_NAME || "MISSING");
+  console.log("=======================================");
 }
 
-// Run once when module loads (good for serverless cold starts)
 logEnvStatus();
 
-const requiredEnvVars = ["EMAIL_HOST", "EMAIL_PORT", "EMAIL_USER", "EMAIL_PASS", "EMAIL_FROM"];
-const missing = requiredEnvVars.filter(v => !process.env[v]);
+const FROM_NAME = process.env.APP_NAME || "Do Tasks App";
+const FROM_EMAIL = process.env.EMAIL_FROM || "noreply@dotasks.app";
 
-if (missing.length > 0) {
-  console.error("CRITICAL: Missing required environment variables:", missing.join(", "));
-}
+const FROM = `${FROM_NAME} <${FROM_EMAIL}>`;
 
-let transporter: nodemailer.Transporter;
+async function sendMailWithDebug(to: string, subject: string, html: string) {
+  console.log("Preparing to send via ZeptoMail API:");
+  console.log("From:", FROM);
+  console.log("To:", to);
+  console.log("Subject:", subject);
 
-try {
-  console.log("Creating Nodemailer transporter...");
-
-  transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: Number(process.env.EMAIL_PORT),
-    secure: Number(process.env.EMAIL_PORT) === 465, // usually true for 465, false for 587
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
+  const payload = {
+    from: {
+      address: FROM_EMAIL,
+      name: FROM_NAME,
     },
-    // Very useful for debugging SMTP issues in production logs
-    debug: true,
-    logger: true,
-    // Increase timeouts if you suspect slow SMTP server
-    connectionTimeout: 10000, // 10s
-    greetingTimeout: 10000,
-    socketTimeout: 10000,
-  });
-
-  // Optional: verify connection (helps catch issues early)
-  console.log("Verifying transporter connection...");
-  transporter.verify((error) => {
-    if (error) {
-      console.error("Transporter verification FAILED:", error);
-    } else {
-      console.log("Transporter verified successfully — SMTP connection looks good");
-    }
-  });
-
-} catch (err) {
-  console.error("Failed to create transporter:", err);
-}
-
-const FROM = `${process.env.APP_NAME || "App"} <${process.env.EMAIL_FROM || "no-reply@invalid.local"}>`;
-
-async function sendMailWithDebug(mailOptions: nodemailer.SendMailOptions) {
-  console.log("Preparing to send email:");
-  console.log("From:", mailOptions.from);
-  console.log("To:", mailOptions.to);
-  console.log("Subject:", mailOptions.subject);
+    to: [
+      {
+        email_address: {
+          address: to,
+        },
+      },
+    ],
+    subject,
+    htmlbody: html,
+  };
 
   try {
-    console.log("Calling transporter.sendMail()...");
-    const info = await transporter.sendMail(mailOptions);
-    console.log("Email sent successfully!");
-    console.log("Message ID:", info.messageId);
-    console.log("Preview URL (if available):", nodemailer.getTestMessageUrl?.(info));
-    return { success: true, messageId: info.messageId };
+    console.log("Calling ZeptoMail API...");
+    const response = await fetch(ZEPTOMAIL_API_URL, {
+      method: "POST",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "Authorization": `Zoho-enczapikey ${process.env.EMAIL_PASS}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      console.log("✅ Email accepted by ZeptoMail!");
+      console.log("Request ID:", data.request_id || "N/A");
+      return { success: true, requestId: data.request_id };
+    } else {
+      console.error("❌ ZeptoMail API error:", response.status, data);
+      return { success: false, error: data.message || data.error?.message || "API error" };
+    }
   } catch (error: any) {
-    console.error("=== EMAIL SEND FAILED ===");
-    console.error("Error name:", error.name);
-    console.error("Error code:", error.code);
-    console.error("Error message:", error.message);
-    if (error.response) console.error("SMTP response:", error.response);
+    console.error("=== ZeptoMail API FAILED ===");
+    console.error("Error:", error.message);
     if (error.stack) console.error("Stack:", error.stack);
-    console.error("Full error object:", JSON.stringify(error, null, 2));
-    return { success: false, error: error.message || "Unknown error" };
+    return { success: false, error: error.message };
   }
 }
 
-export async function sendVerificationEmail(
-  to: string,
-  verificationToken: string,
-) {
-  const verificationUrl = `${
-    process.env.VITE_APP_URL || "http://localhost:8888"
-  }/verify-email?token=${verificationToken}`;
+// ====================== YOUR EXISTING FUNCTIONS ======================
 
-  const mailOptions = {
-    from: FROM,
-    to,
-    subject: "Verify Your Email Address boop",
-    html: `
-      <h1>Welcome!</h1>
-      <p>Please verify your email address by clicking the link below:</p>
-      <a href="${verificationUrl}">Verify Email</a>
-      <p>If you didn’t register, please ignore this email.</p>
-    `,
-  };
+export async function sendVerificationEmail(to: string, verificationToken: string) {
+  const verificationUrl = `${process.env.VITE_APP_URL || "http://localhost:8888"}/verify-email?token=${verificationToken}`;
 
-  return sendMailWithDebug(mailOptions);
+  const html = `
+    <h1>Welcome!</h1>
+    <p>Please verify your email address by clicking the link below:</p>
+    <a href="${verificationUrl}">Verify Email</a>
+    <p>If you didn’t register, please ignore this email.</p>
+  `;
+
+  return sendMailWithDebug(to, "Verify Your Email Address boop", html);
 }
 
 export async function sendResetPasswordEmail(to: string, resetToken: string) {
-  const resetUrl = `${
-    process.env.VITE_APP_URL || "http://localhost:8888"
-  }/confirm-reset-password?token=${resetToken}`;
+  const resetUrl = `${process.env.VITE_APP_URL || "http://localhost:8888"}/confirm-reset-password?token=${resetToken}`;
 
-  const mailOptions = {
-    from: FROM,
-    to,
-    subject: "Reset Your Password",
-    html: `
-      <h1>Password Reset Request</h1>
-      <p>You requested to reset your password. Click the link below to set a new password:</p>
-      <a href="${resetUrl}">Reset Password</a>
-      <p>This link will expire in 1 hour. If you didn’t request a password reset, please ignore this email.</p>
-    `,
-  };
+  const html = `
+    <h1>Password Reset Request</h1>
+    <p>You requested to reset your password. Click the link below to set a new password:</p>
+    <a href="${resetUrl}">Reset Password</a>
+    <p>This link will expire in 1 hour. If you didn’t request a password reset, please ignore this email.</p>
+  `;
 
-  return sendMailWithDebug(mailOptions);
+  return sendMailWithDebug(to, "Reset Your Password", html);
 }
 
-export async function sendEmailChangeNotification(
-  oldEmail: string,
-  newEmail: string,
-) {
-  const mailOptions = {
-    from: FROM,
-    to: oldEmail,
-    subject: "Your Email Address Has Been Changed",
-    html: `
-      <h1>Email Address Change Notification</h1>
-      <p>The email address associated with your account has been changed to <strong>${newEmail}</strong>.</p>
-      <p>If you initiated this change, no further action is required. If you did not request this change, please contact support immediately at <a href="mailto:support@yourdomain.com">support@yourdomain.com</a>.</p>
-      <p>Thank you,<br>Your App Team</p>
-    `,
-  };
+export async function sendEmailChangeNotification(oldEmail: string, newEmail: string) {
+  const html = `
+    <h1>Email Address Change Notification</h1>
+    <p>The email address associated with your account has been changed to <strong>${newEmail}</strong>.</p>
+    <p>If you initiated this change, no further action is required. If you did not request this change, please contact support immediately at <a href="mailto:support@dotasks.app">support@dotasks.app</a>.</p>
+    <p>Thank you,<br>Do Tasks App Team</p>
+  `;
 
-  return sendMailWithDebug(mailOptions);
+  return sendMailWithDebug(oldEmail, "Your Email Address Has Been Changed", html);
 }
 
 export async function sendPasswordChangeNotification(to: string) {
-  const mailOptions = {
-    from: FROM,
-    to,
-    subject: "Your Password Has Been Changed",
-    html: `
-      <h1>Password Change Notification</h1>
-      <p>The password for your account has been successfully changed.</p>
-      <p>If you initiated this change, no further action is required. If you did not request this change, please contact support immediately at <a href="mailto:support@yourdomain.com">support@yourdomain.com</a>.</p>
-      <p>Thank you,<br>Your App Team</p>
-    `,
-  };
+  const html = `
+    <h1>Password Change Notification</h1>
+    <p>The password for your account has been successfully changed.</p>
+    <p>If you initiated this change, no further action is required. If you did not request this change, please contact support immediately at <a href="mailto:support@dotasks.app">support@dotasks.app</a>.</p>
+    <p>Thank you,<br>Do Tasks App Team</p>
+  `;
 
-  return sendMailWithDebug(mailOptions);
+  return sendMailWithDebug(to, "Your Password Has Been Changed", html);
 }
