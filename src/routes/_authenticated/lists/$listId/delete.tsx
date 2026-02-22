@@ -21,7 +21,6 @@ function DeleteListConfirmPage() {
     { id: listId },
     {
       staleTime: 1000 * 60 * 5, // 5 minutes
-      // Optional: keep showing previous data while refetching
       placeholderData: (prev) => prev,
     },
   );
@@ -63,8 +62,15 @@ function DeleteListConfirmPage() {
     mutation.mutate({ id: listId });
   };
 
-  // Use cached/fallback title
   const listTitle = list?.title ?? "this list";
+
+  if (isListLoading) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div
@@ -76,71 +82,59 @@ function DeleteListConfirmPage() {
         "bg-background overscroll-none touch-none",
       )}
     >
-      <div className="relative flex min-h-full flex-col px-6 pb-20 pt-20">
-        {/* Back button */}
+      <div className="relative flex min-h-full flex-col px-6 pt-20 pb-10 sm:px-8">
+        {/* Back / Close button */}
         <Button
           variant="outline"
           size="icon"
-          className="absolute left-4 top-6 z-[10000]"
+          className="absolute left-4 top-6 sm:left-6 sm:top-8 z-[10000]"
           aria-label="Back to lists"
           onClick={handleCancel}
+          disabled={mutation.isPending}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
 
-        {/* Centered content */}
-        <div className="flex flex-1 flex-col items-center justify-center text-center">
-          <div className="space-y-6 max-w-md">
-            {isListLoading ? (
-              <div className="flex items-center justify-center gap-3">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                <h1 className="text-3xl font-bold tracking-tight">
-                  Loading list...
-                </h1>
-              </div>
-            ) : (
-              <>
-                <h1 className="text-3xl font-bold tracking-tight">
-                  Delete "{listTitle}"?
-                </h1>
+        {/* Main centered content */}
+        <div className="flex flex-1 flex-col items-center justify-center">
+          <div className="w-full max-w-2xl space-y-10">
+            <div className="text-center space-y-4">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
+                Delete "{listTitle}"?
+              </h1>
+              <p className="text-lg text-muted-foreground">
+                This action cannot be undone. All tasks in this list will be
+                permanently deleted.
+              </p>
+            </div>
 
-                <p className="text-lg text-muted-foreground">
-                  This action cannot be undone. All tasks in this list will be
-                  permanently deleted.
-                </p>
-              </>
-            )}
+            <form onSubmit={handleSubmit} aria-label="Delete list confirmation" className="space-y-8">
+              <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
+                <Button
+                  type="submit"
+                  variant="destructive"
+                  disabled={mutation.isPending}
+                  className="w-full sm:w-40"
+                >
+                  {mutation.isPending && (
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  )}
+                  {mutation.isPending ? "Deleting..." : "Delete List"}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCancel}
+                  disabled={mutation.isPending}
+                  className="w-full sm:w-32"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
-
-        {/* Action buttons */}
-        <form
-          onSubmit={handleSubmit}
-          aria-label="Delete list confirmation"
-          className="mt-auto flex flex-col gap-4 sm:flex-row sm:justify-center w-full max-w-sm mx-auto pb-10"
-        >
-          <Button
-            type="submit"
-            variant="destructive"
-            disabled={mutation.isPending || isListLoading || !list}
-            className="w-full sm:w-40"
-          >
-            {mutation.isPending && (
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            )}
-            {mutation.isPending ? "Deleting..." : "Delete List"}
-          </Button>
-
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleCancel}
-            disabled={mutation.isPending || isListLoading}
-            className="w-full sm:w-32"
-          >
-            Cancel
-          </Button>
-        </form>
       </div>
     </div>
   );
