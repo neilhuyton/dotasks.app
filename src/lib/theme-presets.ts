@@ -18,11 +18,6 @@ export const colorThemes: Record<
     primaryForeground: string;
   }
 > = {
-  zinc: {
-    name: "Zinc",
-    primary: "oklch(0.21 0.006 285.885)",
-    primaryForeground: "oklch(0.985 0 0)",
-  },
   blue: {
     name: "Blue",
     primary: "oklch(0.62 0.18 250)",
