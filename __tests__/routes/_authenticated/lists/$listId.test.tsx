@@ -69,14 +69,26 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
 
   afterAll(() => server.close());
 
-  async function renderListDetail(listId = "list-abc-123") {
+  // ────────────────────────────────────────────────
+  // Flexible render helper
+  // ────────────────────────────────────────────────
+  async function renderListDetail(
+    listId = "list-abc-123",
+    options: { waitForSuccess?: boolean } = { waitForSuccess: true },
+  ) {
     const result = renderWithTrpcRouter({
       initialPath: `/lists/${listId}`,
       routeTree,
     });
 
-    // Wait for real content to confirm page loaded
-    await screen.findByText("My Important Projects", {}, { timeout: 5000 });
+    if (options.waitForSuccess) {
+      // Wait for success content (title) to confirm page loaded successfully
+      await screen.findByText("My Important Projects", {}, { timeout: 5000 });
+    } else {
+      // For loading/error tests: give React Query / MSW a moment to start
+      // processing without forcing success content
+      await waitFor(() => {}, { timeout: 100 }); // minimal stabilization
+    }
 
     return result;
   }
@@ -105,17 +117,25 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
   it("shows loading spinner while fetching list", async () => {
     server.use(listLoadingHandler);
 
-    await renderListDetail();
+    await renderListDetail("list-abc-123", { waitForSuccess: false });
 
-    await screen.findByTestId("loading-spinner");
+    // Wait for spinner (increased timeout for MSW delay)
+    await screen.findByTestId("loading-spinner", {}, { timeout: 3000 });
   });
 
   it("shows 'List not found' message when list does not exist", async () => {
     server.use(getListNotFoundHandler);
 
-    await renderListDetail();
+    await renderListDetail("list-abc-123", { waitForSuccess: false });
 
-    await screen.findByText(/not found|don't have access/i);
+    // Wait for error/not-found message
+    await screen.findByText(
+      /not found|don't have access/i,
+      {},
+      { timeout: 2000 },
+    );
+    // Alternative (more robust if you have test id):
+    // await screen.findByTestId("list-not-found", {}, { timeout: 2000 });
   });
 
   it("renders Add Task FAB with correct navigation target", async () => {

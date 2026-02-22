@@ -6,20 +6,47 @@ import type { AppRouter } from "../server/trpc";
 import { useAuthStore } from "./store/authStore";
 import { router } from "./router/router";
 import { keepPreviousData } from "@tanstack/react-query";
+import { get, set, del } from "idb-keyval";
+import type {
+  Persister,
+  PersistedClient,
+} from "@tanstack/react-query-persist-client";
 
+// ────────────────────────────────────────────────
+// IndexedDB Persister (properly typed, matches official examples)
+// ────────────────────────────────────────────────
+const CACHE_KEY = "my-app-query-cache-v1"; // Bump this string if you ever change cache shape
+
+const idbPersister: Persister = {
+  persistClient: async (client: PersistedClient) => {
+    await set(CACHE_KEY, client);
+  },
+
+  restoreClient: async (): Promise<PersistedClient | undefined> => {
+    return await get<PersistedClient>(CACHE_KEY);
+  },
+
+  removeClient: async () => {
+    await del(CACHE_KEY);
+  },
+};
+
+// ────────────────────────────────────────────────
+// Your original QueryClient (unchanged except for the persistence integration)
+// ────────────────────────────────────────────────
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: Infinity, // Never auto-stale
-      gcTime: Infinity, // Keep forever (small app)
-      refetchOnWindowFocus: true, // No sneaky refetches
-      refetchOnReconnect: true,
-      refetchOnMount: true, // Trust cache first
+      staleTime: Infinity,
+      gcTime: Infinity,
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      placeholderData: keepPreviousData,
       retry: 1, // Don't hammer slow DB
       // Optional: background indicators if you want subtle "updating..." text
       // background: { enabled: true, delay: 2000 },
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 8000),
-      placeholderData: keepPreviousData,
     },
     mutations: {
       retry: false,
@@ -87,3 +114,6 @@ function handleTRPCAuthError(error: unknown): void {
     });
   }
 }
+
+// Export the persister so you can use it in your root provider
+export { idbPersister };

@@ -1,5 +1,5 @@
 // src/components/lists/ListsTable.tsx
-// 
+
 import { useAuthStore } from "@/store/authStore";
 import { trpc } from "@/trpc";
 import { ItemGroup } from "@/components/ui/item";
