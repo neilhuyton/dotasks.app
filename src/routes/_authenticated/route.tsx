@@ -24,7 +24,7 @@ export const Route = createFileRoute("/_authenticated")({
     return (
       <div className="flex flex-col min-h-dvh overscroll-none bg-background">
         <header className="fixed top-0 left-0 right-0 z-50 bg-background px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between border-b">
-          <div className="text-xl font-semibold tracking-tight">To Do</div>
+          <div className="text-xl font-semibold tracking-tight">Do Tasks</div>
 
           <div className="flex items-center gap-3 sm:gap-4">
             <ThemeToggle />

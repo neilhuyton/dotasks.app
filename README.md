@@ -1,3 +1,3 @@
-# My Todos App
+# DoTasks App
 
 Text
