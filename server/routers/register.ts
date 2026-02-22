@@ -74,15 +74,21 @@ export const registerRouter = router({
         },
       });
 
-      // Attempt to send verification email (non-blocking)
-      sendVerificationEmail(email, verificationToken).catch((err) => {
-        // In production, replace with structured logging (Sentry, Logflare, etc.)
-        console.error("Failed to send verification email", {
-          userId: user.id,
+      try {
+        const emailResult = await sendVerificationEmail(
           email,
-          error: err instanceof Error ? err.message : String(err),
-        });
-      });
+          verificationToken,
+        );
+
+        if (!emailResult.success) {
+          console.error(
+            "Verification email failed to send:",
+            emailResult.error,
+          );
+        }
+      } catch (emailErr) {
+        console.error("Email send error during registration:", emailErr);
+      }
 
       const accessToken = jwt.sign(
         { userId: user.id, email: user.email },
