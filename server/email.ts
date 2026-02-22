@@ -1,5 +1,5 @@
 // server/email.ts
-import fetch from 'node-fetch';  // <-- This is the key change for Netlify Lambda reliability
+import axios from 'axios';
 
 const ZEPTOMAIL_API_URL = "https://api.zeptomail.eu/v1.1/email";
 
@@ -49,7 +49,7 @@ export async function sendMailWithDebug(
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
     controller.abort();
-    console.warn("ZeptoMail fetch aborted after 15 seconds (AbortController)");
+    console.warn("ZeptoMail request aborted after 15 seconds (AbortController)");
   }, 15000);
 
   try {
@@ -63,18 +63,17 @@ export async function sendMailWithDebug(
     const start = Date.now();
 
     const response = await Promise.race([
-      fetch(ZEPTOMAIL_API_URL, {
-        method: "POST",
+      axios.post(ZEPTOMAIL_API_URL, payload, {
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
           Authorization: `Zoho-enczapikey ${process.env.EMAIL_PASS}`,
         },
-        body: JSON.stringify(payload),
+        timeout: 15000,
         signal: controller.signal,
-      }) as Promise<Response>,  // type assertion (node-fetch Response is compatible)
+      }),
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Hard 15s timeout on ZeptoMail fetch")), 15000)
+        setTimeout(() => reject(new Error("Hard 15s timeout on ZeptoMail request")), 15000)
       ),
     ]);
 
@@ -83,9 +82,9 @@ export async function sendMailWithDebug(
     const duration = Date.now() - start;
     console.log(`ZeptoMail API responded in ${duration} ms - Status: ${response.status}`);
 
-    const data = await response.json();
+    const data = response.data;
 
-    if (response.ok) {
+    if (response.status >= 200 && response.status < 300) {
       console.log("✅ Email accepted by ZeptoMail!");
       console.log("Request ID:", data.request_id || "N/A");
       return { success: true, requestId: data.request_id };
@@ -102,7 +101,11 @@ export async function sendMailWithDebug(
     console.error("Error name:", error.name);
     console.error("Error message:", error.message);
     if (error.code) console.error("Error code:", error.code);
-    if (error.stack) console.error("Stack:", error.stack?.substring(0, 800));
+    if (error.response) {
+      console.error("Response status:", error.response.status);
+      console.error("Response data:", JSON.stringify(error.response.data, null, 2));
+    }
+    if (error.stack) console.error("Stack:", error.stack.substring(0, 800));
     return {
       success: false,
       error: error.message || "Network / timeout / abort error",
