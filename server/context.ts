@@ -1,54 +1,81 @@
 // server/context.ts
-
-import { PrismaClient } from '@prisma/client';
-import jwt from 'jsonwebtoken';
-import type { IncomingMessage } from 'http';
+import { PrismaClient } from "@prisma/client";
+import jwt from "jsonwebtoken";
+import type { IncomingMessage } from "http";
 
 // ───────────────────────────────────────────────
-// 1. Prisma in serverless → better to create per-request
-//    (avoids connection pool exhaustion & stale connections)
-const prisma = globalThis.prisma ?? new PrismaClient();
+// Prisma (per-request in production/serverless, cached in dev only)
+let prisma: PrismaClient;
 
-if (process.env.NODE_ENV !== 'production') {
-  globalThis.prisma = prisma;
+if (process.env.NODE_ENV === "production") {
+  prisma = new PrismaClient();
+} else {
+  // Safe globalThis access in dev
+  const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
+  prisma = globalForPrisma.prisma ?? new PrismaClient();
+  globalForPrisma.prisma = prisma;
 }
 
 // ───────────────────────────────────────────────
-export type Context = {
-  prisma: PrismaClient;
-  userId?: string;
+export interface AuthJwtPayload {
+  sub?: string;
+  user_id?: string; // some JWTs use user_id
+  userId?: string; // common custom field
   email?: string;
-};
+  // Minimal set — we don't assume other fields exist
+}
 
-export async function createContext({ req }: { req: IncomingMessage }): Promise<Context> {
-  let userId: string | undefined;
-  let email: string | undefined;
+export interface Context {
+  prisma: PrismaClient;
+  userId: string | null;
+  email: string | null;
+}
+
+export async function createContext({
+  req,
+}: {
+  req: IncomingMessage;
+}): Promise<Context> {
+  let userId: string | null = null;
+  let email: string | null = null;
 
   const authHeader = req.headers.authorization;
 
-  if (authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.split('Bearer ')[1];
+  if (typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.slice(7);
 
-    try {
-      const secret = process.env.JWT_SECRET;
+    const secret = process.env.SUPABASE_JWT_SECRET;
 
-      if (!secret) {
-        console.warn('JWT_SECRET is not set — authentication disabled');
-        // You might want to throw in development
-      } else {
-        const decoded = jwt.verify(token, secret) as {
-          userId: string;
-          email: string;
-          iat?: number;
-          exp?: number;
-          // ... other claims you use
-        };
+    if (!secret) {
+      console.warn("SUPABASE_JWT_SECRET is not set → authentication disabled");
+    } else {
+      try {
+        const decoded = jwt.verify(token, secret);
 
-        userId = decoded.userId;
-        email = decoded.email;
+        // Type narrowing: must be object (jwt.verify never returns string/Buffer with RS256 etc.)
+        if (decoded !== null && typeof decoded === "object") {
+          const claims = decoded as AuthJwtPayload;
+
+          // Prefer sub (standard JWT / Supabase) → then fallbacks
+          userId =
+            typeof claims.sub === "string"
+              ? claims.sub
+              : typeof claims.userId === "string"
+                ? claims.userId
+                : typeof claims.user_id === "string"
+                  ? claims.user_id
+                  : null;
+
+          // Email — only if it's a non-empty string
+          if (typeof claims.email === "string" && claims.email.length > 0) {
+            email = claims.email;
+          }
+        }
+      } catch (err) {
+        // Swallow auth errors — context stays unauthenticated
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[auth] JWT verification failed: ${msg}`);
       }
-    } catch (err) {
-      console.debug('Invalid JWT', (err as Error).message);
     }
   }
 

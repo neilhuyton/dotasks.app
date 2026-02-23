@@ -5,8 +5,8 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
-import jwt from "jsonwebtoken";
 import { sendVerificationEmail } from "../email";
+import { signSupabaseJwt } from "./auth-helpers"; // ← new import
 
 export const registerRouter = router({
   register: publicProcedure
@@ -25,13 +25,6 @@ export const registerRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const { email, password } = input;
-
-      if (!process.env.JWT_SECRET) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Server configuration error",
-        });
-      }
 
       const existingUser = await ctx.prisma.user.findUnique({
         where: { email },
@@ -75,26 +68,15 @@ export const registerRouter = router({
       });
 
       try {
-        const emailResult = await sendVerificationEmail(
-          email,
-          verificationToken,
-        );
-
-        if (!emailResult.success) {
-          console.error(
-            "Verification email failed to send:",
-            emailResult.error,
-          );
-        }
+        await sendVerificationEmail(email, verificationToken);
       } catch (emailErr) {
         console.error("Email send error during registration:", emailErr);
       }
 
-      const accessToken = jwt.sign(
-        { userId: user.id, email: user.email },
-        process.env.JWT_SECRET,
-        { expiresIn: "15m" },
-      );
+      const accessToken = signSupabaseJwt({
+        userId: user.id,
+        email: user.email,
+      });
 
       return {
         user: {

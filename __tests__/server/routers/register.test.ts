@@ -1,3 +1,5 @@
+// __tests__/server/routers/register.test.ts
+
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import crypto from 'node:crypto';
 
@@ -19,7 +21,6 @@ const mockRefreshToken = {
 function mockFullUser(partial: Partial<User> = {}): User {
   const now = new Date();
 
-  // Base object
   const user: User = {
     id: crypto.randomUUID(),
     email: 'default@example.com',
@@ -33,7 +34,6 @@ function mockFullUser(partial: Partial<User> = {}): User {
     ...partial,
   };
 
-  // Apply overrides for dates safely (avoid duplicate keys)
   if ('createdAt' in partial) {
     user.createdAt =
       partial.createdAt instanceof Date
@@ -154,40 +154,5 @@ describe('register procedure (public)', () => {
     });
 
     expect(mockPrisma.user.create).not.toHaveBeenCalled();
-  });
-
-  it('throws INTERNAL_SERVER_ERROR when JWT_SECRET is missing', async () => {
-    const originalSecret = process.env.JWT_SECRET;
-
-    // Use Vitest's env stubbing to reliably unset the variable
-    vi.stubEnv('JWT_SECRET', undefined);
-
-    mockPrisma.user.findUnique.mockResolvedValue(null);
-
-    mockPrisma.user.create.mockResolvedValue(
-      mockFullUser({ email: 'newuser2@example.com' })
-    );
-
-    mockPrisma.refreshToken.create.mockResolvedValue(mockRefreshToken);
-
-    await expect(
-      caller.register({
-        email: 'newuser2@example.com',
-        password: 'password123',
-      })
-    ).rejects.toMatchObject({
-      message: 'Server configuration error',
-      code: 'INTERNAL_SERVER_ERROR',
-    });
-
-    // Clean up env stubs
-    vi.unstubAllEnvs();
-
-    // Restore original value if it existed
-    if (originalSecret !== undefined) {
-      process.env.JWT_SECRET = originalSecret;
-    } else {
-      delete process.env.JWT_SECRET;
-    }
   });
 });
