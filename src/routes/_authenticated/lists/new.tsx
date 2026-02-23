@@ -9,7 +9,7 @@ import { useState, type SyntheticEvent } from "react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/trpc";
 import { useAuthStore } from "@/store/authStore";
-import { useBannerStore } from "@/store/bannerStore"; // ← your global banner store
+import { useBannerStore } from "@/store/bannerStore";
 
 export const Route = createFileRoute("/_authenticated/lists/new")({
   component: CreateListPage,
