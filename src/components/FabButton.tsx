@@ -5,11 +5,10 @@ import { Link } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import type { ComponentProps } from "react";
 
-// Extend with the props <Link> actually needs
 interface FabButtonProps
   extends Omit<ComponentProps<typeof Button>, "children" | "asChild"> {
   to: string;
-  params?: Record<string, string>;          // ← add this (or more precise type if you want)
+  params?: Record<string, string>;
   label: string;
   testId?: string;
 }
@@ -26,14 +25,14 @@ export function FabButton({
       asChild
       size="lg"
       className={`
-        fixed bottom-8 right-6 z-50
+        fixed bottom-20 right-6 z-50
         rounded-full w-14 h-14
         shadow-xl hover:shadow-2xl
         transition-all duration-200 hover:scale-110
         bg-primary hover:bg-primary/90
         text-primary-foreground
         flex items-center justify-center
-        md:bottom-28 md:right-10 md:w-16 md:h-16
+        md:bottom-16 md:right-10 md:w-16 md:h-16
       `}
       data-testid={testId}
       {...buttonProps}
