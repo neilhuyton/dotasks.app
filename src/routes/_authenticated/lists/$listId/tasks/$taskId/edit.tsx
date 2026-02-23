@@ -8,7 +8,7 @@ import { Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/trpc";
 import { useState, useEffect } from "react";
-import { toast } from "sonner";
+import { useBannerStore } from "@/store/bannerStore";
 
 export const Route = createFileRoute(
   "/_authenticated/lists/$listId/tasks/$taskId/edit",
@@ -20,6 +20,7 @@ function EditTaskPage() {
   const { listId, taskId } = Route.useParams();
   const navigate = Route.useNavigate();
   const utils = trpc.useUtils();
+  const { show: showBanner } = useBannerStore();
 
   const tasks = utils.task.getByList.getData({ listId }) ?? [];
   const cachedTask = tasks.find((t) => t.id === taskId);
@@ -78,7 +79,11 @@ function EditTaskPage() {
       if (context?.previousTasks) {
         utils.task.getByList.setData({ listId }, context.previousTasks);
       }
-      toast.error("Failed to update task");
+      showBanner({
+        message: "Failed to update task. Please try again.",
+        variant: "error",
+        duration: 4000,
+      });
       console.error("Failed to update task:", err);
     },
 
@@ -87,7 +92,12 @@ function EditTaskPage() {
     },
 
     onSuccess: (updatedTask) => {
-      toast.success(`Task "${updatedTask.title}" updated`);
+      showBanner({
+        message: `Task "${updatedTask.title}" has been updated.`,
+        variant: "success",
+        duration: 3000,
+      });
+
       navigate({
         to: "/lists/$listId",
         params: { listId },

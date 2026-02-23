@@ -1,13 +1,17 @@
 // __tests__/server/routers/refreshToken.test.ts
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import crypto from 'node:crypto';
+import { describe, it, expect, beforeEach } from "vitest";
+import crypto from "node:crypto";
 
-import { createPublicCaller, resetPrismaMocks, mockPrisma } from '../../utils/testCaller';
-import type { RefreshToken } from '@prisma/client';
-import { Prisma } from '@prisma/client';
+import {
+  createPublicCaller,
+  resetPrismaMocks,
+  mockPrisma,
+} from "../../utils/testCaller";
+import type { RefreshToken } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
-describe('refreshToken router (public procedures)', () => {
+describe("refreshToken router (public procedures)", () => {
   let caller: ReturnType<typeof createPublicCaller>;
 
   beforeEach(() => {
@@ -15,16 +19,16 @@ describe('refreshToken router (public procedures)', () => {
     resetPrismaMocks();
   });
 
-  describe('refresh', () => {
-    it('refreshes tokens successfully with valid refresh token', async () => {
+  describe("refresh", () => {
+    it("refreshes tokens successfully with valid refresh token", async () => {
       const plainRefreshToken = crypto.randomUUID();
       const hashedRefreshToken = crypto
-        .createHash('sha256')
+        .createHash("sha256")
         .update(plainRefreshToken)
-        .digest('hex');
+        .digest("hex");
 
       const userId = crypto.randomUUID();
-      const email = 'user@example.com';
+      const email = "user@example.com";
 
       // Mock finding the valid token record (with included user)
       mockPrisma.refreshToken.findUnique.mockResolvedValue({
@@ -52,7 +56,7 @@ describe('refreshToken router (public procedures)', () => {
       // Mock creating new refresh token
       mockPrisma.refreshToken.create.mockResolvedValue({
         id: crypto.randomUUID(),
-        hashedToken: 'new-hashed-token-xyz',
+        hashedToken: "new-hashed-token-xyz",
         userId,
         createdAt: new Date(),
         lastUsedAt: null,
@@ -68,7 +72,7 @@ describe('refreshToken router (public procedures)', () => {
         refreshToken: expect.stringMatching(
           /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
         ),
-        message: 'Tokens refreshed successfully',
+        message: "Tokens refreshed successfully",
       });
 
       expect(mockPrisma.refreshToken.findUnique).toHaveBeenCalledWith({
@@ -83,7 +87,7 @@ describe('refreshToken router (public procedures)', () => {
       expect(mockPrisma.refreshToken.create).toHaveBeenCalledTimes(1);
     });
 
-    it('throws UNAUTHORIZED for invalid or expired refresh token', async () => {
+    it("throws UNAUTHORIZED for invalid or expired refresh token", async () => {
       const plainRefreshToken = crypto.randomUUID();
 
       mockPrisma.refreshToken.findUnique.mockResolvedValue(null);
@@ -93,17 +97,17 @@ describe('refreshToken router (public procedures)', () => {
           refreshToken: plainRefreshToken,
         }),
       ).rejects.toMatchObject({
-        message: 'Invalid or expired refresh token',
-        code: 'UNAUTHORIZED',
+        message: "Invalid or expired refresh token",
+        code: "UNAUTHORIZED",
       });
 
       expect(mockPrisma.refreshToken.create).not.toHaveBeenCalled();
     });
 
-    it('throws BAD_REQUEST for invalid refresh token format (Zod)', async () => {
+    it("throws BAD_REQUEST for invalid refresh token format (Zod)", async () => {
       await expect(
         caller.refreshToken.refresh({
-          refreshToken: 'not-a-uuid',
+          refreshToken: "not-a-uuid",
         }),
       ).rejects.toThrow(/Invalid refresh token format/);
     });

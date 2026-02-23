@@ -8,7 +8,7 @@ import { Loader2, ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/trpc";
-import { toast } from "sonner";
+import { useBannerStore } from "@/store/bannerStore";
 
 export const Route = createFileRoute("/_authenticated/lists/$listId/tasks/new")(
   {
@@ -24,7 +24,8 @@ function NewTaskPage() {
 
   const navigate = Route.useNavigate();
   const utils = trpc.useUtils();
-
+  const { show: showBanner } = useBannerStore();
+  
   const mutation = trpc.task.create.useMutation({
     onMutate: async (input) => {
       await utils.task.getByList.cancel({ listId });
@@ -58,7 +59,11 @@ function NewTaskPage() {
       if (context?.previousTasks) {
         utils.task.getByList.setData({ listId }, context.previousTasks);
       }
-      toast.error("Failed to create task");
+      showBanner({
+        message: "Failed to create task. Please try again.",
+        variant: "error",
+        duration: 4000,
+      });
       console.error("Failed to create task:", err);
     },
 
@@ -67,7 +72,12 @@ function NewTaskPage() {
     },
 
     onSuccess: (createdTask) => {
-      toast.success(`Task "${createdTask.title}" added`);
+      showBanner({
+        message: `Task "${createdTask.title}" has been added.`,
+        variant: "success",
+        duration: 3000,
+      });
+
       navigate({
         to: "/lists/$listId",
         params: { listId },

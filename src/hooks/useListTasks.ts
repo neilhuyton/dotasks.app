@@ -4,14 +4,16 @@ import { useMemo, useState } from "react";
 import { trpc } from "@/trpc";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/../server/trpc";
-import { toast } from "sonner";
-import { useSupabaseTaskRealtime } from "./useSupabaseTaskRealtime"; // ← NEW import
+import { useBannerStore } from "@/store/bannerStore"; // ← added
+import { useSupabaseTaskRealtime } from "./useSupabaseTaskRealtime";
 
 type RouterOutput = inferRouterOutputs<AppRouter>;
 export type Task = RouterOutput["task"]["getByList"][number];
 
 export function useListTasks(listId: string | null | undefined) {
   const utils = trpc.useUtils();
+  const { show: showBanner } = useBannerStore(); // ← added
+
   const enabled = !!listId;
   const queryKey = useMemo(() => ({ listId: listId! }), [listId]);
 
@@ -26,7 +28,7 @@ export function useListTasks(listId: string | null | undefined) {
   });
 
   // Real-time subscription for this list's tasks
-  useSupabaseTaskRealtime({ listId }); // ← NEW: enables real-time updates
+  useSupabaseTaskRealtime({ listId });
 
   const [pendingReorder, setPendingReorder] = useState<Task[] | null>(null);
 
@@ -43,7 +45,7 @@ export function useListTasks(listId: string | null | undefined) {
   };
 
   // ──────────────────────────────────────────────
-  // Reordering (drag & drop) – smooth, no flicker
+  // Reordering (drag & drop)
   // ──────────────────────────────────────────────
   const reorderTasks = trpc.task.reorder.useMutation({
     onMutate: async (updates: { id: string; order: number }[]) => {
@@ -73,7 +75,7 @@ export function useListTasks(listId: string | null | undefined) {
               const update = result.updated.find((u) => u.id === t.id);
               return update ? { ...t, order: update.order } : t;
             })
-            .sort((a, b) => a.order - b.order)
+            .sort((a, b) => a.order - b.order),
         );
       }
     },
@@ -81,7 +83,11 @@ export function useListTasks(listId: string | null | undefined) {
     onError: (_, __, context) => {
       rollbackTo(context?.previous);
       console.error("Reorder failed");
-      toast.error("Failed to reorder tasks");
+      showBanner({
+        message: "Failed to reorder tasks. Please try again.",
+        variant: "error",
+        duration: 4000,
+      });
     },
 
     onSettled: () => {
@@ -94,12 +100,20 @@ export function useListTasks(listId: string | null | undefined) {
   // Create task – NO optimistic update (realtime will handle insert)
   // ──────────────────────────────────────────────
   const create = trpc.task.create.useMutation({
-    onSuccess: () => {
-      toast.success("Task created");
+    onSuccess: (createdTask) => {
+      showBanner({
+        message: `Task "${createdTask.title}" has been added.`,
+        variant: "success",
+        duration: 3000,
+      });
     },
 
     onError: () => {
-      toast.error("Failed to create task");
+      showBanner({
+        message: "Failed to create task. Please try again.",
+        variant: "error",
+        duration: 4000,
+      });
     },
 
     onSettled: () => {
@@ -125,14 +139,31 @@ export function useListTasks(listId: string | null | undefined) {
                 isCompleted: !t.isCompleted,
                 isCurrent: false,
               }
-            : t
-        )
+            : t,
+        ),
       );
 
       return { previous };
     },
 
-    onError: (_, __, context) => rollbackTo(context?.previous),
+    onError: (_, __, context) => {
+      rollbackTo(context?.previous);
+      showBanner({
+        message: "Failed to update task status. Please try again.",
+        variant: "error",
+        duration: 4000,
+      });
+    },
+
+    onSuccess: (updatedTask) => {
+      // ← NEW: onSuccess handler with banner
+      const action = updatedTask.isCompleted ? "completed" : "re-opened";
+      showBanner({
+        message: `Task "${updatedTask.title}" marked as ${action}.`,
+        variant: "success",
+        duration: 2800,
+      });
+    },
 
     onSettled: () => utils.task.getByList.invalidate(queryKey),
   });
@@ -152,7 +183,14 @@ export function useListTasks(listId: string | null | undefined) {
       return { previous };
     },
 
-    onError: (_, __, context) => rollbackTo(context?.previous),
+    onError: (_, __, context) => {
+      rollbackTo(context?.previous);
+      showBanner({
+        message: "Failed to delete task.",
+        variant: "error",
+        duration: 4000,
+      });
+    },
 
     onSettled: () => utils.task.getByList.invalidate(queryKey),
   });
@@ -171,13 +209,20 @@ export function useListTasks(listId: string | null | undefined) {
         prev.map((t) => ({
           ...t,
           isCurrent: t.id === id,
-        }))
+        })),
       );
 
       return { previous };
     },
 
-    onError: (_, __, context) => rollbackTo(context?.previous),
+    onError: (_, __, context) => {
+      rollbackTo(context?.previous);
+      showBanner({
+        message: "Failed to set current task.",
+        variant: "error",
+        duration: 4000,
+      });
+    },
 
     onSettled: () => utils.task.getByList.invalidate(queryKey),
   });
@@ -196,20 +241,28 @@ export function useListTasks(listId: string | null | undefined) {
         prev.map((t) => ({
           ...t,
           isCurrent: false,
-        }))
+        })),
       );
 
       return { previous };
     },
 
-    onError: (_, __, context) => rollbackTo(context?.previous),
+    onError: (_, __, context) => {
+      rollbackTo(context?.previous);
+      showBanner({
+        message: "Failed to clear current task.",
+        variant: "error",
+        duration: 4000,
+      });
+    },
 
     onSettled: () => utils.task.getByList.invalidate(queryKey),
   });
 
   return {
     tasks: displayedTasks,
-    isLoadingTasks: isLoading || (enabled && isFetching && displayedTasks.length === 0),
+    isLoadingTasks:
+      isLoading || (enabled && isFetching && displayedTasks.length === 0),
 
     createTask: create.mutate,
     createTaskPending: create.isPending,

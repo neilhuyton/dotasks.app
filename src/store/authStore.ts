@@ -1,12 +1,12 @@
 // src/store/authStore.ts
 
-import { create } from 'zustand';
+import { create } from "zustand";
 import { queryClient } from "../queryClient";
 
 export interface AuthState {
   isLoggedIn: boolean;
   userId: string | null;
-  accessToken: string | null;     
+  accessToken: string | null;
   refreshToken: string | null;
   login: (userId: string, accessToken: string, refreshToken: string) => void;
   setAccessToken: (accessToken: string) => void;
@@ -14,16 +14,16 @@ export interface AuthState {
 }
 
 const STORAGE_KEYS = {
-  userId: 'auth:userId',
-  refreshToken: 'auth:refreshToken',
+  userId: "auth:userId",
+  refreshToken: "auth:refreshToken",
 } as const;
 
 // Helper to load initial state from localStorage (only on app start)
 const getInitialState = (): Pick<
   AuthState,
-  'isLoggedIn' | 'userId' | 'accessToken' | 'refreshToken'
+  "isLoggedIn" | "userId" | "accessToken" | "refreshToken"
 > => {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     // SSR / server-side → no storage
     return {
       isLoggedIn: false,
@@ -36,12 +36,13 @@ const getInitialState = (): Pick<
   const storedUserId = localStorage.getItem(STORAGE_KEYS.userId);
   const storedRefreshToken = localStorage.getItem(STORAGE_KEYS.refreshToken);
 
-  const hasRefreshToken = !!storedRefreshToken && storedRefreshToken.trim() !== '';
+  const hasRefreshToken =
+    !!storedRefreshToken && storedRefreshToken.trim() !== "";
 
   return {
     isLoggedIn: hasRefreshToken,
     userId: storedUserId || null,
-    accessToken: null,           // never restore access token — always refresh it
+    accessToken: null, // never restore access token — always refresh it
     refreshToken: storedRefreshToken || null,
   };
 };
@@ -68,7 +69,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
   setAccessToken: (accessToken: string) => {
     if (!accessToken) {
-      console.warn('[authStore] setAccessToken called with empty value');
+      console.warn("[authStore] setAccessToken called with empty value");
       return;
     }
     set({ accessToken });
@@ -91,7 +92,9 @@ export const useAuthStore = create<AuthState>()((set) => ({
     queryClient.removeQueries();
     // Alternative (more aggressive): queryClient.clear();
 
-    console.debug('[authStore] User logged out – storage & query cache cleared');
+    console.debug(
+      "[authStore] User logged out – storage & query cache cleared",
+    );
   },
 }));
 
@@ -106,7 +109,7 @@ export const resetAuthStore = () => {
     refreshToken: null,
   });
 
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     localStorage.removeItem(STORAGE_KEYS.userId);
     localStorage.removeItem(STORAGE_KEYS.refreshToken);
   }
@@ -114,5 +117,5 @@ export const resetAuthStore = () => {
   // Also clear query cache during reset (useful for tests/dev)
   queryClient.removeQueries();
 
-  console.debug('[authStore] Auth fully reset (for testing)');
+  console.debug("[authStore] Auth fully reset (for testing)");
 };

@@ -6,7 +6,7 @@ import { Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/trpc";
 import { useState, useEffect } from "react";
-import { toast } from "sonner";
+import { useBannerStore } from "@/store/bannerStore"; // ← added
 
 export const Route = createFileRoute(
   "/_authenticated/lists/$listId/tasks/$taskId/delete",
@@ -19,18 +19,18 @@ function DeleteTaskConfirmPage() {
 
   const navigate = Route.useNavigate();
   const utils = trpc.useUtils();
+  const { show: showBanner } = useBannerStore(); // ← added
 
   const tasks = utils.task.getByList.getData({ listId }) ?? [];
   const cachedTask = tasks.find((t) => t.id === taskId);
 
-  // ALL hooks go here, unconditionally
   const [title, setTitle] = useState<string | null>(null);
 
   useEffect(() => {
     if (cachedTask && title === null) {
       setTitle(cachedTask.title ?? "this task");
     }
-  }, [cachedTask, title]); // note: title in deps to prevent re-run after set
+  }, [cachedTask, title]);
 
   const mutation = trpc.task.delete.useMutation({
     onMutate: async ({ id }) => {
@@ -46,7 +46,11 @@ function DeleteTaskConfirmPage() {
       if (context?.previousTasks) {
         utils.task.getByList.setData({ listId }, context.previousTasks);
       }
-      toast.error("Failed to delete task");
+      showBanner({
+        message: "Failed to delete task. Please try again.",
+        variant: "error",
+        duration: 4000,
+      });
       console.error("Failed to delete task:", err);
     },
 
@@ -55,7 +59,11 @@ function DeleteTaskConfirmPage() {
     },
 
     onSuccess: () => {
-      toast.success(`Task "${title ?? "deleted"}" removed`);
+      showBanner({
+        message: `"${title ?? "Task"}" has been deleted successfully.`,
+        variant: "success",
+        duration: 3000,
+      });
       navigate({
         to: "/lists/$listId",
         params: { listId },
@@ -77,7 +85,6 @@ function DeleteTaskConfirmPage() {
     mutation.mutate({ id: taskId });
   };
 
-  // Only now do conditional render — hooks are already called
   if (title === null) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background">

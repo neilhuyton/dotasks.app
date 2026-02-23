@@ -6,6 +6,7 @@ import { useAuthStore } from "@/store/authStore";
 import ProfileIcon from "@/components/ProfileIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ColorThemeToggle } from "@/components/ColorThemeToggle";
+import { ActionBanner } from "@/components/ActionBanner";
 
 const isTestEnv =
   import.meta.env.MODE === "test" || process.env.NODE_ENV === "test";
@@ -43,6 +44,7 @@ export const Route = createFileRoute("/_authenticated")({
         >
           <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8">
             <Outlet />
+            <ActionBanner />
           </div>
         </main>
 

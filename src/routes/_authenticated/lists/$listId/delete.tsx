@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { trpc } from "@/trpc";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import { useBannerStore } from "@/store/bannerStore";
 
 export const Route = createFileRoute("/_authenticated/lists/$listId/delete")({
   component: DeleteListConfirmPage,
@@ -16,6 +16,7 @@ function DeleteListConfirmPage() {
 
   const navigate = Route.useNavigate();
   const utils = trpc.useUtils();
+  const { show: showBanner } = useBannerStore();
 
   const { data: list, isLoading: isListLoading } = trpc.list.getOne.useQuery(
     { id: listId },
@@ -39,7 +40,11 @@ function DeleteListConfirmPage() {
       if (context?.previousLists) {
         utils.list.getAll.setData(undefined, context.previousLists);
       }
-      toast.error("Failed to delete list");
+      showBanner({
+        message: "Failed to delete list. Please try again.",
+        variant: "error",
+        duration: 4000,
+      });
       console.error("Failed to delete list:", err);
     },
 
@@ -48,7 +53,11 @@ function DeleteListConfirmPage() {
     },
 
     onSuccess: () => {
-      toast.success("List deleted successfully");
+      showBanner({
+        message: `"${list?.title ?? "List"}" has been deleted successfully.`,
+        variant: "success",
+        duration: 3000,
+      });
       navigate({ to: "/lists", replace: true });
     },
   });
@@ -108,7 +117,11 @@ function DeleteListConfirmPage() {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} aria-label="Delete list confirmation" className="space-y-8">
+            <form
+              onSubmit={handleSubmit}
+              aria-label="Delete list confirmation"
+              className="space-y-8"
+            >
               <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
                 <Button
                   type="submit"

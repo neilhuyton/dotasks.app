@@ -8,7 +8,7 @@ import { Loader2, X } from "lucide-react";
 import { useState, useEffect, type SyntheticEvent } from "react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/trpc";
-import { toast } from "sonner";
+import { useBannerStore } from "@/store/bannerStore";
 
 export const Route = createFileRoute("/_authenticated/lists/$listId/edit")({
   component: EditListPage,
@@ -18,6 +18,7 @@ function EditListPage() {
   const { listId } = Route.useParams();
   const navigate = Route.useNavigate();
   const utils = trpc.useUtils();
+  const { show: showBanner } = useBannerStore();
 
   const {
     data: list,
@@ -28,7 +29,6 @@ function EditListPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
 
-  // Initialize form values once list data is loaded
   useEffect(() => {
     if (list) {
       setTitle(list.title || "");
@@ -81,19 +81,23 @@ function EditListPage() {
       if (ctx?.prevAll) utils.list.getAll.setData(undefined, ctx.prevAll);
       if (ctx?.prevDetail)
         utils.list.getOne.setData({ id: listId }, ctx.prevDetail);
-      toast.error("Failed to update list");
+
+      showBanner({
+        message: "Failed to update list. Please try again.",
+        variant: "error",
+        duration: 4000,
+      });
     },
 
-    onSuccess: (updatedList, variables) => {
+    onSuccess: (updatedList) => {
       utils.list.getAll.setData(undefined, (old = []) =>
         old.map((l) =>
-          l.id === variables.id
+          l.id === listId
             ? {
                 ...l,
                 title: updatedList.title ?? l.title,
                 description: updatedList.description ?? l.description,
                 updatedAt: updatedList.updatedAt ?? l.updatedAt,
-                // keep _count, tasks, color, icon, isPinned, etc.
               }
             : l,
         ),
@@ -103,9 +107,11 @@ function EditListPage() {
         old ? { ...old, ...updatedList } : updatedList,
       );
 
-      toast.success(
-        `List "${updatedList.title || title}" updated successfully`,
-      );
+      showBanner({
+        message: `"${updatedList.title || title}" has been updated successfully.`,
+        variant: "success",
+        duration: 3000,
+      });
 
       navigate({ to: "/lists", replace: true });
     },
