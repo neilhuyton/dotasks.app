@@ -5,6 +5,7 @@ import { trpc } from "@/trpc";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/../server/trpc";
 import { toast } from "sonner";
+import { useSupabaseTaskRealtime } from "./useSupabaseTaskRealtime"; // ← NEW import
 
 type RouterOutput = inferRouterOutputs<AppRouter>;
 export type Task = RouterOutput["task"]["getByList"][number];
@@ -14,6 +15,7 @@ export function useListTasks(listId: string | null | undefined) {
   const enabled = !!listId;
   const queryKey = useMemo(() => ({ listId: listId! }), [listId]);
 
+  // Fetch tasks
   const {
     data: tasks = [],
     isFetching,
@@ -22,6 +24,9 @@ export function useListTasks(listId: string | null | undefined) {
     enabled,
     staleTime: 60_000, // 1 minute
   });
+
+  // Real-time subscription for this list's tasks
+  useSupabaseTaskRealtime({ listId }); // ← NEW: enables real-time updates
 
   const [pendingReorder, setPendingReorder] = useState<Task[] | null>(null);
 
@@ -47,13 +52,14 @@ export function useListTasks(listId: string | null | undefined) {
       await utils.task.getByList.cancel(queryKey);
       const previous = utils.task.getByList.getData(queryKey) ?? [];
 
-      const newTasks = previous.map((t) => {
-        const update = updates.find((u) => u.id === t.id);
-        return update ? { ...t, order: update.order } : t;
-      }).sort((a, b) => a.order - b.order);
+      const newTasks = previous
+        .map((t) => {
+          const update = updates.find((u) => u.id === t.id);
+          return update ? { ...t, order: update.order } : t;
+        })
+        .sort((a, b) => a.order - b.order);
 
       setPendingReorder(newTasks);
-
       optimisticUpdate(() => newTasks);
 
       return { previous };
@@ -62,10 +68,12 @@ export function useListTasks(listId: string | null | undefined) {
     onSuccess: (result) => {
       if (result.updated) {
         optimisticUpdate((prev) =>
-          prev.map((t) => {
-            const update = result.updated.find((u) => u.id === t.id);
-            return update ? { ...t, order: update.order } : t;
-          }).sort((a, b) => a.order - b.order)
+          prev
+            .map((t) => {
+              const update = result.updated.find((u) => u.id === t.id);
+              return update ? { ...t, order: update.order } : t;
+            })
+            .sort((a, b) => a.order - b.order)
         );
       }
     },
@@ -83,7 +91,7 @@ export function useListTasks(listId: string | null | undefined) {
   });
 
   // ──────────────────────────────────────────────
-  // Create task – NO optimistic update
+  // Create task – NO optimistic update (realtime will handle insert)
   // ──────────────────────────────────────────────
   const create = trpc.task.create.useMutation({
     onSuccess: () => {
