@@ -4,7 +4,8 @@ import {
   DndContext,
   closestCenter,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -50,11 +51,16 @@ export function SortableTaskList({
   isReordering,
 }: SortableTaskListProps) {
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: {
-        distance: 5,
-        delay: 180,
-        tolerance: 5,
+        distance: 5, // small movement threshold for desktop
+      },
+    }),
+    useSensor(TouchSensor, {
+      // Key change for mobile: delay allows scrolling before drag starts
+      activationConstraint: {
+        delay: 250,     // 250 ms hold → good balance (180–300 ms range)
+        tolerance: 5,   // small finger movement allowed during delay
       },
     }),
     useSensor(KeyboardSensor, {

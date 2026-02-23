@@ -2,7 +2,7 @@
 
 import { type Task } from "@/hooks/useListTasks";
 import { Link } from "@tanstack/react-router";
-import { SortableTaskList } from "@/components/SortableTaskList"; // Make sure this exists
+import { SortableTaskList } from "@/components/SortableTaskList";
 
 interface TaskListProps {
   tasks: Task[];
