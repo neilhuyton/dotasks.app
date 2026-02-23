@@ -4,6 +4,7 @@ import { useAuthStore } from "@/store/authStore";
 import { trpc } from "@/trpc";
 import { ItemGroup } from "@/components/ui/item";
 import { ListItem } from "./ListItem";
+import { keepPreviousData } from "@tanstack/react-query";
 
 export default function ListsTable() {
   const { userId } = useAuthStore();
@@ -14,6 +15,8 @@ export default function ListsTable() {
     error,
   } = trpc.list.getAll.useQuery(undefined, {
     enabled: !!userId,
+    placeholderData: keepPreviousData,
+    staleTime: 1000 * 60 * 5, // 5 minutes is fine, or Infinity if you prefer
   });
 
   if (isLoading) {

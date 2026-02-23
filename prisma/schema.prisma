@@ -26,6 +26,7 @@ model User {
   todoLists                   TodoList[]
 
   @@index([createdAt])
+  @@map("user") 
 }
 
 model RefreshToken {
@@ -40,6 +41,7 @@ model RefreshToken {
 
   @@index([userId])
   @@index([createdAt])
+  @@map("refresh_token")
 }
 
 model TodoList {
@@ -62,7 +64,8 @@ model TodoList {
 
   @@index([userId])
   @@index([createdAt])
-  @@index([userId, isPinned])     // Efficient query for user's pinned lists
+  @@index([userId, isPinned])
+  @@map("todolist")
 }
 
 model Task {
@@ -88,5 +91,6 @@ model Task {
   @@index([isCompleted])
   @@index([dueDate])
   @@index([listId, isCurrent])
-  @@index([listId, isPinned])     // Efficient: get pinned tasks per list quickly
+  @@index([listId, isPinned])
+  @@map("task")
 }

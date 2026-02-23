@@ -15,7 +15,7 @@ import type {
 // ────────────────────────────────────────────────
 // IndexedDB Persister (properly typed, matches official examples)
 // ────────────────────────────────────────────────
-const CACHE_KEY = "my-app-query-cache-v1"; // Bump this string if you ever change cache shape
+const CACHE_KEY = "my-app-query-cache-v4"; // Bump this string if you ever change cache shape
 
 const idbPersister: Persister = {
   persistClient: async (client: PersistedClient) => {
