@@ -5,10 +5,10 @@ export default async () => {
   const baseUrl =
     process.env.DEPLOY_PRIME_URL ||
     process.env.URL ||
-    "https://your-site-name.netlify.app";
+    "https://dotasksapp.netlify.app";
 
   // tRPC endpoint — adjust if you have a rewrite (e.g. to /trpc/* instead of /.netlify/functions/trpc)
-  const trpcEndpoint = `${baseUrl}/.netlify/functions/trpc`;
+  const trpcEndpoint = `${baseUrl}/trpc`;
 
   // Or if rewritten in netlify.toml / next.config.js:
   // const trpcEndpoint = `${baseUrl}/trpc`;
