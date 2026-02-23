@@ -53,14 +53,14 @@ export function SortableTaskList({
   const sensors = useSensors(
     useSensor(MouseSensor, {
       activationConstraint: {
-        distance: 5, // small movement threshold for desktop
+        distance: 5,
       },
     }),
     useSensor(TouchSensor, {
-      // Key change for mobile: delay allows scrolling before drag starts
+      // Longer delay gives browser more time to recognize scroll intent
       activationConstraint: {
-        delay: 250,     // 250 ms hold → good balance (180–300 ms range)
-        tolerance: 5,   // small finger movement allowed during delay
+        delay: 350,       // ← 350 ms is often a good compromise
+        tolerance: 8,
       },
     }),
     useSensor(KeyboardSensor, {
