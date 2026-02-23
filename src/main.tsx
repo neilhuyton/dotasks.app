@@ -7,7 +7,6 @@ import { trpcClient } from "@/client";
 import { trpc } from "@/trpc";
 import "./index.css";
 import { ThemeProvider } from "./components/ThemeProvider";
-import { ToasterWrapper } from "./components/ToasterWrapper";
 import { queryClient } from "@/queryClient";
 import { RealtimeListeners } from "@/components/RealtimeListeners";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -23,7 +22,6 @@ createRoot(document.getElementById("root")!).render(
           enableSystem={true}
         >
           <RouterProvider router={router} />
-          <ToasterWrapper />
           <RealtimeListeners />
           <ReactQueryDevtools initialIsOpen={false} />
         </ThemeProvider>
