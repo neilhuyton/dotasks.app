@@ -56,8 +56,7 @@ export function SortableTaskItem({
     transition:
       transition ||
       "transform 0.18s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.18s ease",
-    opacity: isDragging ? 0.8 : 1,
-    scale: isDragging ? 1.025 : 1,
+    opacity: isDragging ? 0.75 : 1,
   };
 
   return (
@@ -66,9 +65,9 @@ export function SortableTaskItem({
       style={style}
       className={cn(
         "cursor-grab active:cursor-grabbing select-none",
-        // IMPORTANT: NO touch-none / touch-action: none here or in parents
-        isDragging && "shadow-2xl ring-2 ring-primary/40 z-50",
-        "transition-all duration-200 rounded-lg border bg-card",
+        isDragging && "shadow-2xl ring-2 ring-primary/50 z-50 scale-[1.02]",
+        "transition-all duration-200",
+
       )}
       {...attributes}
       {...listeners}
