@@ -3,6 +3,7 @@
 import { protectedProcedure, router } from "../trpc-base";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { sendEmailChangeNotification } from "../email";
 
 export const userRouter = router({
   getCurrent: protectedProcedure.query(async ({ ctx }) => {
@@ -77,27 +78,21 @@ export const userRouter = router({
         select: { email: true },
       });
 
-      // Queue background notification to old email
+      // Send notification to the old email address
       if (oldEmail !== email) {
-        fetch(
-          `${process.env.URL || "http://localhost:8888"}/.netlify/functions/send-email-background`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              type: "email-change",
-              oldEmail,
-              newEmail: email,
-            }),
-          },
-        ).catch((err) => {
-          console.error("Failed to queue email change notification:", {
+        try {
+          await sendEmailChangeNotification(oldEmail, email);
+          // Optional: structured logging if you have it
+          // console.log(`Email change notification sent to ${oldEmail}`);
+        } catch (err) {
+          console.error("Failed to send email change notification:", {
             userId,
             oldEmail,
             newEmail: email,
-            error: err,
+            error: err instanceof Error ? err.message : String(err),
           });
-        });
+          // Do NOT throw — the email is non-critical
+        }
       }
 
       return {

@@ -1,14 +1,16 @@
 // server/routers/verifyEmail.ts
 
-import { publicProcedure, router } from '../trpc-base';
-import { z } from 'zod';
-import { TRPCError } from '@trpc/server';
+import { publicProcedure, router } from "../trpc-base";
+import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 
 export const verifyEmailRouter = router({
-  verifyEmail: publicProcedure  // public — no auth required to verify
+  verifyEmail: publicProcedure // public — no auth required to verify
     .input(
       z.object({
-        token: z.string().uuid({ message: 'Invalid verification token format' }),
+        token: z
+          .string()
+          .uuid({ message: "Invalid verification token format" }),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -37,22 +39,23 @@ export const verifyEmailRouter = router({
 
         if (alreadyVerified) {
           throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'This verification link has already been used or the email is verified.',
+            code: "BAD_REQUEST",
+            message:
+              "This verification link has already been used or the email is verified.",
           });
         }
 
         throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Invalid or expired verification token.',
+          code: "NOT_FOUND",
+          message: "Invalid or expired verification token.",
         });
       }
 
       // 2. Check if already verified (idempotent)
       if (user.isEmailVerified) {
         throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Email is already verified.',
+          code: "BAD_REQUEST",
+          message: "Email is already verified.",
         });
       }
 
@@ -69,7 +72,7 @@ export const verifyEmailRouter = router({
       // But keep it simple here — non-blocking
 
       return {
-        message: 'Email verified successfully! You can now log in.',
+        message: "Email verified successfully! You can now log in.",
         email: user.email, // optional — client can use to auto-fill login or show confirmation
       };
     }),
