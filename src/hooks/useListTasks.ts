@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { trpc } from "@/trpc";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/../server/trpc";
-import { useBannerStore } from "@/store/bannerStore"; // ← added
+import { useBannerStore } from "@/store/bannerStore";
 import { useSupabaseTaskRealtime } from "./useSupabaseTaskRealtime";
 
 type RouterOutput = inferRouterOutputs<AppRouter>;
@@ -12,7 +12,7 @@ export type Task = RouterOutput["task"]["getByList"][number];
 
 export function useListTasks(listId: string | null | undefined) {
   const utils = trpc.useUtils();
-  const { show: showBanner } = useBannerStore(); // ← added
+  const { show: showBanner } = useBannerStore();
 
   const enabled = !!listId;
   const queryKey = useMemo(() => ({ listId: listId! }), [listId]);
@@ -156,7 +156,6 @@ export function useListTasks(listId: string | null | undefined) {
     },
 
     onSuccess: (updatedTask) => {
-      // ← NEW: onSuccess handler with banner
       const action = updatedTask.isCompleted ? "completed" : "re-opened";
       showBanner({
         message: `Task marked as ${action}.`,
@@ -196,7 +195,7 @@ export function useListTasks(listId: string | null | undefined) {
   });
 
   // ──────────────────────────────────────────────
-  // Set current task
+  // Set current task – with optimistic move to top
   // ──────────────────────────────────────────────
   const setCurrentMutation = trpc.task.setCurrent.useMutation({
     onMutate: async ({ id }) => {
@@ -205,12 +204,37 @@ export function useListTasks(listId: string | null | undefined) {
       await utils.task.getByList.cancel(queryKey);
       const previous = utils.task.getByList.getData(queryKey) ?? [];
 
-      optimisticUpdate((prev) =>
-        prev.map((t) => ({
-          ...t,
-          isCurrent: t.id === id,
-        })),
-      );
+      const optimisticTasks = [...previous];
+
+      const targetIndex = optimisticTasks.findIndex((t) => t.id === id);
+      if (targetIndex === -1) return { previous };
+
+      const targetTask = optimisticTasks[targetIndex];
+
+      // Remove from current position
+      optimisticTasks.splice(targetIndex, 1);
+
+      // Assign very low order so it sorts to top
+      const minOrder =
+        optimisticTasks.length > 0
+          ? Math.min(...optimisticTasks.map((t) => t.order ?? 0)) - 1
+          : 0;
+
+      const updatedTarget = {
+        ...targetTask,
+        isCurrent: true,
+        order: minOrder,
+      };
+
+      // Insert at beginning
+      optimisticTasks.unshift(updatedTarget);
+
+      // Re-normalize order values (0, 1, 2, ...) – optional but cleaner
+      optimisticTasks.forEach((t, idx) => {
+        t.order = idx;
+      });
+
+      optimisticUpdate(() => optimisticTasks);
 
       return { previous };
     },
@@ -224,7 +248,9 @@ export function useListTasks(listId: string | null | undefined) {
       });
     },
 
-    onSettled: () => utils.task.getByList.invalidate(queryKey),
+    onSettled: () => {
+      utils.task.getByList.invalidate(queryKey);
+    },
   });
 
   // ──────────────────────────────────────────────
@@ -241,6 +267,7 @@ export function useListTasks(listId: string | null | undefined) {
         prev.map((t) => ({
           ...t,
           isCurrent: false,
+          // order remains unchanged
         })),
       );
 
