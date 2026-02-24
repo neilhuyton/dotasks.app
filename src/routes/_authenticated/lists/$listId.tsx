@@ -16,7 +16,11 @@ function ListDetail() {
   const { listId } = Route.useParams();
   const navigate = useNavigate();
 
-  const { data: list, isLoading: listLoading } = trpc.list.getOne.useQuery(
+  const {
+    data: list,
+    isLoading: listLoading,
+    isFetched,
+  } = trpc.list.getOne.useQuery(
     { id: listId },
     {
       enabled: !!listId,
@@ -38,26 +42,17 @@ function ListDetail() {
     isReordering,
   } = useListTasks(listId);
 
-  if (listLoading) {
+  if (listLoading || !isFetched) {
     return (
-      <div
-        className="flex min-h-[60vh] items-center justify-center"
-        data-testid="list-loading"
-      >
-        <Loader2
-          className="h-12 w-12 animate-spin text-blue-600"
-          data-testid="loading-spinner"
-        />
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
       </div>
     );
   }
 
   if (!list) {
     return (
-      <div
-        className="rounded-lg bg-red-50 p-6 sm:p-8 text-center text-red-800"
-        data-testid="list-not-found"
-      >
+      <div className="flex min-h-[60vh] items-center justify-center text-muted-foreground">
         List not found or you don't have access.
       </div>
     );
