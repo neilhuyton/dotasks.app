@@ -2,13 +2,22 @@
 
 import { get, set, del } from 'idb-keyval';
 import type { PersistedClient, Persister } from '@tanstack/react-query-persist-client';
+import debounce from 'lodash.debounce';  // ← add this
 
-const STORAGE_KEY = 'my-app-query-cache'; // Change to something unique per app
+const STORAGE_KEY = 'do-tasks:query-cache-v1';
 
 export function createIDBPersister(): Persister {
+  const debouncedSet = debounce(
+    async (client: PersistedClient) => {
+      await set(STORAGE_KEY, client);
+    },
+    2000,  // 2000 ms = throttle/debounce time
+    { leading: false, trailing: true }
+  );
+
   return {
     persistClient: async (client: PersistedClient) => {
-      await set(STORAGE_KEY, client);
+      debouncedSet(client);
     },
 
     restoreClient: async () => {

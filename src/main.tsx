@@ -9,12 +9,12 @@ import "./index.css";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { queryClient } from "@/queryClient";
 import { RealtimeListeners } from "@/components/RealtimeListeners";
-import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { PersistedQueryClientProvider } from "./components/PersistedQueryClientProvider";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
+    <PersistedQueryClientProvider>   
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <ThemeProvider
           defaultTheme="dark"
@@ -26,6 +26,6 @@ createRoot(document.getElementById("root")!).render(
           <ReactQueryDevtools initialIsOpen={false} />
         </ThemeProvider>
       </trpc.Provider>
-    </QueryClientProvider>
+    </PersistedQueryClientProvider>
   </StrictMode>,
 );
