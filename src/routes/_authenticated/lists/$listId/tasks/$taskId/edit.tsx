@@ -4,7 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, X } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/trpc";
 import { useState, useEffect } from "react";
@@ -152,7 +152,7 @@ function EditTaskPage() {
           onClick={handleCancel}
           disabled={isSubmitting}
         >
-          <X className="h-5 w-5" />
+          <ArrowLeft className="h-5 w-5" />
         </Button>
 
         <div className="flex flex-1 flex-col items-center justify-center">

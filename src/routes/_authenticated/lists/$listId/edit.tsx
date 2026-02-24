@@ -4,7 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, X } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 import { useState, useEffect, type SyntheticEvent } from "react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/trpc";
@@ -153,7 +153,7 @@ function EditListPage() {
           onClick={handleCancel}
           disabled={isPending}
         >
-          <X className="h-5 w-5" />
+          <ArrowLeft className="h-5 w-5" />
         </Button>
 
         <div className="flex flex-1 flex-col items-center justify-center">

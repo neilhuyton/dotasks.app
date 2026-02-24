@@ -2,11 +2,11 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { Loader2, X } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/trpc";
 import { useState, useEffect } from "react";
-import { useBannerStore } from "@/store/bannerStore"; // ← added
+import { useBannerStore } from "@/store/bannerStore";
 
 export const Route = createFileRoute(
   "/_authenticated/lists/$listId/tasks/$taskId/delete",
@@ -19,7 +19,7 @@ function DeleteTaskConfirmPage() {
 
   const navigate = Route.useNavigate();
   const utils = trpc.useUtils();
-  const { show: showBanner } = useBannerStore(); // ← added
+  const { show: showBanner } = useBannerStore();
 
   const tasks = utils.task.getByList.getData({ listId }) ?? [];
   const cachedTask = tasks.find((t) => t.id === taskId);
@@ -112,7 +112,7 @@ function DeleteTaskConfirmPage() {
           onClick={handleCancel}
           disabled={mutation.isPending}
         >
-          <X className="h-5 w-5" />
+          <ArrowLeft className="h-5 w-5" />
         </Button>
 
         <div className="flex flex-1 flex-col items-center justify-center">
