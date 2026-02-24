@@ -10,8 +10,8 @@ import {
   ItemTitle,
   ItemMedia,
 } from "@/components/ui/item";
-import { Checkbox } from "@/components/ui/checkbox";
 import { TaskActionsDropdown } from "@/components/tasks/TaskActionsDropdown";
+import { TaskCheckbox } from "../ui/task-checkbox";
 
 interface TaskItemProps {
   task: Task;
@@ -61,11 +61,11 @@ export function TaskItem({
         variant="icon"
         className="self-center p-0 m-0 border-none bg-transparent"
       >
-        <Checkbox
+        <TaskCheckbox
           checked={task.isCompleted}
           onCheckedChange={() => toggleTask({ id: task.id })}
           disabled={isToggling}
-          className="h-5 w-5 border-border/60 data-[state=checked]:border-primary data-[state=checked]:bg-primary focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1"
+          className="cursor-pointer"
         />
       </ItemMedia>
 

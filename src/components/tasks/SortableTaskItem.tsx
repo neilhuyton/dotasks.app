@@ -3,7 +3,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-import { TaskItem } from "@/components/TaskItem";
+import { TaskItem } from "@/components/tasks/TaskItem";
 import type { Task } from "@/hooks/useListTasks";
 import { cn } from "@/lib/utils";
 
@@ -43,7 +43,12 @@ export function SortableTaskItem({
     isDragging,
   } = useSortable({
     id: task.id,
-    disabled: isReordering || isToggling || isDeleting || isSettingCurrent || task.isCompleted,
+    disabled:
+      isReordering ||
+      isToggling ||
+      isDeleting ||
+      isSettingCurrent ||
+      task.isCompleted,
   });
 
   const style = {
@@ -63,7 +68,7 @@ export function SortableTaskItem({
         "cursor-grab active:cursor-grabbing select-none",
         // IMPORTANT: NO touch-none / touch-action: none here or in parents
         isDragging && "shadow-2xl ring-2 ring-primary/40 z-50",
-        "transition-all duration-200 rounded-lg border bg-card"
+        "transition-all duration-200 rounded-lg border bg-card",
       )}
       {...attributes}
       {...listeners}

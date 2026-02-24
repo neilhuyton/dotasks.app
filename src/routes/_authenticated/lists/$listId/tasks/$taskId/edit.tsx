@@ -91,9 +91,9 @@ function EditTaskPage() {
       utils.task.getByList.invalidate({ listId });
     },
 
-    onSuccess: (updatedTask) => {
+    onSuccess: () => {
       showBanner({
-        message: `Task "${updatedTask.title}" has been updated.`,
+        message: `Task has been updated.`,
         variant: "success",
         duration: 3000,
       });

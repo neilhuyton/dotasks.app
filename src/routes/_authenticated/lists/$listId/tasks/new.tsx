@@ -71,9 +71,9 @@ function NewTaskPage() {
       utils.task.getByList.invalidate({ listId });
     },
 
-    onSuccess: (createdTask) => {
+    onSuccess: () => {
       showBanner({
-        message: `Task "${createdTask.title}" has been added.`,
+        message: `Task has been added.`,
         variant: "success",
         duration: 3000,
       });

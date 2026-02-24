@@ -49,17 +49,24 @@ export function ActionBanner() {
         "transition-all duration-300 ease-in-out",
       )}
     >
-      <div className="mx-auto max-w-7xl px-4 py-3.5 flex items-center justify-between sm:px-6 lg:px-8">
-        <div className="flex items-center gap-3.5">
-          <p className={cn("text-sm font-medium leading-tight", styles.text)}>
+      <div className="mx-auto max-w-7xl px-4 py-3.5 flex items-center justify-center sm:px-6 lg:px-8 relative">
+        {/* Message - centered */}
+        <div className="flex items-center justify-center flex-1">
+          <p
+            className={cn(
+              "text-sm font-medium leading-tight text-center",
+              styles.text,
+            )}
+          >
             {banner.message}
           </p>
         </div>
 
+        {/* Close button - positioned on the right */}
         <button
           onClick={hide}
           className={cn(
-            "rounded-full p-1.5 transition-colors duration-200",
+            "rounded-full p-1.5 transition-colors duration-200 absolute right-4 sm:right-6 lg:right-8",
             styles.closeHover,
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]",
           )}

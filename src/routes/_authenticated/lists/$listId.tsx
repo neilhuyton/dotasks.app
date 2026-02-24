@@ -2,7 +2,7 @@
 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronLeft, Loader2 } from "lucide-react";
-import TaskList from "@/components/TaskList";
+import TaskList from "@/components/tasks/TaskList";
 import { useListTasks } from "@/hooks/useListTasks";
 import { trpc } from "@/trpc";
 import { Outlet, useNavigate } from "@tanstack/react-router";
