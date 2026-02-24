@@ -195,7 +195,7 @@ export function useListTasks(listId: string | null | undefined) {
   });
 
   // ──────────────────────────────────────────────
-  // Set current task – with optimistic move to top
+  // Set current task – with optimistic move to top + clear others
   // ──────────────────────────────────────────────
   const setCurrentMutation = trpc.task.setCurrent.useMutation({
     onMutate: async ({ id }) => {
@@ -204,8 +204,12 @@ export function useListTasks(listId: string | null | undefined) {
       await utils.task.getByList.cancel(queryKey);
       const previous = utils.task.getByList.getData(queryKey) ?? [];
 
-      const optimisticTasks = [...previous];
+      const optimisticTasks = previous.map((t) => ({
+        ...t,
+        isCurrent: t.id === id,           // only the target becomes current
+      }));
 
+      // ── Move to top (same logic as before) ───────────────────────
       const targetIndex = optimisticTasks.findIndex((t) => t.id === id);
       if (targetIndex === -1) return { previous };
 
@@ -214,7 +218,7 @@ export function useListTasks(listId: string | null | undefined) {
       // Remove from current position
       optimisticTasks.splice(targetIndex, 1);
 
-      // Assign very low order so it sorts to top
+      // Assign very low order → sorts to top
       const minOrder =
         optimisticTasks.length > 0
           ? Math.min(...optimisticTasks.map((t) => t.order ?? 0)) - 1
@@ -229,10 +233,11 @@ export function useListTasks(listId: string | null | undefined) {
       // Insert at beginning
       optimisticTasks.unshift(updatedTarget);
 
-      // Re-normalize order values (0, 1, 2, ...) – optional but cleaner
+      // Optional: re-normalize order values to 0,1,2,...
       optimisticTasks.forEach((t, idx) => {
         t.order = idx;
       });
+      // ─────────────────────────────────────────────────────────────
 
       optimisticUpdate(() => optimisticTasks);
 
@@ -267,7 +272,6 @@ export function useListTasks(listId: string | null | undefined) {
         prev.map((t) => ({
           ...t,
           isCurrent: false,
-          // order remains unchanged
         })),
       );
 
