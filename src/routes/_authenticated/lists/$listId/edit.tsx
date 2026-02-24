@@ -185,6 +185,7 @@ function EditListPage() {
                     autoFocus
                     required
                     disabled={isPending}
+                    autoComplete="off"
                   />
                 </div>
 
@@ -202,6 +203,7 @@ function EditListPage() {
                     placeholder="Any notes about this list..."
                     disabled={isPending}
                     rows={6}
+                    autoComplete="off"
                   />
                 </div>
               </div>

@@ -181,6 +181,7 @@ function EditTaskPage() {
                     autoFocus
                     required
                     disabled={isSubmitting}
+                    autoComplete="off"
                   />
                 </div>
 
@@ -198,6 +199,7 @@ function EditTaskPage() {
                     placeholder="Add more details..."
                     rows={6}
                     disabled={isSubmitting}
+                    autoComplete="off"
                   />
                 </div>
               </div>

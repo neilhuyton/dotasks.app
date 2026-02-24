@@ -7,10 +7,10 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { ColorThemeToggle } from "@/components/ColorThemeToggle";
 import { ActionBanner } from "@/components/ActionBanner";
 import { GlobalFetchingIndicator } from "@/components/GlobalIsFetchingIndicator";
-import { queryClient } from "@/queryClient";
-import { trpc } from "@/trpc";
-import { trpcClient } from "@/client";
-import { getQueryKey } from "@trpc/react-query";
+// import { queryClient } from "@/queryClient";
+// import { trpc } from "@/trpc";
+// import { trpcClient } from "@/client";
+// import { getQueryKey } from "@trpc/react-query";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: () => {
@@ -20,16 +20,16 @@ export const Route = createFileRoute("/_authenticated")({
     }
   },
 
-  loader: async () => {
-    const queryKey = getQueryKey(trpc.user.getCurrent, undefined, "query");
+  // loader: async () => {
+  //   const queryKey = getQueryKey(trpc.user.getCurrent, undefined, "query");
 
-    await queryClient.prefetchQuery({
-      queryKey,
-      queryFn: () => trpcClient.user.getCurrent.query(undefined),
-    });
+  //   await queryClient.prefetchQuery({
+  //     queryKey,
+  //     queryFn: () => trpcClient.user.getCurrent.query(undefined),
+  //   });
 
-    return {};
-  },
+  //   return {};
+  // },
 
   component: () => {
     return (

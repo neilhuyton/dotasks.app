@@ -25,7 +25,7 @@ function NewTaskPage() {
   const navigate = Route.useNavigate();
   const utils = trpc.useUtils();
   const { show: showBanner } = useBannerStore();
-  
+
   const mutation = trpc.task.create.useMutation({
     onMutate: async (input) => {
       await utils.task.getByList.cancel({ listId });
