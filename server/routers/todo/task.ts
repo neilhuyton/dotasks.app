@@ -54,7 +54,10 @@ export const taskRouter = router({
 
       return ctx.prisma.task.findMany({
         where: { listId: input.listId },
-        orderBy: { order: "asc" }, // lowest order at top, highest (newest) at bottom
+        orderBy: [
+          { isCurrent: "desc" }, // Current task comes first
+          { order: "asc" }, // Then sort by order (oldest → newest)
+        ],
       });
     }),
 
@@ -189,6 +192,8 @@ export const taskRouter = router({
       if (willBeCompleted) {
         updateData.isPinned = false;
         updateData.isCurrent = false;
+        // Optional: push completed tasks toward the bottom
+        // updateData.order = 999999;
       }
 
       return ctx.prisma.task.update({
@@ -254,6 +259,7 @@ export const taskRouter = router({
       }
 
       return ctx.prisma.$transaction(async (tx) => {
+        // Clear current status from all other tasks in the list
         await tx.task.updateMany({
           where: {
             listId: input.listId,
@@ -263,9 +269,13 @@ export const taskRouter = router({
           data: { isCurrent: false },
         });
 
+        // Set the selected task as current and give it the lowest order
         return tx.task.update({
           where: { id: input.id },
-          data: { isCurrent: true },
+          data: {
+            isCurrent: true,
+            order: -1, // Ensures it appears at the very top
+          },
         });
       });
     }),
@@ -351,6 +361,6 @@ export const taskRouter = router({
         ),
       );
 
-      return { success: true, updated: input }; // ← return what we applied
+      return { success: true, updated: input };
     }),
 });
