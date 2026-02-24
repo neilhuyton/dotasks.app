@@ -17,7 +17,7 @@ export function useListTasks(listId: string | null | undefined) {
   const enabled = !!listId;
   const queryKey = useMemo(() => ({ listId: listId! }), [listId]);
 
-  // Fetch tasks
+  // Fetch tasks – server sorts: isCurrent desc, order asc
   const {
     data: tasks = [],
     isFetching,
@@ -27,11 +27,12 @@ export function useListTasks(listId: string | null | undefined) {
     staleTime: 60_000, // 1 minute
   });
 
-  // Real-time subscription for this list's tasks
+  // Real-time subscription
   useSupabaseTaskRealtime({ listId });
 
   const [pendingReorder, setPendingReorder] = useState<Task[] | null>(null);
 
+  // Use pending reordering state during drag, otherwise server data
   const displayedTasks = pendingReorder ?? tasks;
 
   const optimisticUpdate = (updater: (prev: Task[]) => Task[]) => {
@@ -54,12 +55,16 @@ export function useListTasks(listId: string | null | undefined) {
       await utils.task.getByList.cancel(queryKey);
       const previous = utils.task.getByList.getData(queryKey) ?? [];
 
-      const newTasks = previous
-        .map((t) => {
-          const update = updates.find((u) => u.id === t.id);
-          return update ? { ...t, order: update.order } : t;
-        })
-        .sort((a, b) => a.order - b.order);
+      const newTasks = previous.map((t) => {
+        const update = updates.find((u) => u.id === t.id);
+        return update ? { ...t, order: update.order } : t;
+      });
+
+      // Sort same way server does (no forced 0..n)
+      newTasks.sort((a, b) => {
+        if (a.isCurrent !== b.isCurrent) return a.isCurrent ? -1 : 1;
+        return a.order - b.order;
+      });
 
       setPendingReorder(newTasks);
       optimisticUpdate(() => newTasks);
@@ -70,19 +75,16 @@ export function useListTasks(listId: string | null | undefined) {
     onSuccess: (result) => {
       if (result.updated) {
         optimisticUpdate((prev) =>
-          prev
-            .map((t) => {
-              const update = result.updated.find((u) => u.id === t.id);
-              return update ? { ...t, order: update.order } : t;
-            })
-            .sort((a, b) => a.order - b.order),
+          prev.map((t) => {
+            const update = result.updated.find((u) => u.id === t.id);
+            return update ? { ...t, order: update.order } : t;
+          }),
         );
       }
     },
 
     onError: (_, __, context) => {
       rollbackTo(context?.previous);
-      console.error("Reorder failed");
       showBanner({
         message: "Failed to reorder tasks. Please try again.",
         variant: "error",
@@ -97,7 +99,7 @@ export function useListTasks(listId: string | null | undefined) {
   });
 
   // ──────────────────────────────────────────────
-  // Create task – NO optimistic update (realtime will handle insert)
+  // Create task – no optimistic insert (realtime handles it well)
   // ──────────────────────────────────────────────
   const create = trpc.task.create.useMutation({
     onSuccess: () => {
@@ -116,9 +118,7 @@ export function useListTasks(listId: string | null | undefined) {
       });
     },
 
-    onSettled: () => {
-      utils.task.getByList.invalidate(queryKey);
-    },
+    onSettled: () => utils.task.getByList.invalidate(queryKey),
   });
 
   // ──────────────────────────────────────────────
@@ -134,11 +134,7 @@ export function useListTasks(listId: string | null | undefined) {
       optimisticUpdate((prev) =>
         prev.map((t) =>
           t.id === id
-            ? {
-                ...t,
-                isCompleted: !t.isCompleted,
-                isCurrent: false,
-              }
+            ? { ...t, isCompleted: !t.isCompleted, isCurrent: false }
             : t,
         ),
       );
@@ -195,7 +191,8 @@ export function useListTasks(listId: string | null | undefined) {
   });
 
   // ──────────────────────────────────────────────
-  // Set current task – with optimistic move to top + clear others
+  // Set current task – optimistic move to top + clear others
+  // Uses large negative gap so it reliably stays at top after refetch
   // ──────────────────────────────────────────────
   const setCurrentMutation = trpc.task.setCurrent.useMutation({
     onMutate: async ({ id }) => {
@@ -206,10 +203,9 @@ export function useListTasks(listId: string | null | undefined) {
 
       const optimisticTasks = previous.map((t) => ({
         ...t,
-        isCurrent: t.id === id,           // only the target becomes current
+        isCurrent: t.id === id, // only target is current
       }));
 
-      // ── Move to top (same logic as before) ───────────────────────
       const targetIndex = optimisticTasks.findIndex((t) => t.id === id);
       if (targetIndex === -1) return { previous };
 
@@ -218,27 +214,25 @@ export function useListTasks(listId: string | null | undefined) {
       // Remove from current position
       optimisticTasks.splice(targetIndex, 1);
 
-      // Assign very low order → sorts to top
-      const minOrder =
+      // Find current minimum order (or 0 if empty)
+      const currentMin =
         optimisticTasks.length > 0
-          ? Math.min(...optimisticTasks.map((t) => t.order ?? 0)) - 1
+          ? Math.min(...optimisticTasks.map((t) => t.order ?? 0))
           : 0;
+
+      // Use a large negative gap → survives future inserts
+      const newOrder = currentMin - 100;
 
       const updatedTarget = {
         ...targetTask,
         isCurrent: true,
-        order: minOrder,
+        order: newOrder,
       };
 
-      // Insert at beginning
+      // Insert at beginning (visual move)
       optimisticTasks.unshift(updatedTarget);
 
-      // Optional: re-normalize order values to 0,1,2,...
-      optimisticTasks.forEach((t, idx) => {
-        t.order = idx;
-      });
-      // ─────────────────────────────────────────────────────────────
-
+      // NO forced re-indexing to 0,1,2,... – keeps server-compatible gaps
       optimisticUpdate(() => optimisticTasks);
 
       return { previous };

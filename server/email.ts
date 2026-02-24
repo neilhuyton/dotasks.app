@@ -116,7 +116,7 @@ export async function sendEmailChangeNotification(
   const html = `
     <h1>Email Address Change Notification</h1>
     <p>The email address associated with your account has been changed to <strong>${newEmail}</strong>.</p>
-    <p>If you initiated this change, no further action is required. If you did not request this change, please contact support immediately at <a href="mailto:${SUPPORT_EMAIL}}">${SUPPORT_EMAIL}}</a>.</p>
+    <p>If you initiated this change, no further action is required. If you did not request this change, please contact support immediately at <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a>.</p>
     <p>Thank you,<br>Do Tasks App Team</p>
   `;
 
@@ -131,7 +131,7 @@ export async function sendPasswordChangeNotification(to: string) {
   const html = `
     <h1>Password Change Notification</h1>
     <p>The password for your account has been successfully changed.</p>
-    <p>If you initiated this change, no further action is required. If you did not request this change, please contact support immediately at <a href="mailto:${SUPPORT_EMAIL}}">${SUPPORT_EMAIL}}</a>.</p>
+    <p>If you initiated this change, no further action is required. If you did not request this change, please contact support immediately at <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a>.</p>
     <p>Thank you,<br>Do Tasks App Team</p>
   `;
 

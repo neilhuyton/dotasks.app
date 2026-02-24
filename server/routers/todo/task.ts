@@ -55,8 +55,9 @@ export const taskRouter = router({
       return ctx.prisma.task.findMany({
         where: { listId: input.listId },
         orderBy: [
-          { isCurrent: "desc" }, // Current task comes first
-          { order: "asc" }, // Then sort by order (oldest → newest)
+          { isCurrent: "desc" },
+          { order: "asc" },
+          { createdAt: "asc" },
         ],
       });
     }),
