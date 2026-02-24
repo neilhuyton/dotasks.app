@@ -1,4 +1,5 @@
 // server/email.ts
+
 import nodemailer from "nodemailer";
 
 const FROM_NAME = process.env.APP_NAME || "Do Tasks App";

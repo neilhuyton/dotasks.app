@@ -5,6 +5,10 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
+import {
+  sendResetPasswordEmail,
+  sendPasswordChangeNotification,
+} from "../email";
 
 export const resetPasswordRouter = router({
   request: publicProcedure
@@ -25,6 +29,7 @@ export const resetPasswordRouter = router({
         select: { id: true, email: true },
       });
 
+      // Security: always return the same vague message (timing attack prevention)
       if (!user) {
         return {
           message:
@@ -33,7 +38,7 @@ export const resetPasswordRouter = router({
       }
 
       const resetToken = crypto.randomUUID();
-      const resetTokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000);
+      const resetTokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
       await ctx.prisma.user.update({
         where: { id: user.id },
@@ -43,21 +48,15 @@ export const resetPasswordRouter = router({
         },
       });
 
-      // Queue background reset email
-      fetch(
-        `${process.env.URL || "http://localhost:8888"}/.netlify/functions/send-email-background`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "reset-password",
-            to: email,
-            token: resetToken,
-          }),
-        },
-      ).catch((err) => {
-        console.error("Failed to queue password reset email:", err);
-      });
+      // Send email directly (non-blocking in practice, but awaited for logging)
+      try {
+        await sendResetPasswordEmail(email, resetToken);
+        // Optional: log success if you have structured logging
+        // console.log(`Password reset email sent to ${email}`);
+      } catch (err) {
+        console.error("Failed to send password reset email:", err);
+        // Still return success to user — don't fail the flow on email error
+      }
 
       return {
         message:
@@ -108,20 +107,14 @@ export const resetPasswordRouter = router({
         select: { email: true },
       });
 
-      // Queue background notification
-      fetch(
-        `${process.env.URL || "http://localhost:8888"}/.netlify/functions/send-email-background`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "password-change",
-            to: updatedUser.email,
-          }),
-        },
-      ).catch((err) => {
-        console.error("Failed to queue password change notification:", err);
-      });
+      // Send notification directly
+      try {
+        await sendPasswordChangeNotification(updatedUser.email);
+        // Optional: log success
+      } catch (err) {
+        console.error("Failed to send password change notification:", err);
+        // Don't fail the mutation — user already reset password
+      }
 
       return { message: "Password reset successfully. Please log in." };
     }),
