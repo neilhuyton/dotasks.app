@@ -7,14 +7,14 @@ import {
   FormControl,
   FormField,
   FormItem,
+  FormLabel, // ← changed from Label to FormLabel for consistency
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { useResetPasswordPage } from "@/hooks/useResetPasswordPage";
 import { Logo } from "@/components/Logo";
-import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { Loader2 } from "lucide-react"; // ← added
 
 export const Route = createFileRoute("/reset-password")({
   component: ResetPassword,
@@ -52,45 +52,37 @@ function ResetPassword() {
             className="w-full"
           >
             <div className="flex flex-col gap-6">
-              <div className="grid gap-3">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <Label htmlFor="email" data-testid="email-label">
-                        Email
-                      </Label>
-                      <FormControl>
-                        <Input
-                          id="email"
-                          type="email"
-                          placeholder="m@example.com"
-                          required
-                          disabled={isPending}
-                          data-testid="email-input"
-                          tabIndex={1}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {isPending && (
-                <div className="flex justify-center py-4">
-                  <LoadingSpinner size="md" testId="reset-password-loading" />
-                </div>
-              )}
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel htmlFor="email" data-testid="email-label">
+                      Email
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="m@example.com"
+                        required
+                        disabled={isPending}
+                        data-testid="email-input"
+                        tabIndex={1}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               {message && (
                 <p
                   role="alert"
                   className={cn(
                     "text-sm text-center",
-                    /failed|error/i.test(message) // ← regex, case-insensitive
+                    /failed|error/i.test(message)
                       ? "text-red-500"
                       : "text-green-500",
                   )}
@@ -107,6 +99,7 @@ function ResetPassword() {
                 data-testid="submit-button"
                 tabIndex={2}
               >
+                {isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
                 {isPending ? "Sending..." : "Send Reset Link"}
               </Button>
 
@@ -116,7 +109,6 @@ function ResetPassword() {
                   role="link"
                   onClick={(e) => {
                     e.preventDefault();
-                    // No need to import router here – use Route.useNavigate()
                     navigate({ to: "/login" });
                   }}
                   className="underline underline-offset-4"
