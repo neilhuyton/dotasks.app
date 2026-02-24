@@ -6,7 +6,7 @@ import { TRPCError } from "@trpc/server";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import { sendVerificationEmail } from "../email";
-import { signSupabaseJwt } from "./auth-helpers"; // ← new import
+import { signSupabaseJwt } from "./auth-helpers";
 
 export const registerRouter = router({
   register: publicProcedure
@@ -26,6 +26,7 @@ export const registerRouter = router({
     .mutation(async ({ input, ctx }) => {
       const { email, password } = input;
 
+      // Check for existing user
       const existingUser = await ctx.prisma.user.findUnique({
         where: { email },
         select: { id: true },
@@ -38,10 +39,12 @@ export const registerRouter = router({
         });
       }
 
+      // Hash password and generate tokens
       const hashedPassword = await bcrypt.hash(password, 12);
       const verificationToken = crypto.randomUUID();
       const refreshToken = crypto.randomUUID();
 
+      // Create user
       const user = await ctx.prisma.user.create({
         data: {
           email,
@@ -55,6 +58,7 @@ export const registerRouter = router({
         },
       });
 
+      // Store hashed refresh token
       const hashedRefresh = crypto
         .createHash("sha256")
         .update(refreshToken)
@@ -67,12 +71,20 @@ export const registerRouter = router({
         },
       });
 
+      // Send verification email (non-blocking – don't fail registration on email error)
       try {
         await sendVerificationEmail(email, verificationToken);
       } catch (emailErr) {
-        console.error("Email send error during registration:", emailErr);
+        console.error("Failed to send verification email during registration", {
+          email,
+          error:
+            emailErr instanceof Error ? emailErr.message : String(emailErr),
+          stack: emailErr instanceof Error ? emailErr.stack : undefined,
+        });
+        // Still proceed – user can request new verification later if needed
       }
 
+      // Generate Supabase-compatible JWT
       const accessToken = signSupabaseJwt({
         userId: user.id,
         email: user.email,

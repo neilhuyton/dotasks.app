@@ -7,11 +7,11 @@ import {
   FormControl,
   FormField,
   FormItem,
+  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { useRegisterPage } from "@/hooks/useRegisterPage";
 import { Logo } from "@/components/Logo";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
@@ -50,15 +50,16 @@ function Register() {
             className="w-full"
           >
             <div className="flex flex-col gap-6">
+              {/* Email */}
               <div className="grid gap-3">
                 <FormField
                   control={form.control}
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <Label htmlFor="email" data-testid="email-label">
+                      <FormLabel htmlFor="email" data-testid="email-label">
                         Email
-                      </Label>
+                      </FormLabel>
                       <FormControl>
                         <Input
                           id="email"
@@ -77,15 +78,19 @@ function Register() {
                 />
               </div>
 
+              {/* Password */}
               <div className="grid gap-3">
                 <FormField
                   control={form.control}
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <Label htmlFor="password" data-testid="password-label">
+                      <FormLabel
+                        htmlFor="password"
+                        data-testid="password-label"
+                      >
                         Password
-                      </Label>
+                      </FormLabel>
                       <FormControl>
                         <Input
                           id="password"
@@ -95,6 +100,37 @@ function Register() {
                           data-testid="password-input"
                           disabled={isRegistering}
                           tabIndex={2}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Confirm Password */}
+              <div className="grid gap-3">
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel
+                        htmlFor="confirmPassword"
+                        data-testid="confirm-password-label"
+                      >
+                        Confirm Password
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          id="confirmPassword"
+                          type="password"
+                          placeholder="Confirm your password"
+                          required
+                          data-testid="confirm-password-input"
+                          disabled={isRegistering}
+                          tabIndex={3}
                           {...field}
                         />
                       </FormControl>
@@ -115,7 +151,8 @@ function Register() {
                   data-testid="register-message"
                   className={cn(
                     "text-sm text-center",
-                    message.includes("failed")
+                    message.toLowerCase().includes("failed") ||
+                      message.includes("match")
                       ? "text-red-500"
                       : "text-green-500",
                   )}
@@ -129,7 +166,7 @@ function Register() {
                 className="w-full mt-4"
                 data-testid="register-button"
                 disabled={isRegistering}
-                tabIndex={3}
+                tabIndex={4}
               >
                 {isRegistering ? "Registering..." : "Register"}
               </Button>
@@ -145,7 +182,7 @@ function Register() {
                   }}
                   className="underline underline-offset-4"
                   data-testid="login-link"
-                  tabIndex={4}
+                  tabIndex={5}
                 >
                   Login
                 </a>

@@ -10,7 +10,7 @@ import {
   afterAll,
   vi,
 } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { server } from "../../__mocks__/server";
 import "@testing-library/jest-dom";
@@ -40,17 +40,20 @@ const waitForFormReady = async (timeout = 2000) =>
 const fillRegistrationForm = async (email: string, password: string) => {
   const emailInput = screen.getByTestId("email-input");
   const passwordInput = screen.getByTestId("password-input");
+  const confirmInput = screen.getByTestId("confirm-password-input");
 
   await userEvent.clear(emailInput);
   await userEvent.clear(passwordInput);
+  await userEvent.clear(confirmInput);
 
   await userEvent.type(emailInput, email);
   await userEvent.type(passwordInput, password);
+  await userEvent.type(confirmInput, password); // ← only change here
 };
 
 const submitForm = () => {
-  const form = screen.getByTestId("register-form");
-  form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+  const button = screen.getByTestId("register-button");
+  fireEvent.click(button); // ← only change here (from dispatchEvent)
 };
 
 describe("RegisterPage", () => {

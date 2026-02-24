@@ -89,7 +89,7 @@ function CompletedTasksPage() {
             </div>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {completedTasks.map((task) => (
               <TaskItem
                 key={task.id}
