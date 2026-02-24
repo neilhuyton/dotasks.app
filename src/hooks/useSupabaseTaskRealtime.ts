@@ -32,7 +32,7 @@ export function useSupabaseTaskRealtime({
 
     channelRef.current = supabase
       .channel(channelName)
-      // INSERT & UPDATE – keep filtered (efficient)
+      // INSERT & UPDATE – filtered by listId for efficiency
       .on(
         "postgres_changes",
         {
@@ -41,10 +41,9 @@ export function useSupabaseTaskRealtime({
           table: "task",
           filter: `listId=eq.${listId}`,
         },
-        async (payload) => {
-          console.log("Realtime INSERT for task in list", listId, payload);
+        () => {
           invalidateAndRefetch();
-        }
+        },
       )
       .on(
         "postgres_changes",
@@ -54,55 +53,51 @@ export function useSupabaseTaskRealtime({
           table: "task",
           filter: `listId=eq.${listId}`,
         },
-        async (payload) => {
-          console.log("Realtime UPDATE for task in list", listId, payload);
+        () => {
           invalidateAndRefetch();
-        }
+        },
       )
-      // DELETE – no filter, check via task ID instead
+      // DELETE – no filter (required for DELETE events), check manually
       .on(
         "postgres_changes",
         {
           event: "DELETE",
           schema: "public",
           table: "task",
-          // NO filter – required for DELETE to work reliably
         },
-        async (payload) => {
+        (payload) => {
           const deletedTaskId = payload.old?.id;
-          console.log("Realtime DELETE detected", payload);
-
           if (deletedTaskId) {
-            console.log(`DELETE for task ID ${deletedTaskId} — invalidating list ${listId}`);
             invalidateAndRefetch();
           }
-        }
+        },
       )
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          console.log(`Realtime subscribed to tasks for list ${listId}`);
-        }
-      });
+      .subscribe();
   };
 
   const invalidateAndRefetch = async () => {
     if (!listId) return;
 
-    const taskQueryKey = [["task", "getByList"], { type: "query", input: { listId } }];
-    
-    // Invalidate → marks as stale
+    const taskQueryKey = [
+      ["task", "getByList"],
+      { type: "query", input: { listId } },
+    ];
+
+    // Mark as stale
     queryClient.invalidateQueries({ queryKey: taskQueryKey, exact: true });
-    
-    // Immediately refetch to update UI
+
+    // Refetch only if the query is currently active (user is viewing this list)
     await queryClient.refetchQueries({
       queryKey: taskQueryKey,
       exact: true,
-      type: "active",  // only refetch if query is active (viewed list)
+      type: "active",
     });
 
-    // Optional: keep list overview fresh too
-    const listPath = ["list", "getAll"];
-    queryClient.invalidateQueries({ queryKey: listPath, exact: false });
+    // Also keep the list overview somewhat fresh
+    queryClient.invalidateQueries({
+      queryKey: ["list", "getAll"],
+      exact: false,
+    });
   };
 
   useEffect(() => {
@@ -121,10 +116,12 @@ export function useSupabaseTaskRealtime({
 
     trySubscribe();
 
+    // Retry subscription if auth or listId isn't ready yet
     if (!useAuthStore.getState().accessToken || !listId) {
       retryInterval = setInterval(trySubscribe, 300);
     }
 
+    // React to auth state changes
     const unsubscribe = useAuthStore.subscribe((state) => {
       if (state.accessToken && listId) {
         subscribe();
