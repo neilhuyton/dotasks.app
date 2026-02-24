@@ -16,7 +16,7 @@ import { server } from "../../__mocks__/server";
 import "@testing-library/jest-dom";
 
 import { registerHandler } from "../../__mocks__/handlers/register";
-import { router } from "../../src/router/router";
+import { router } from "../../src/router";
 
 import {
   renderWithTrpcRouter,

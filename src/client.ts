@@ -15,7 +15,7 @@ import type { AppRouter } from "../server/trpc";
 import { vanillaTrpc } from "./trpc-vanilla";
 import { useAuthStore } from "./store/authStore";
 import { queryClient } from "./queryClient";
-import { router } from "./router/router";
+import { router } from "./router";
 
 let activeRefreshPromise: Promise<void> | null = null;
 

@@ -21,7 +21,7 @@ import {
   resetPasswordRequestServerErrorHandler,
 } from "../../__mocks__/handlers/resetPasswordRequest";
 
-import { router } from "@/router/router";
+import { router } from "@/router";
 
 import {
   renderWithTrpcRouter,

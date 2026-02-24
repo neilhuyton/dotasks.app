@@ -1,14 +1,10 @@
 // src/queryClient.ts
 
-import {
-  QueryClient,
-  QueryCache,
-  MutationCache,
-} from "@tanstack/react-query";
+import { QueryClient, QueryCache, MutationCache } from "@tanstack/react-query";
 import { TRPCClientError } from "@trpc/client";
 import type { AppRouter } from "../server/trpc";
 import { useAuthStore } from "./store/authStore";
-import { router } from "./router/router";
+import { router } from "./router";
 
 type TRPCErrorShape = NonNullable<TRPCClientError<AppRouter>["data"]>;
 

@@ -21,7 +21,7 @@ import {
   resetPasswordConfirmInvalidTokenHandler,
 } from "../../__mocks__/handlers/resetPasswordConfirm";
 
-import { router } from "@/router/router";
+import { router } from "@/router";
 
 import {
   renderWithTrpcRouter,

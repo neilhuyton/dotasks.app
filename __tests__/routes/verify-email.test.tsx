@@ -18,7 +18,7 @@ import { verifyEmailHandler } from "../../__mocks__/handlers/verifyEmail";
 import { mockUsers } from "../../__mocks__/mockUsers";
 import { TEST_VERIFICATION_TOKENS } from "../test-constants";
 import { useAuthStore } from "../../src/store/authStore";
-import { router } from "../../src/router/router";
+import { router } from "../../src/router";
 
 import {
   renderWithTrpcRouter,

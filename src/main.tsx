@@ -2,7 +2,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
-import { router } from "@/router/router";
+import { router } from "@/router";
 import { trpcClient } from "@/client";
 import { trpc } from "@/trpc";
 import "./index.css";

@@ -22,7 +22,7 @@ import {
   createMemoryHistory,
   createRouter,
 } from "@tanstack/react-router";
-import { router } from "../../src/router/router";
+import { router } from "../../src/router";
 import { loginHandler } from "../../__mocks__/handlers";
 import { suppressActWarnings } from "../act-suppress";
 import { trpcMsw } from "../../__mocks__/trpcMsw";
