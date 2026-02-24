@@ -1,10 +1,8 @@
-// src/routes/_authenticated/profile.tsx
-
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { X, Mail, Lock, LogOut } from "lucide-react";
-import { VisuallyHidden } from "radix-ui";
+import { Mail, Lock, LogOut, ArrowLeft } from "lucide-react";
+import { VisuallyHidden } from "radix-ui"; // assuming you're using @radix-ui/react-visually-hidden
 
 import { useProfilePage } from "@/hooks/useProfilePage";
 
@@ -28,9 +26,14 @@ function ProfileRoute() {
   } = useProfilePage();
 
   const navigate = Route.useNavigate();
+  const router = useRouter();
 
   const handleClose = () => {
-    navigate({ to: "/lists", replace: true });
+    if (router.history.canGoBack()) {
+      router.history.back();
+    } else {
+      navigate({ to: "/", replace: true });
+    }
   };
 
   return (
@@ -49,11 +52,11 @@ function ProfileRoute() {
           <Button
             variant="outline"
             size="icon"
-            className="absolute left-4 top-5 sm:left-6 sm:top-7 z-10"
+            className="absolute left-4 top-6 sm:left-6 sm:top-8 z-[10000]"
             aria-label="Close profile"
             onClick={handleClose}
           >
-            <X className="h-5 w-5" />
+            <ArrowLeft className="h-5 w-5" />
           </Button>
 
           <div className="mx-auto max-w-3xl text-center">
@@ -108,7 +111,6 @@ function ProfileRoute() {
                 Change Email
               </h2>
 
-              {/* Input + Button inline */}
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                 <div className="flex items-center gap-2 sm:gap-3 flex-1">
                   <Mail className="h-5 w-5 sm:h-6 sm:w-6 text-primary flex-shrink-0 opacity-70" />
@@ -172,12 +174,11 @@ function ProfileRoute() {
                 Change Password
               </h2>
 
-              {/* Input + Button inline */}
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                 <div className="flex items-center gap-2 sm:gap-3 flex-1">
                   <Lock className="h-5 w-5 sm:h-6 sm:w-6 text-primary flex-shrink-0" />
                   <input
-                    type="email"
+                    type="email" // ← note: most likely should be type="email" but consider changing logic to password reset
                     placeholder="Enter your email"
                     {...passwordForm.register("email")}
                     className="flex-1 p-2.5 sm:p-3 bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-sm sm:text-base"
