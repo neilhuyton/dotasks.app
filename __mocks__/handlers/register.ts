@@ -5,11 +5,7 @@ import { trpcMsw } from "../trpcMsw";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
-// ────────────────────────────────────────────────
-// Delay only in test environment
-const isTestEnv = typeof process !== "undefined" && process.env?.NODE_ENV === "test";
-const TEST_DELAY_MS = 600; // Adjust if needed (400–800 ms usually works well)
-// ────────────────────────────────────────────────
+const TEST_DELAY_MS = 600;
 
 export let mockUsers: {
   id: string;
@@ -35,11 +31,9 @@ interface RegisterInput {
 
 export const registerHandler = trpcMsw.register.mutation(async ({ input }) => {
   // Artificial delay for tests – makes loading states visible
-  if (isTestEnv) {
-    await new Promise((resolve) => setTimeout(resolve, TEST_DELAY_MS));
-  }
+  await new Promise((resolve) => setTimeout(resolve, TEST_DELAY_MS));
 
-  const rawInput = '0' in input ? input['0'] : input;
+  const rawInput = "0" in input ? input["0"] : input;
   const typedInput = rawInput as RegisterInput | undefined;
 
   const email = typedInput?.email ?? "";
@@ -99,7 +93,8 @@ export const registerHandler = trpcMsw.register.mutation(async ({ input }) => {
     },
     accessToken: crypto.randomUUID(),
     refreshToken: newUser.refreshToken,
-    message: "Registration successful! Please check your email to verify your account.",
+    message:
+      "Registration successful! Please check your email to verify your account.",
   };
 });
 

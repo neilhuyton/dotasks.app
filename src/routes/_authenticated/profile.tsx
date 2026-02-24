@@ -68,7 +68,7 @@ function ProfileRoute() {
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 pb-28 sm:pb-12">
-          <div className="mx-auto max-w-3xl space-y-6 sm:space-y-10 lg:space-y-12">
+          <div className="mx-auto max-w-3xl space-y-8 sm:space-y-10 lg:space-y-12">
             {/* Current Email */}
             <div className="space-y-2 sm:space-y-3">
               <h2 className="text-lg sm:text-xl font-semibold text-center sm:text-left">
@@ -107,15 +107,29 @@ function ProfileRoute() {
               <h2 className="text-lg sm:text-xl font-semibold text-center sm:text-left">
                 Change Email
               </h2>
-              <div className="flex items-center gap-2 sm:gap-3">
-                <Mail className="h-5 w-5 sm:h-6 sm:w-6 text-primary flex-shrink-0 opacity-70" />
-                <input
-                  type="email"
-                  placeholder="New email address"
-                  {...emailForm.register("email")}
-                  className="flex-1 p-2.5 sm:p-3 bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-sm sm:text-base"
-                  data-testid="email-input"
-                />
+
+              {/* Input + Button inline */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                <div className="flex items-center gap-2 sm:gap-3 flex-1">
+                  <Mail className="h-5 w-5 sm:h-6 sm:w-6 text-primary flex-shrink-0 opacity-70" />
+                  <input
+                    type="email"
+                    placeholder="New email address"
+                    {...emailForm.register("email")}
+                    className="flex-1 p-2.5 sm:p-3 bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-sm sm:text-base"
+                    data-testid="email-input"
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  variant="outline"
+                  className="min-w-[140px] sm:min-w-[180px] text-sm sm:text-base px-6 py-5 sm:py-5"
+                  disabled={isEmailPending}
+                  data-testid="email-submit"
+                >
+                  {isEmailPending ? "Updating..." : "Update Email"}
+                </Button>
               </div>
 
               {emailForm.formState.errors.email && (
@@ -146,18 +160,6 @@ function ProfileRoute() {
                   {emailMessage}
                 </p>
               )}
-
-              <div className="flex justify-center">
-                <Button
-                  type="submit"
-                  variant="outline"
-                  className="min-w-[180px] sm:min-w-[220px] text-sm sm:text-base px-8 py-5"
-                  disabled={isEmailPending}
-                  data-testid="email-submit"
-                >
-                  {isEmailPending ? "Updating..." : "Update Email"}
-                </Button>
-              </div>
             </form>
 
             {/* Change Password Form */}
@@ -169,15 +171,29 @@ function ProfileRoute() {
               <h2 className="text-lg sm:text-xl font-semibold text-center sm:text-left">
                 Change Password
               </h2>
-              <div className="flex items-center gap-2 sm:gap-3">
-                <Lock className="h-5 w-5 sm:h-6 sm:w-6 text-primary flex-shrink-0" />
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  {...passwordForm.register("email")}
-                  className="flex-1 p-2.5 sm:p-3 bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-sm sm:text-base"
-                  data-testid="password-input"
-                />
+
+              {/* Input + Button inline */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                <div className="flex items-center gap-2 sm:gap-3 flex-1">
+                  <Lock className="h-5 w-5 sm:h-6 sm:w-6 text-primary flex-shrink-0" />
+                  <input
+                    type="email"
+                    placeholder="Enter your email"
+                    {...passwordForm.register("email")}
+                    className="flex-1 p-2.5 sm:p-3 bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-sm sm:text-base"
+                    data-testid="password-input"
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  variant="outline"
+                  className="min-w-[140px] sm:min-w-[180px] text-sm sm:text-base px-6 py-5 sm:py-5"
+                  disabled={isPasswordPending}
+                  data-testid="password-submit"
+                >
+                  {isPasswordPending ? "Sending..." : "Send Reset Link"}
+                </Button>
               </div>
 
               {passwordMessage && (
@@ -199,21 +215,9 @@ function ProfileRoute() {
                   {passwordMessage}
                 </p>
               )}
-
-              <div className="flex justify-center">
-                <Button
-                  type="submit"
-                  variant="outline"
-                  className="min-w-[180px] sm:min-w-[220px] text-sm sm:text-base px-8 py-5"
-                  disabled={isPasswordPending}
-                  data-testid="password-submit"
-                >
-                  {isPasswordPending ? "Sending..." : "Send Reset Link"}
-                </Button>
-              </div>
             </form>
 
-            {/* Logout – now also centered, not full width */}
+            {/* Logout */}
             <div className="pt-6 sm:pt-8 border-t">
               <div className="flex justify-center">
                 <Button

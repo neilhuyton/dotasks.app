@@ -2,24 +2,33 @@
 
 import { createFileRoute, redirect, Outlet } from "@tanstack/react-router";
 import { useAuthStore } from "@/store/authStore";
-// import Navigation from "@/components/Navigation";
 import ProfileIcon from "@/components/ProfileIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ColorThemeToggle } from "@/components/ColorThemeToggle";
 import { ActionBanner } from "@/components/ActionBanner";
 import { GlobalFetchingIndicator } from "@/components/GlobalIsFetchingIndicator";
-
-const isTestEnv =
-  import.meta.env.MODE === "test" || process.env.NODE_ENV === "test";
+import { queryClient } from "@/queryClient";
+import { trpc } from "@/trpc";
+import { trpcClient } from "@/client";
+import { getQueryKey } from "@trpc/react-query";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: () => {
-    if (isTestEnv) return;
-
     const { isLoggedIn } = useAuthStore.getState();
     if (!isLoggedIn) {
       throw redirect({ to: "/login", replace: true });
     }
+  },
+
+  loader: async () => {
+    const queryKey = getQueryKey(trpc.user.getCurrent, undefined, "query");
+
+    await queryClient.prefetchQuery({
+      queryKey,
+      queryFn: () => trpcClient.user.getCurrent.query(undefined),
+    });
+
+    return {};
   },
 
   component: () => {
