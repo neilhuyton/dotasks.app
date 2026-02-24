@@ -57,9 +57,8 @@ export function SortableTaskList({
       },
     }),
     useSensor(TouchSensor, {
-      // Longer delay gives browser more time to recognize scroll intent
       activationConstraint: {
-        delay: 350,       // ← 350 ms is often a good compromise
+        delay: 350,
         tolerance: 8,
       },
     }),
@@ -111,7 +110,7 @@ export function SortableTaskList({
         strategy={verticalListSortingStrategy}
       >
         <div
-          className="space-y-3 transition-all duration-200 ease-out will-change-transform"
+          className="space-y-2 transition-all duration-200 ease-out will-change-transform"
           style={{ minHeight: "200px" }}
         >
           {activeTasks.map((task) => (
