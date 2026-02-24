@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useRegisterPage } from "@/hooks/useRegisterPage";
 import { Logo } from "@/components/Logo";
-import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { Loader2 } from "lucide-react"; // ← add this import
 
 export const Route = createFileRoute("/register")({
   component: Register,
@@ -51,100 +51,85 @@ function Register() {
           >
             <div className="flex flex-col gap-6">
               {/* Email */}
-              <div className="grid gap-3">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel htmlFor="email" data-testid="email-label">
-                        Email
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          id="email"
-                          type="email"
-                          placeholder="m@example.com"
-                          required
-                          data-testid="email-input"
-                          disabled={isRegistering}
-                          tabIndex={1}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel htmlFor="email" data-testid="email-label">
+                      Email
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="m@example.com"
+                        required
+                        data-testid="email-input"
+                        disabled={isRegistering}
+                        tabIndex={1}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               {/* Password */}
-              <div className="grid gap-3">
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel
-                        htmlFor="password"
-                        data-testid="password-label"
-                      >
-                        Password
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          id="password"
-                          type="password"
-                          placeholder="Enter your password"
-                          required
-                          data-testid="password-input"
-                          disabled={isRegistering}
-                          tabIndex={2}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel htmlFor="password" data-testid="password-label">
+                      Password
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="Enter your password"
+                        required
+                        data-testid="password-input"
+                        disabled={isRegistering}
+                        tabIndex={2}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               {/* Confirm Password */}
-              <div className="grid gap-3">
-                <FormField
-                  control={form.control}
-                  name="confirmPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel
-                        htmlFor="confirmPassword"
-                        data-testid="confirm-password-label"
-                      >
-                        Confirm Password
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          id="confirmPassword"
-                          type="password"
-                          placeholder="Confirm your password"
-                          required
-                          data-testid="confirm-password-input"
-                          disabled={isRegistering}
-                          tabIndex={3}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {isRegistering && (
-                <div className="flex justify-center py-4">
-                  <LoadingSpinner size="md" testId="register-loading" />
-                </div>
-              )}
+              <FormField
+                control={form.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel
+                      htmlFor="confirmPassword"
+                      data-testid="confirm-password-label"
+                    >
+                      Confirm Password
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        placeholder="Confirm your password"
+                        required
+                        data-testid="confirm-password-input"
+                        disabled={isRegistering}
+                        tabIndex={3}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               {message && (
                 <p
@@ -152,7 +137,7 @@ function Register() {
                   className={cn(
                     "text-sm text-center",
                     message.toLowerCase().includes("failed") ||
-                      message.includes("match")
+                      message.toLowerCase().includes("match")
                       ? "text-red-500"
                       : "text-green-500",
                   )}
@@ -168,6 +153,9 @@ function Register() {
                 disabled={isRegistering}
                 tabIndex={4}
               >
+                {isRegistering && (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                )}
                 {isRegistering ? "Registering..." : "Register"}
               </Button>
 

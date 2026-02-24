@@ -2,7 +2,8 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { trpc } from "@/trpc"; // adjust to your actual trpc client import path
+import { trpc } from "@/trpc";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/verify-email")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -28,7 +29,7 @@ function RouteComponent() {
   useEffect(() => {
     if (!token) {
       setStatus("error");
-      setMessage("No verification token provided");
+      setMessage("No verification token provided.");
       return;
     }
 
@@ -71,36 +72,42 @@ function RouteComponent() {
   const isSuccess = status === "success";
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-background">
-      <div className="w-full max-w-md">
-        <h1 className="mb-8 text-3xl font-bold text-center">
+    <div className="min-h-dvh flex flex-col items-center p-1 sm:p-2 lg:p-3">
+      <div className="w-full max-w-md bg-background rounded-lg p-4 flex flex-col items-center mt-16 sm:mt-20">
+        <h1
+          className="text-2xl font-bold text-center mb-4"
+          role="heading"
+          aria-level={1}
+        >
           Email Verification
         </h1>
 
-        {isLoading && (
-          <div
-            data-testid="verify-email-loading"
-            className="text-center text-lg text-muted-foreground animate-pulse"
-          >
-            {message}
-          </div>
-        )}
+        <p className="text-muted-foreground text-center mb-6">
+          {isLoading
+            ? "Please wait while we verify your email..."
+            : isSuccess
+              ? "Almost there..."
+              : "Something went wrong"}
+        </p>
 
-        {!isLoading && (
-          <div
+        <div className="w-full py-4">
+          <p
             data-testid="verify-message"
-            className={`rounded-xl p-8 text-center text-lg font-medium shadow-sm border ${
-              isSuccess
-                ? "bg-green-50 text-green-800 border-green-200"
-                : "bg-red-50 text-red-800 border-red-200"
-            }`}
+            className={cn(
+              "text-sm text-center",
+              isLoading
+                ? "text-muted-foreground animate-pulse"
+                : isSuccess
+                  ? "text-green-600"
+                  : "text-red-600",
+            )}
           >
             {message}
-          </div>
-        )}
+          </p>
+        </div>
 
         {isSuccess && (
-          <p className="mt-6 text-center text-sm text-muted-foreground">
+          <p className="mt-4 text-center text-sm text-muted-foreground">
             Redirecting to login...
           </p>
         )}
