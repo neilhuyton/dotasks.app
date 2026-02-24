@@ -59,7 +59,7 @@ function CreateListPage() {
       );
 
       showBanner({
-        message: `"${newList.title}" has been created successfully.`,
+        message: `List has been created successfully.`,
         variant: "success",
         duration: 3000,
       });

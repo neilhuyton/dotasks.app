@@ -60,7 +60,7 @@ function DeleteTaskConfirmPage() {
 
     onSuccess: () => {
       showBanner({
-        message: `"${title ?? "Task"}" has been deleted successfully.`,
+        message: `Task has been deleted successfully.`,
         variant: "success",
         duration: 3000,
       });

@@ -8,7 +8,7 @@ const STORAGE_KEY = "app-color-theme";
 export function useColorTheme() {
   const [colorTheme, setColorTheme] = useState<ColorTheme>(() => {
     const saved = localStorage.getItem(STORAGE_KEY) as ColorTheme | null;
-    return saved && colorThemes[saved] ? saved : "zinc";
+    return saved && colorThemes[saved] ? saved : "blue";
   });
 
   useEffect(() => {

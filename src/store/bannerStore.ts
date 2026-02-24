@@ -1,4 +1,5 @@
 // src/store/bannerStore.ts
+
 import { create } from "zustand";
 
 type Banner = {

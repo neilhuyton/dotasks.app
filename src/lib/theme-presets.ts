@@ -1,7 +1,6 @@
 // src/lib/theme-presets.ts
 
 export type ColorTheme =
-  | "zinc"
   | "blue"
   | "green"
   | "rose"

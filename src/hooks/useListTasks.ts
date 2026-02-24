@@ -100,9 +100,9 @@ export function useListTasks(listId: string | null | undefined) {
   // Create task – NO optimistic update (realtime will handle insert)
   // ──────────────────────────────────────────────
   const create = trpc.task.create.useMutation({
-    onSuccess: (createdTask) => {
+    onSuccess: () => {
       showBanner({
-        message: `Task "${createdTask.title}" has been added.`,
+        message: `Task has been added.`,
         variant: "success",
         duration: 3000,
       });
@@ -159,7 +159,7 @@ export function useListTasks(listId: string | null | undefined) {
       // ← NEW: onSuccess handler with banner
       const action = updatedTask.isCompleted ? "completed" : "re-opened";
       showBanner({
-        message: `Task "${updatedTask.title}" marked as ${action}.`,
+        message: `Task marked as ${action}.`,
         variant: "success",
         duration: 2800,
       });

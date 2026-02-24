@@ -24,16 +24,15 @@ export function ColorThemeToggle() {
           variant="outline"
           size="icon"
           className="
-            h-8 w-8                // smaller button size
-            p-0                    // remove default padding for tighter fit
-            border-border/70       // softer border when small (optional)
+            h-8 w-8              
+            p-0                  
+            border-border/70     
             hover:bg-muted/80
             relative
           "
         >
-          <Paintbrush className="h-4 w-4" />  {/* smaller icon */}
-          
-          {/* Smaller active theme preview dot */}
+          <Paintbrush className="h-4 w-4" />
+
           <span
             className="
               absolute -bottom-0.5 -right-0.5 
@@ -44,13 +43,13 @@ export function ColorThemeToggle() {
               bg-[var(--primary)]
             "
           />
-          
+
           <span className="sr-only">Toggle color theme</span>
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent 
-        align="end" 
+      <DropdownMenuContent
+        align="end"
         className="w-56 max-h-[min(70vh,400px)] overflow-y-auto"
       >
         {(Object.keys(colorThemes) as ColorThemeKey[]).map((key) => {
@@ -63,10 +62,9 @@ export function ColorThemeToggle() {
               onClick={() => setColorTheme(key)}
               className={cn(
                 "cursor-pointer flex items-center gap-3 py-2.5",
-                isActive && "bg-accent"
+                isActive && "bg-accent",
               )}
             >
-              {/* Theme preview dot — keep consistent size */}
               <div
                 className="h-5 w-5 rounded-full border border-border shrink-0 shadow-sm"
                 style={{ backgroundColor: theme.primary }}
@@ -74,7 +72,9 @@ export function ColorThemeToggle() {
               <span className="font-medium">{theme.name}</span>
 
               {isActive && (
-                <span className="ml-auto text-xs text-muted-foreground">Active</span>
+                <span className="ml-auto text-xs text-muted-foreground">
+                  Active
+                </span>
               )}
             </DropdownMenuItem>
           );

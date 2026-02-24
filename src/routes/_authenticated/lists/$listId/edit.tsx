@@ -108,7 +108,7 @@ function EditListPage() {
       );
 
       showBanner({
-        message: `"${updatedList.title || title}" has been updated successfully.`,
+        message: `List has been updated successfully.`,
         variant: "success",
         duration: 3000,
       });

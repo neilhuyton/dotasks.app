@@ -54,7 +54,7 @@ function DeleteListConfirmPage() {
 
     onSuccess: () => {
       showBanner({
-        message: `"${list?.title ?? "List"}" has been deleted successfully.`,
+        message: `List has been deleted successfully.`,
         variant: "success",
         duration: 3000,
       });

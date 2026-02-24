@@ -1,9 +1,10 @@
 // src/components/ActionBanner.tsx
-import { createPortal } from 'react-dom';
-import { useEffect } from 'react';
-import { cn } from '@/lib/utils';
-import { CheckCircle2, X } from 'lucide-react';
-import { useBannerStore } from '@/store/bannerStore';
+
+import { createPortal } from "react-dom";
+import { useEffect } from "react";
+import { X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useBannerStore } from "@/store/bannerStore";
 
 export function ActionBanner() {
   const { banner, hide } = useBannerStore();
@@ -16,34 +17,58 @@ export function ActionBanner() {
 
   if (!banner) return null;
 
-  const variantStyles = {
-    success: 'bg-green-600 text-white',
-    error: 'bg-red-600 text-white',
-    info: 'bg-blue-600 text-white',
+  const variantConfig = {
+    success: {
+      bg: "bg-[color-mix(in_oklab,var(--primary)_80%,white_20%)]",
+      text: "text-[oklch(0.98_0_0)]",
+      icon: "text-[color-mix(in_oklab,var(--primary)_90%,white_10%)]",
+      closeHover: "hover:bg-[color-mix(in_oklab,var(--primary)_30%,black_70%)]",
+    },
+    error: {
+      bg: "bg-[color-mix(in_oklab,var(--primary)_75%,oklch(0.55_0.25_30)_25%)]",
+      text: "text-white",
+      icon: "text-[color-mix(in_oklab,oklch(0.9_0.2_30),var(--primary)_40%)]",
+      closeHover: "hover:bg-black/30",
+    },
+    info: {
+      bg: "bg-[color-mix(in_oklab,var(--primary)_85%,white_15%)]",
+      text: "text-[oklch(0.98_0_0)]",
+      icon: "text-[color-mix(in_oklab,var(--primary)_95%,white_5%)]",
+      closeHover: "hover:bg-[color-mix(in_oklab,var(--primary)_20%,black_80%)]",
+    },
   };
+
+  const variant = banner.variant ?? "success";
+  const styles = variantConfig[variant];
 
   return createPortal(
     <div
       className={cn(
-        'fixed inset-x-0 bottom-0 z-[9999]',
-        variantStyles[banner.variant ?? 'success'],
-        'shadow-2xl border-t border-white/20',
+        "fixed inset-x-0 bottom-0 z-[9999] shadow-2xl border-t border-white/10 backdrop-blur-md",
+        styles.bg,
+        "transition-all duration-300 ease-in-out",
       )}
     >
-      <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between sm:px-6 lg:px-8">
-        <div className="flex items-center gap-3">
-          <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
-          <p className="text-sm font-medium">{banner.message}</p>
+      <div className="mx-auto max-w-7xl px-4 py-3.5 flex items-center justify-between sm:px-6 lg:px-8">
+        <div className="flex items-center gap-3.5">
+          <p className={cn("text-sm font-medium leading-tight", styles.text)}>
+            {banner.message}
+          </p>
         </div>
+
         <button
           onClick={hide}
-          className="rounded-full p-1.5 hover:bg-white/20 transition-colors"
+          className={cn(
+            "rounded-full p-1.5 transition-colors duration-200",
+            styles.closeHover,
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]",
+          )}
           aria-label="Close banner"
         >
-          <X className="h-5 w-5" />
+          <X className={cn("h-5 w-5", styles.text)} />
         </button>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }
