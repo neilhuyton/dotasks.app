@@ -1,10 +1,11 @@
-// src/components/lists/SortableListItem.tsx
+// src/components/lists/SortableListItem.tsx — full corrected file
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ListItem } from "./ListItem";
 import { cn } from "@/lib/utils";
+import { ListItem } from "./ListItem";
 import type { List } from "@/hooks/useLists";
+import { Link } from "@tanstack/react-router";
 
 interface SortableListItemProps {
   list: List;
@@ -30,7 +31,7 @@ export function SortableListItem({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition: transition ?? "transform 0.18s ease",
-    opacity: isDragging ? 0.7 : 1,
+    opacity: isDragging ? 0.82 : 1,
   };
 
   return (
@@ -38,13 +39,25 @@ export function SortableListItem({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "cursor-grab active:cursor-grabbing select-none",
-        isDragging && "shadow-xl ring-2 ring-primary/40 scale-[1.02] z-10",
+        "rounded-md transition-all duration-200 ease-out",
+        isDragging && "shadow-lg ring-2 ring-primary/40 scale-[1.015] z-10",
       )}
       {...attributes}
       {...listeners}
     >
-      <ListItem list={list} />
+      {isDragging ? (
+        <div className="block touch-manipulation">
+          <ListItem list={list} isDragging={isDragging} />
+        </div>
+      ) : (
+        <Link
+          to="/lists/$listId"
+          params={{ listId: list.id }}
+          className="block touch-manipulation"
+        >
+          <ListItem list={list} isDragging={isDragging} />
+        </Link>
+      )}
     </div>
   );
 }

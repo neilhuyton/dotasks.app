@@ -32,9 +32,16 @@ export function SortableListsTable({
   isReordering,
 }: SortableListsTableProps) {
   const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 5, // desktop – start after small movement
+      },
+    }),
     useSensor(TouchSensor, {
-      activationConstraint: { delay: 300, tolerance: 8 },
+      activationConstraint: {
+        delay: 180, // mobile – require ~180ms press before drag can start
+        tolerance: 5, // allow small finger wobble without starting drag
+      },
     }),
     useSensor(KeyboardSensor),
   );
