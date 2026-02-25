@@ -1,27 +1,27 @@
 // src/routes/confirm-reset-password.tsx
 
-import { createFileRoute } from '@tanstack/react-router'
-import { cn } from "@/lib/utils"
+import { createFileRoute } from "@tanstack/react-router";
+import { cn } from "@/lib/utils";
 import {
   Form,
   FormControl,
   FormField,
   FormItem,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { useConfirmResetPasswordPage } from "@/hooks/useConfirmResetPasswordPage"
-import { Logo } from "@/components/Logo"
-import { LoadingSpinner } from "@/components/LoadingSpinner"
-import { z } from 'zod'
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { useConfirmResetPasswordPage } from "@/hooks/useConfirmResetPasswordPage";
+import { Logo } from "@/components/Logo";
+import { Loader2 } from "lucide-react";
+import { z } from "zod";
 
 const searchSchema = z.object({
-  token: z.string().min(1, 'Token is required'),
-})
+  token: z.string().min(1, "Token is required"),
+});
 
-export const Route = createFileRoute('/confirm-reset-password')({
+export const Route = createFileRoute("/confirm-reset-password")({
   validateSearch: searchSchema,
 
   errorComponent: () => (
@@ -40,14 +40,14 @@ export const Route = createFileRoute('/confirm-reset-password')({
   ),
 
   component: ConfirmResetPassword,
-})
+});
 
 function ConfirmResetPassword() {
-  const { token } = Route.useSearch()
-  const navigate = Route.useNavigate()
+  const { token } = Route.useSearch();
+  const navigate = Route.useNavigate();
 
   const { form, message, isPending, handleSubmit } =
-    useConfirmResetPasswordPage(token)
+    useConfirmResetPasswordPage(token);
 
   return (
     <div className="min-h-dvh flex flex-col items-center p-1 sm:p-2 lg:p-3">
@@ -71,7 +71,7 @@ function ConfirmResetPassword() {
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit((data) =>
-              handleSubmit(data, () => navigate({ to: "/login" }))
+              handleSubmit(data, () => navigate({ to: "/login" })),
             )}
             role="form"
             data-testid="confirm-reset-password-form"
@@ -103,16 +103,35 @@ function ConfirmResetPassword() {
                     </FormItem>
                   )}
                 />
-              </div>
 
-              {isPending && (
-                <div className="flex justify-center py-4">
-                  <LoadingSpinner
-                    size="md"
-                    testId="confirm-reset-password-loading"
-                  />
-                </div>
-              )}
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <Label
+                        htmlFor="confirmPassword"
+                        data-testid="confirm-password-label"
+                      >
+                        Confirm New Password
+                      </Label>
+                      <FormControl>
+                        <Input
+                          id="confirmPassword"
+                          type="password"
+                          placeholder="Confirm your new password"
+                          required
+                          data-testid="confirm-password-input"
+                          disabled={isPending}
+                          tabIndex={2}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage data-testid="confirm-password-error" />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               {message && (
                 <p
@@ -120,7 +139,8 @@ function ConfirmResetPassword() {
                   data-testid="confirm-reset-password-message"
                   className={cn(
                     "text-sm text-center",
-                    message.toLowerCase().includes("failed")
+                    message.toLowerCase().includes("failed") ||
+                      message.toLowerCase().includes("match")
                       ? "text-red-500"
                       : "text-green-500",
                   )}
@@ -134,8 +154,9 @@ function ConfirmResetPassword() {
                 className="w-full mt-4"
                 data-testid="reset-password-button"
                 disabled={isPending}
-                tabIndex={2}
+                tabIndex={3}
               >
+                {isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
                 {isPending ? "Resetting..." : "Reset Password"}
               </Button>
 
@@ -144,12 +165,12 @@ function ConfirmResetPassword() {
                   href="#"
                   role="link"
                   onClick={(e) => {
-                    e.preventDefault()
-                    navigate({ to: "/login" })
+                    e.preventDefault();
+                    navigate({ to: "/login" });
                   }}
                   className="underline underline-offset-4"
                   data-testid="back-to-login-link"
-                  tabIndex={3}
+                  tabIndex={4}
                 >
                   Back to login
                 </a>
@@ -159,5 +180,5 @@ function ConfirmResetPassword() {
         </Form>
       </div>
     </div>
-  )
+  );
 }

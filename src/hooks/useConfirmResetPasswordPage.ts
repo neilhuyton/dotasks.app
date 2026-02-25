@@ -6,11 +6,17 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { trpc } from "@/trpc";
 import { useState, useEffect } from "react";
 
-const formSchema = z.object({
-  newPassword: z
-    .string()
-    .min(8, { message: "Password must be at least 8 characters" }),
-});
+const formSchema = z
+  .object({
+    newPassword: z
+      .string()
+      .min(8, { message: "Password must be at least 8 characters" }),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"], // show error under confirm field
+  });
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -18,10 +24,7 @@ interface UseConfirmResetPasswordReturn {
   form: ReturnType<typeof useForm<FormValues>>;
   message: string | null;
   isPending: boolean;
-  handleSubmit: (
-    data: FormValues,
-    onSwitchToLogin: () => void,
-  ) => void;  // no longer Promise<void>
+  handleSubmit: (data: FormValues, onSwitchToLogin: () => void) => void;
 }
 
 export const useConfirmResetPasswordPage = (
@@ -29,7 +32,10 @@ export const useConfirmResetPasswordPage = (
 ): UseConfirmResetPasswordReturn => {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { newPassword: "" },
+    defaultValues: {
+      newPassword: "",
+      confirmPassword: "",
+    },
     mode: "onChange",
   });
 
@@ -60,12 +66,9 @@ export const useConfirmResetPasswordPage = (
     return () => subscription.unsubscribe();
   }, [form]);
 
-  const handleSubmit = (
-    data: FormValues,
-    onSwitchToLogin: () => void,
-  ) => {
+  const handleSubmit = (data: FormValues, onSwitchToLogin: () => void) => {
     // Validate form client-side first
-    form.trigger("newPassword").then((isValid) => {
+    form.trigger().then((isValid) => {
       if (!isValid) return;
 
       if (!token) {
@@ -73,15 +76,15 @@ export const useConfirmResetPasswordPage = (
         return;
       }
 
-      // Use mutate instead of mutateAsync → no unhandled rejection risk
       resetMutation.mutate(
-        { token, newPassword: data.newPassword },
+        {
+          token,
+          newPassword: data.newPassword,
+        },
         {
           onSuccess: () => {
-            // Navigate only after success
             onSwitchToLogin();
           },
-          // onError is already handled globally above
         },
       );
     });
