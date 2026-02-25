@@ -11,10 +11,7 @@ export const listRouter = router({
         userId: ctx.userId,
         isArchived: false,
       },
-      orderBy: [
-        { isPinned: "desc" },
-        { createdAt: "desc" },
-      ],
+      orderBy: [{ isPinned: "desc" }, { order: "asc" }, { createdAt: "desc" }],
       select: {
         id: true,
         title: true,
@@ -24,6 +21,7 @@ export const listRouter = router({
         isPinned: true,
         createdAt: true,
         updatedAt: true,
+        order: true,
         _count: {
           select: {
             tasks: true,
@@ -115,16 +113,9 @@ export const listRouter = router({
         throw new TRPCError({ code: "NOT_FOUND" });
       }
 
-      // Option A: Hard delete
       return ctx.prisma.todoList.delete({
         where: { id: input.id },
       });
-
-      // Option B: Soft delete (uncomment if preferred)
-      // return ctx.prisma.todoList.update({
-      //   where: { id: input.id },
-      //   data: { isArchived: true },
-      // });
     }),
 
   pin: protectedProcedure
@@ -180,4 +171,39 @@ export const listRouter = router({
       },
     });
   }),
+
+  reorder: protectedProcedure
+    .input(
+      z.array(
+        z.object({
+          id: z.string().uuid(),
+          order: z.number().int().min(0),
+        }),
+      ),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Optional: verify all lists belong to user
+      const listIds = input.map((i) => i.id);
+      const count = await ctx.prisma.todoList.count({
+        where: {
+          id: { in: listIds },
+          userId: ctx.userId,
+        },
+      });
+
+      if (count !== input.length) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      await ctx.prisma.$transaction(
+        input.map(({ id, order }) =>
+          ctx.prisma.todoList.update({
+            where: { id },
+            data: { order },
+          }),
+        ),
+      );
+
+      return { success: true, updated: input };
+    }),
 });

@@ -2,21 +2,17 @@
 
 import { Outlet, createFileRoute } from "@tanstack/react-router";
 
-import ListsTable from "@/components/lists/ListsTable";
+import { SortableListsTable } from "@/components/lists/SortableListsTable";
 import { PageContainer } from "@/components/PageContainer";
 import { FabButton } from "@/components/FabButton";
-import { trpc } from "@/trpc";
-import { useAuthStore } from "@/store/authStore";
+import { useLists } from "@/hooks/useLists";
 
 export const Route = createFileRoute("/_authenticated/lists/")({
   component: ListsPage,
 });
 
 function ListsPage() {
-  const { userId } = useAuthStore();
-  const { data: lists = [], isLoading } = trpc.list.getAll.useQuery(undefined, {
-    enabled: !!userId,
-  });
+  const { lists, isLoadingLists, updateListOrder, isReordering } = useLists();
 
   const listCount = lists.length;
 
@@ -27,15 +23,18 @@ function ListsPage() {
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
             Your Lists
           </h1>
-
-          {!isLoading && listCount > 0 && (
+          {!isLoadingLists && listCount > 0 && (
             <div className="text-sm font-medium text-muted-foreground">
               {listCount} {listCount === 1 ? "list" : "lists"}
             </div>
           )}
         </div>
 
-        <ListsTable />
+        <SortableListsTable
+          lists={lists}
+          updateListOrder={updateListOrder}
+          isReordering={isReordering}
+        />
       </div>
 
       <FabButton

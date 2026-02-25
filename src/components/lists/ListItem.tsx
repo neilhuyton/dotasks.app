@@ -4,9 +4,11 @@ import { Link } from "@tanstack/react-router";
 import { ListActionsDropdown } from "./ListActionsDropdown";
 import { Item, ItemContent, ItemTitle } from "@/components/ui/item";
 import { cn } from "@/lib/utils";
-import { ChevronRight } from "lucide-react"; // ← add this import
+import { ChevronRight } from "lucide-react";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "server/trpc";
+import { trpc } from "@/trpc";
+import { useRef } from "react";
 
 type RouterOutput = inferRouterOutputs<AppRouter>;
 type ApiList = RouterOutput["list"]["getAll"][number];
@@ -16,11 +18,36 @@ interface ListItemProps {
 }
 
 export function ListItem({ list }: ListItemProps) {
+  const utils = trpc.useUtils();
+  const prefetchTimer = useRef<number | null>(null);
+
+  const prefetchTasks = () => {
+    if (!list.id) return;
+    utils.task.getByList.prefetch({ listId: list.id });
+  };
+
+  const handleTouchStart = () => {
+    prefetchTimer.current = window.setTimeout(prefetchTasks, 80);
+  };
+
+  const handleTouchEndOrCancel = () => {
+    if (prefetchTimer.current) {
+      clearTimeout(prefetchTimer.current);
+      prefetchTimer.current = null;
+    }
+  };
+
   return (
     <Link
       to="/lists/$listId"
       params={{ listId: list.id }}
       className="block outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-md"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEndOrCancel}
+      onTouchCancel={handleTouchEndOrCancel}
+      onPointerDown={handleTouchStart}
+      onPointerUp={handleTouchEndOrCancel}
+      onPointerCancel={handleTouchEndOrCancel}
     >
       <Item
         variant="outline"
@@ -29,7 +56,7 @@ export function ListItem({ list }: ListItemProps) {
           "px-3 py-2",
           "transition-colors duration-150",
           "border hover:bg-muted/30 dark:hover:bg-muted/40",
-          "cursor-pointer group", // ← added group for hover effects
+          "cursor-pointer group",
           "bg-card/80 dark:bg-muted/30",
         )}
       >

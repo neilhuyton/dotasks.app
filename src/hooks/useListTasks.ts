@@ -6,6 +6,7 @@ import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/../server/trpc";
 import { useBannerStore } from "@/store/bannerStore";
 import { useSupabaseTaskRealtime } from "./useSupabaseTaskRealtime";
+import { keepPreviousData } from "@tanstack/react-query";
 
 type RouterOutput = inferRouterOutputs<AppRouter>;
 export type Task = RouterOutput["task"]["getByList"][number];
@@ -17,22 +18,23 @@ export function useListTasks(listId: string | null | undefined) {
   const enabled = !!listId;
   const queryKey = useMemo(() => ({ listId: listId! }), [listId]);
 
-  // Fetch tasks – server sorts: isCurrent desc, order asc
   const {
     data: tasks = [],
     isFetching,
     isLoading,
   } = trpc.task.getByList.useQuery(queryKey, {
     enabled,
-    staleTime: 60_000, // 1 minute
+    staleTime: 1000 * 60 * 15, // 15 minutes – good balance for mobile
+    gcTime: 1000 * 60 * 60 * 2, // 2 hours – survive app background/foreground
+    placeholderData: keepPreviousData, // Show previous data instantly when switching lists
   });
 
-  // Real-time subscription
+  // Real-time updates via Supabase subscription
   useSupabaseTaskRealtime({ listId });
 
   const [pendingReorder, setPendingReorder] = useState<Task[] | null>(null);
 
-  // Use pending reordering state during drag, otherwise server data
+  // Use pending reordering state during drag, otherwise use server/cached data
   const displayedTasks = pendingReorder ?? tasks;
 
   const optimisticUpdate = (updater: (prev: Task[]) => Task[]) => {
@@ -60,7 +62,7 @@ export function useListTasks(listId: string | null | undefined) {
         return update ? { ...t, order: update.order } : t;
       });
 
-      // Sort same way server does (no forced 0..n)
+      // Sort same way server does (isCurrent first, then by order)
       newTasks.sort((a, b) => {
         if (a.isCurrent !== b.isCurrent) return a.isCurrent ? -1 : 1;
         return a.order - b.order;
@@ -220,7 +222,7 @@ export function useListTasks(listId: string | null | undefined) {
           ? Math.min(...optimisticTasks.map((t) => t.order ?? 0))
           : 0;
 
-      // Use a large negative gap → survives future inserts
+      // Large negative gap → survives future inserts at top
       const newOrder = currentMin - 100;
 
       const updatedTarget = {
@@ -229,10 +231,9 @@ export function useListTasks(listId: string | null | undefined) {
         order: newOrder,
       };
 
-      // Insert at beginning (visual move)
+      // Insert at beginning (visual move to top)
       optimisticTasks.unshift(updatedTarget);
 
-      // NO forced re-indexing to 0,1,2,... – keeps server-compatible gaps
       optimisticUpdate(() => optimisticTasks);
 
       return { previous };

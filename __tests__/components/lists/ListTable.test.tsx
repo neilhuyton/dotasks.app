@@ -17,7 +17,7 @@ import { httpLink } from "@trpc/client";
 import "@testing-library/jest-dom";
 import userEvent from "@testing-library/user-event";
 
-import ListsTable from "@/components/lists/ListsTable";
+import { SortableListsTable } from "@/components/lists/SortableListsTable";
 import { server } from "@/../__mocks__/server";
 import {
   listGetAllHandler,
@@ -87,7 +87,7 @@ describe("ListsTable", () => {
           queryClient={queryClient}
         >
           <QueryClientProvider client={queryClient}>
-            <ListsTable />
+            <SortableListsTable />
           </QueryClientProvider>
         </trpc.Provider>,
       );

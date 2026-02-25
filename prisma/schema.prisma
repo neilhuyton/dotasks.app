@@ -51,6 +51,7 @@ model TodoList {
   color       String?   // e.g. "#ef4444" – for nice UI coloring
   icon        String?   // optional emoji or icon name
   isArchived  Boolean   @default(false)
+  order       Int       @default(0) 
   
   isPinned    Boolean   @default(false)
 
