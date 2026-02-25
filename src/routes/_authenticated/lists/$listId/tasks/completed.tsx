@@ -55,19 +55,20 @@ function CompletedTasksPage() {
         "overflow-y-auto overscroll-none",
       )}
     >
-      <div className="relative flex-1 px-5 pb-28 pt-16 md:px-8 md:pb-32">
-        {/* Back button */}
+      {/* Changed part starts here — add centered container */}
+      <div className="relative flex-1 px-4 sm:px-6 lg:px-8 pb-28 pt-16 mx-auto w-full max-w-3xl">
+        {/* ↑ max-w-3xl is a good match for task lists; can use max-w-2xl or max-w-4xl depending on preference */}
+
         <Button
           variant="ghost"
           size="icon"
-          className="absolute left-4 top-4 z-10"
+          className="absolute left-4 top-4 z-10 sm:left-6 lg:left-8"
           onClick={handleBack}
           aria-label="Back to list"
         >
           <ArrowLeft className="h-6 w-6" />
         </Button>
 
-        {/* Header */}
         <div className="mb-8 text-center">
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
             Completed Tasks
