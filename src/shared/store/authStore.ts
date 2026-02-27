@@ -40,7 +40,7 @@ function getInitialState(): Pick<
   return {
     isLoggedIn: hasValidRefresh,
     userId: userId || null,
-    accessToken: null, // never persist access token — always refresh
+    accessToken: null,
     refreshToken: refreshToken || null,
   };
 }

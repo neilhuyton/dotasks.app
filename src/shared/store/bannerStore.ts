@@ -10,7 +10,7 @@ type Banner = {
 
 export const useBannerStore = create<{
   banner: Banner;
-  show: (banner: Banner) => void;
+  show: (banner: NonNullable<Banner>) => void;
   hide: () => void;
 }>((set) => ({
   banner: null,

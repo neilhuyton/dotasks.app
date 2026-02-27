@@ -159,7 +159,7 @@ function performLogout() {
 
 export function createTrpcClient() {
   const isTest = import.meta.env.MODE === "test";
-  const baseUrl = isTest ? "http://localhost:8888" : ""; // change 3000 to your dev port if needed (e.g. 5173 for Vite)
+  const baseUrl = isTest ? "http://localhost:8888" : "";
 
   return createTRPCClient<AppRouter>({
     links: [

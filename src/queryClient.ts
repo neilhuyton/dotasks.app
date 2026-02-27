@@ -1,46 +1,71 @@
 // src/queryClient.ts
-
 import { QueryClient, QueryCache, MutationCache } from "@tanstack/react-query";
 import { TRPCClientError } from "@trpc/client";
 import type { AppRouter } from "../server/trpc";
 import { useAuthStore } from "@/shared/store/authStore";
 import { router } from "./router";
 
-type TRPCErrorShape = NonNullable<TRPCClientError<AppRouter>["data"]>;
+type TRPCErrorData = NonNullable<TRPCClientError<AppRouter>["data"]>;
 
-function isAuthError(err: unknown): err is TRPCClientError<AppRouter> {
-  if (!(err instanceof TRPCClientError)) return false;
+function isAuthError(error: unknown): error is TRPCClientError<AppRouter> {
+  if (!(error instanceof TRPCClientError)) return false;
 
-  const shape = err.data as TRPCErrorShape | undefined;
+  const data = error.data as TRPCErrorData | undefined;
 
   return (
-    shape?.code === "UNAUTHORIZED" ||
-    shape?.httpStatus === 401 ||
-    err.message.toLowerCase().includes("unauthorized") ||
-    err.message.toLowerCase().includes("expired token") ||
-    err.message.toLowerCase().includes("invalid token") ||
-    err.message.toLowerCase().includes("jwt")
+    data?.code === "UNAUTHORIZED" ||
+    data?.httpStatus === 401 ||
+    error.message.toLowerCase().includes("unauthorized") ||
+    error.message.toLowerCase().includes("expired token") ||
+    error.message.toLowerCase().includes("invalid token") ||
+    error.message.toLowerCase().includes("jwt")
   );
+}
+
+function handleTRPCAuthError(error: unknown): void {
+  if (!isAuthError(error)) return;
+
+  const { refreshToken, userId, logout } = useAuthStore.getState();
+
+  if (refreshToken && userId) {
+    // TODO: Attempt refresh here (or rely on tRPC link for this)
+    // If refresh fails → proceed to logout below
+    // For now, assuming refresh is handled in tRPC client link
+  }
+
+  // Fatal: no refresh possible or refresh failed → logout
+  logout();
+  queryClient.clear();
+  queryClient.cancelQueries();
+
+  // Only navigate if not already on login (avoid loops)
+  if (router.state.location.pathname !== "/login") {
+    router.invalidate().finally(() => {
+      router.navigate({ to: "/login", replace: true });
+    });
+  }
 }
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 0,
+      staleTime: 0,               // always stale → refetch often
       gcTime: 5 * 60 * 1000,
       refetchOnMount: true,
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
-      retry: 1,
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 8000),
+      retry: 1,                   // low retry for quick failure feedback
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
     },
     mutations: {
-      retry: false,
+      retry: false,               // mutations usually shouldn't retry
     },
   },
 
   queryCache: new QueryCache({
     onError: (error) => {
+      // Optional: only handle background errors differently
+      // if (query.state.data !== undefined) { /* background refetch failed */ }
       handleTRPCAuthError(error);
     },
   }),
@@ -51,23 +76,3 @@ export const queryClient = new QueryClient({
     },
   }),
 });
-
-function handleTRPCAuthError(error: unknown): void {
-  if (!isAuthError(error)) return;
-
-  const { refreshToken, logout } = useAuthStore.getState();
-
-  if (refreshToken) {
-    return;
-  }
-
-  logout();
-  queryClient.clear();
-  queryClient.cancelQueries();
-
-  if (router.state.location.pathname !== "/login") {
-    router.invalidate().finally(() => {
-      router.navigate({ to: "/login", replace: true });
-    });
-  }
-}

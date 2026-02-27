@@ -1,21 +1,25 @@
 // src/app/components/ActionBanner.tsx
 
 import { createPortal } from "react-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { useBannerStore } from "@/shared/store/bannerStore";
 
 export function ActionBanner() {
   const { banner, hide } = useBannerStore();
+  const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
-    if (!banner || banner.duration === 0) return;
+    if (!banner || banner.duration === 0 || isPaused) return;
+
     const timer = setTimeout(hide, banner.duration ?? 4000);
     return () => clearTimeout(timer);
-  }, [banner, hide]);
+  }, [banner, hide, isPaused]);
 
   if (!banner) return null;
+
+  const variant = banner.variant ?? "success";
 
   const variantConfig = {
     success: {
@@ -38,19 +42,27 @@ export function ActionBanner() {
     },
   };
 
-  const variant = banner.variant ?? "success";
-  const styles = variantConfig[variant];
+  const styles =
+    variantConfig[variant as keyof typeof variantConfig] ??
+    variantConfig.success;
 
   return createPortal(
     <div
+      role={variant === "error" ? "alert" : "status"}
+      aria-live={variant === "error" ? "assertive" : "polite"}
+      aria-atomic="true"
       className={cn(
         "fixed inset-x-0 bottom-0 z-[9999] shadow-2xl border-t border-white/10 backdrop-blur-md",
         styles.bg,
         "transition-all duration-300 ease-in-out",
       )}
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      onFocus={() => setIsPaused(true)}
+      onBlur={() => setIsPaused(false)}
+      tabIndex={-1}
     >
-      <div className="mx-auto max-w-7xl px-4 py-3.5 flex items-center justify-center sm:px-6 lg:px-8 relative">
-        {/* Message - centered */}
+      <div className="mx-auto max-w-7xl px-4 py-3.5 flex items-center justify-center relative sm:px-6 lg:px-8">
         <div className="flex items-center justify-center flex-1">
           <p
             className={cn(
@@ -63,7 +75,6 @@ export function ActionBanner() {
           </p>
         </div>
 
-        {/* Close button - positioned on the right */}
         <button
           onClick={hide}
           className={cn(

@@ -12,7 +12,7 @@ export default defineConfig({
     tailwindcss(),
     tanstackRouter({
       routesDirectory: "./src/app/routes", // explicit
-      generatedRouteTree: "./src/routeTree.gen.ts", // explicit
+      generatedRouteTree: "./src/types/routeTree.gen.ts", // explicit
       routeFileIgnorePrefix: "-", // ignore _authenticated etc. if needed, but optional
       // optional: verbose: true,  // add this to see logs during dev server start
     }),

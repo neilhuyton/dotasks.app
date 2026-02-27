@@ -78,7 +78,6 @@ export const userRouter = router({
         select: { email: true },
       });
 
-      // Send notification to the old email address
       if (oldEmail !== email) {
         try {
           await sendEmailChangeNotification(oldEmail, email);

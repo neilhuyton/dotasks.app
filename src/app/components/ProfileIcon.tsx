@@ -27,7 +27,7 @@ function ProfileIcon() {
       aria-label="User Profile"
       data-testid="profile-icon"
     >
-      <UserIcon className="h-5 w-5" />  {/* smaller icon (was h-6 w-6) */}
+      <UserIcon className="h-5 w-5" />
     </Link>
   );
 }
