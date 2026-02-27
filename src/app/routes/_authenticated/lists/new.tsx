@@ -5,26 +5,22 @@ import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { Textarea } from "@/app/components/ui/textarea";
 import { Loader2, ArrowLeft } from "lucide-react";
-import { useState, type SyntheticEvent } from "react";
+import { useState } from "react";
 import { cn } from "@/shared/lib/utils";
-import { trpc, useTRPC } from "@/trpc"; // ← modern import (adjust if needed)
+import { trpc } from "@/trpc";
 import { useBannerStore } from "@/shared/store/bannerStore";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-
-// Inferred types from tRPC router
 import type { inferRouterOutputs } from "@trpc/server";
-import type { AppRouter } from "@/../server/trpc"; // adjust path if needed
+import type { AppRouter } from "@/../server/trpc";
 
 type RouterOutput = inferRouterOutputs<AppRouter>;
-type ListItem = RouterOutput["list"]["getAll"][number];
 type Lists = RouterOutput["list"]["getAll"];
 
 function createOptimisticList(
   input: { title: string; description?: string },
   prevLength: number,
-): ListItem {
+) {
   const now = new Date().toISOString();
-
   return {
     id: `temp-${crypto.randomUUID()}`,
     title: input.title,
@@ -33,12 +29,8 @@ function createOptimisticList(
     icon: null,
     order: prevLength,
     isPinned: false,
-
-    // Only include what's actually in the type / response
     createdAt: now,
     updatedAt: now,
-
-    // These two are apparently returned by your getAll (keep them)
     _count: { tasks: 0 },
     tasks: [],
   };
@@ -46,15 +38,11 @@ function createOptimisticList(
 
 export const Route = createFileRoute("/_authenticated/lists/new")({
   loader: async ({ context: { queryClient } }) => {
-    // Prefetch list.getAll so the list overview is warm when we return
-    // (no input needed for getAll)
     await queryClient.ensureQueryData(
       trpc.list.getAll.queryOptions(undefined, {
-        staleTime: 30_000, // optional: keep fresh for 30s
+        staleTime: 30_000,
       }),
     );
-
-    // You can return data if needed, but here we just prefetch → empty return is fine
     return {};
   },
 
@@ -65,8 +53,6 @@ function CreateListPage() {
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
   const { show: showBanner } = useBannerStore();
-
-  const trpc = useTRPC(); // ← typed proxy (used for queryKey/options)
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -83,8 +69,8 @@ function CreateListPage() {
         const optimistic = createOptimisticList(input, prev.length);
 
         queryClient.setQueryData<Lists>(allListsQueryKey, [
-          optimistic,
           ...prev,
+          optimistic,
         ]);
 
         return { prev };
@@ -106,7 +92,6 @@ function CreateListPage() {
       },
 
       onSuccess: (newList) => {
-        // Replace temp item with real one (nice UX polish)
         queryClient.setQueryData<Lists>(allListsQueryKey, (old = []) =>
           old.map((item) =>
             item.id.startsWith("temp-") ? { ...item, ...newList } : item,
@@ -124,7 +109,7 @@ function CreateListPage() {
     }),
   );
 
-  const handleSubmit = (e: SyntheticEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!title.trim()) return;
 
@@ -150,9 +135,6 @@ function CreateListPage() {
         "bg-background overscroll-none touch-none",
       )}
     >
-      {/* Remove or keep the debug line as needed */}
-      {/* <h1>DEBUG: Create List Page is mounted</h1> */}
-
       <div className="relative flex min-h-full flex-col px-6 pb-20 pt-20 sm:px-8">
         <Button
           variant="outline"

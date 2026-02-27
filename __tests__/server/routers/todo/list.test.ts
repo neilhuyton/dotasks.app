@@ -18,7 +18,7 @@ describe("list router (protected procedures)", () => {
   });
 
   describe("getAll", () => {
-    it("returns active lists sorted by order asc, then createdAt desc", async () => {
+    it("returns active lists sorted by order asc", async () => {
       const mockLists = [
         {
           id: crypto.randomUUID(),
@@ -85,12 +85,11 @@ describe("list router (protected procedures)", () => {
         },
       ];
 
-      // We give the mock data **already sorted** — because the mock doesn't sort
       const sortedMockData = [...mockLists].sort((a, b) => {
         if (a.order !== b.order) {
-          return a.order - b.order;                    // asc
+          return a.order - b.order;
         }
-        return b.createdAt.getTime() - a.createdAt.getTime(); // desc = newer first
+        return b.createdAt.getTime() - a.createdAt.getTime();
       });
 
       mockPrisma.todoList.findMany.mockResolvedValue(sortedMockData);
@@ -99,7 +98,6 @@ describe("list router (protected procedures)", () => {
 
       expect(result).toHaveLength(4);
 
-      // These should now pass reliably
       expect(result[0].title).toBe("High priority");
       expect(result[0].order).toBe(0);
 
@@ -112,21 +110,12 @@ describe("list router (protected procedures)", () => {
       expect(result[3].title).toBe("Medium priority");
       expect(result[3].order).toBe(10);
 
-      // Confirm tie-breaker
-      expect(result[1].createdAt.getTime()).toBeGreaterThan(
-        result[2].createdAt.getTime()
-      );
-
-      // Confirm the query shape Prisma was asked for
       expect(mockPrisma.todoList.findMany).toHaveBeenCalledWith({
         where: {
           userId: "test-user-id",
           isArchived: false,
         },
-        orderBy: [
-          { order: "asc" },
-          { createdAt: "desc" },
-        ],
+        orderBy: { order: "asc" },
         select: {
           id: true,
           title: true,
@@ -195,13 +184,17 @@ describe("list router (protected procedures)", () => {
     it("throws NOT_FOUND when list does not exist or belongs to another user", async () => {
       mockPrisma.todoList.findUnique.mockResolvedValue(null);
 
-      await expect(caller.list.getOne({ id: crypto.randomUUID() })).rejects.toMatchObject({
+      await expect(
+        caller.list.getOne({ id: crypto.randomUUID() }),
+      ).rejects.toMatchObject({
         code: "NOT_FOUND",
       });
     });
 
     it("throws BAD_REQUEST for invalid UUID format", async () => {
-      await expect(caller.list.getOne({ id: "not-a-uuid" })).rejects.toThrow(/Invalid uuid/i);
+      await expect(caller.list.getOne({ id: "not-a-uuid" })).rejects.toThrow(
+        /Invalid uuid/i,
+      );
     });
   });
 
@@ -251,6 +244,7 @@ describe("list router (protected procedures)", () => {
           title: "Daily Goals",
           description: "Things to do every day",
           userId: "test-user-id",
+          order: 0,
         },
       });
     });
@@ -298,13 +292,17 @@ describe("list router (protected procedures)", () => {
     it("throws NOT_FOUND when trying to delete non-owned or non-existent list", async () => {
       mockPrisma.todoList.findUnique.mockResolvedValue(null);
 
-      await expect(caller.list.delete({ id: crypto.randomUUID() })).rejects.toMatchObject({
+      await expect(
+        caller.list.delete({ id: crypto.randomUUID() }),
+      ).rejects.toMatchObject({
         code: "NOT_FOUND",
       });
     });
 
     it("throws BAD_REQUEST for invalid UUID", async () => {
-      await expect(caller.list.delete({ id: "invalid-id" })).rejects.toThrow(/Invalid uuid/i);
+      await expect(caller.list.delete({ id: "invalid-id" })).rejects.toThrow(
+        /Invalid uuid/i,
+      );
     });
   });
 });

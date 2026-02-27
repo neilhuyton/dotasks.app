@@ -158,7 +158,7 @@ function EditListPage() {
         });
 
         form.reset();
-        navigate({ to: "/lists/$listId", params: { listId }, replace: true });
+        navigate({ to: "/lists", replace: true });
       },
     }),
   );

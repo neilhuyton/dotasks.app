@@ -11,14 +11,14 @@ export const listRouter = router({
         userId: ctx.userId,
         isArchived: false,
       },
-      orderBy: [{ order: "asc" }, { createdAt: "desc" }],
+      orderBy: { order: "asc" },
       select: {
         id: true,
         title: true,
         description: true,
         color: true,
         icon: true,
-        isPinned: true, // ← can keep if you want to return it
+        isPinned: true,
         order: true,
         createdAt: true,
         updatedAt: true,
@@ -63,10 +63,23 @@ export const listRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const lastList = await ctx.prisma.todoList.findFirst({
+        where: {
+          userId: ctx.userId,
+          isArchived: false,
+        },
+        select: { order: true },
+        orderBy: { order: "desc" },
+        take: 1,
+      });
+
+      const nextOrder = lastList ? lastList.order + 1 : 0;
+
       return ctx.prisma.todoList.create({
         data: {
           ...input,
           userId: ctx.userId,
+          order: nextOrder,
         },
       });
     }),
@@ -180,7 +193,6 @@ export const listRouter = router({
       ),
     )
     .mutation(async ({ ctx, input }) => {
-      // Optional: verify all lists belong to user
       const listIds = input.map((i) => i.id);
       const count = await ctx.prisma.todoList.count({
         where: {
