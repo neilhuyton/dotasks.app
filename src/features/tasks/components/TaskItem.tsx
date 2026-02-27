@@ -11,13 +11,12 @@ import {
 } from "@/app/components/ui/item";
 import { TaskCheckbox } from "@/app/components/ui/task-checkbox";
 import { TaskActionsDropdown } from "./TaskActionsDropdown";
-
-
+import { Loader2 } from "lucide-react";
 
 interface TaskItemProps {
   task: Task;
   toggleTask: (input: { id: string }) => void;
-  isToggling: boolean;
+  pendingToggleIds: Set<string>;
   onDelete: (taskId: string) => void;
   isDeleting: boolean;
   setCurrentTask: (input: { id: string; listId: string }) => void;
@@ -30,7 +29,7 @@ interface TaskItemProps {
 export function TaskItem({
   task,
   toggleTask,
-  isToggling,
+  pendingToggleIds,
   onDelete,
   isDeleting,
   setCurrentTask,
@@ -39,8 +38,13 @@ export function TaskItem({
   clearCurrentTaskPending,
   listId,
 }: TaskItemProps) {
+  const isThisTaskToggling = pendingToggleIds.has(task.id);
+
   const isPending =
-    isSettingCurrent || clearCurrentTaskPending || isDeleting || isToggling;
+    isSettingCurrent ||
+    clearCurrentTaskPending ||
+    isDeleting ||
+    isThisTaskToggling;
 
   return (
     <Item
@@ -56,18 +60,27 @@ export function TaskItem({
         task.isPinned &&
           "bg-amber-50/60 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800",
         "hover:bg-muted/20 dark:hover:bg-muted/40",
+        isThisTaskToggling && "opacity-75",
       )}
     >
       <ItemMedia
         variant="icon"
-        className="self-center p-0 m-0 border-none bg-transparent"
+        className="self-center p-0 m-0 border-none bg-transparent relative"
       >
         <TaskCheckbox
           checked={task.isCompleted}
-          onCheckedChange={() => toggleTask({ id: task.id })}
-          disabled={isToggling}
+          onCheckedChange={() => {
+            if (!isThisTaskToggling) {
+              toggleTask({ id: task.id });
+            }
+          }}
+          disabled={isThisTaskToggling || isDeleting || isSettingCurrent || clearCurrentTaskPending}
           className="cursor-pointer"
         />
+
+        {isThisTaskToggling && (
+          <Loader2 className="absolute -left-6 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+        )}
       </ItemMedia>
 
       <ItemContent className="min-w-0 py-0 flex-1">

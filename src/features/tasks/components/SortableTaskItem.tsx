@@ -10,7 +10,7 @@ import { TaskItem } from "./TaskItem";
 interface SortableTaskItemProps {
   task: Task;
   toggleTask: (input: { id: string }) => void;
-  isToggling: boolean;
+  pendingToggleIds: Set<string>;
   onDelete: (taskId: string) => void;
   isDeleting: boolean;
   setCurrentTask: (input: { id: string; listId: string }) => void;
@@ -24,7 +24,7 @@ interface SortableTaskItemProps {
 export function SortableTaskItem({
   task,
   toggleTask,
-  isToggling,
+  pendingToggleIds,
   onDelete,
   isDeleting,
   setCurrentTask,
@@ -45,7 +45,7 @@ export function SortableTaskItem({
     id: task.id,
     disabled:
       isReordering ||
-      isToggling ||
+      pendingToggleIds.has(task.id) ||
       isDeleting ||
       isSettingCurrent ||
       task.isCompleted,
@@ -74,7 +74,7 @@ export function SortableTaskItem({
       <TaskItem
         task={task}
         toggleTask={toggleTask}
-        isToggling={isToggling}
+        pendingToggleIds={pendingToggleIds}
         onDelete={onDelete}
         isDeleting={isDeleting}
         setCurrentTask={setCurrentTask}

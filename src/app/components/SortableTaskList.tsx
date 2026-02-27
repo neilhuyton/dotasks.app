@@ -1,5 +1,3 @@
-// src/app/components/SortableTaskList.tsx
-
 import {
   DndContext,
   closestCenter,
@@ -24,7 +22,7 @@ import { SortableTaskItem } from "@/features/tasks/components/SortableTaskItem";
 interface SortableTaskListProps {
   tasks: Task[];
   toggleTask: (input: { id: string }) => void;
-  isToggling: boolean;
+  pendingToggleIds: Set<string>;
   onDelete: (taskId: string) => void;
   isDeleting: boolean;
   setCurrentTask: (input: { id: string; listId: string }) => void;
@@ -39,7 +37,7 @@ interface SortableTaskListProps {
 export function SortableTaskList({
   tasks,
   toggleTask,
-  isToggling,
+  pendingToggleIds,
   onDelete,
   isDeleting,
   setCurrentTask,
@@ -118,7 +116,7 @@ export function SortableTaskList({
               key={task.id}
               task={task}
               toggleTask={toggleTask}
-              isToggling={isToggling}
+              pendingToggleIds={pendingToggleIds}
               onDelete={onDelete}
               isDeleting={isDeleting}
               setCurrentTask={setCurrentTask}

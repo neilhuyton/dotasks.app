@@ -1,5 +1,3 @@
-// src/app/routes/_authenticated/lists/$listId.tsx
-
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronLeft, Loader2 } from "lucide-react";
 
@@ -48,17 +46,16 @@ function ListDetail() {
   const { listId } = Route.useParams();
   const navigate = Route.useNavigate();
 
-  // ─── All hooks FIRST (unconditional) ──────────────────────────────────────
   const {
     data: list,
     isLoading: isListLoading,
     isError: isListError,
   } = useQuery(
     trpc.list.getOne.queryOptions(
-      { id: listId ?? "" }, // fallback to avoid undefined crash in query key
+      { id: listId ?? "" },
       {
         staleTime: 5 * 60 * 1000,
-        enabled: !!listId, // don't fetch if no ID
+        enabled: !!listId,
       },
     ),
   );
@@ -67,7 +64,7 @@ function ListDetail() {
     tasks,
     isLoadingTasks,
     toggleTask,
-    toggleTaskPending,
+    pendingToggleIds,
     deleteTaskPending,
     setCurrentTask,
     setCurrentTaskPending,
@@ -75,9 +72,8 @@ function ListDetail() {
     clearCurrentTaskPending,
     updateTaskOrder,
     isReordering,
-  } = useListTasks(listId); // safe: hook handles undefined internally
+  } = useListTasks(listId);
 
-  // ─── Now safe to early return ────────────────────────────────────────────
   if (!listId) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center text-muted-foreground">
@@ -142,7 +138,7 @@ function ListDetail() {
           <TaskList
             tasks={tasks}
             toggleTask={toggleTask}
-            isToggling={toggleTaskPending}
+            pendingToggleIds={pendingToggleIds}
             onDelete={(taskId) =>
               navigate({
                 to: "/lists/$listId/tasks/$taskId/delete",

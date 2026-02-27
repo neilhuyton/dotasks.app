@@ -7,7 +7,7 @@ import { SortableTaskList } from "@/app/components/SortableTaskList";
 interface TaskListProps {
   tasks: Task[];
   toggleTask: (input: { id: string }) => void;
-  isToggling: boolean;
+  pendingToggleIds: Set<string>;
   onDelete: (taskId: string) => void;
   isDeleting: boolean;
   setCurrentTask: (input: { id: string; listId: string }) => void;
@@ -22,7 +22,7 @@ interface TaskListProps {
 export default function TaskList({
   tasks,
   toggleTask,
-  isToggling,
+  pendingToggleIds,
   onDelete,
   isDeleting,
   setCurrentTask,
@@ -67,7 +67,7 @@ export default function TaskList({
           <SortableTaskList
             tasks={tasks}
             toggleTask={toggleTask}
-            isToggling={isToggling}
+            pendingToggleIds={pendingToggleIds}
             onDelete={onDelete}
             isDeleting={isDeleting}
             setCurrentTask={setCurrentTask}

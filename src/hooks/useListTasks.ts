@@ -27,7 +27,6 @@ export function useListTasks(listId: string | null | undefined) {
 
   const queryKey = trpc.task.getByList.queryKey(input);
 
-  // ─── Tasks Query ────────────────────────────────────────────────
   const {
     data: tasks = [],
     isLoading,
@@ -35,19 +34,18 @@ export function useListTasks(listId: string | null | undefined) {
   } = useQuery({
     ...trpc.task.getByList.queryOptions(input),
     enabled,
-    staleTime: 15 * 60 * 1000, // 15 min
-    gcTime: 2 * 60 * 60 * 1000, // 2 hours
+    staleTime: 15 * 60 * 1000,
+    gcTime: 2 * 60 * 60 * 1000,
     placeholderData: keepPreviousData,
   });
 
-  // Realtime subscription
   useSupabaseTaskRealtime({ listId });
 
-  // Pending local reorder state (optimistic UI)
   const [pendingReorder, setPendingReorder] = useState<Task[] | null>(null);
+  const [pendingToggleIds, setPendingToggleIds] = useState<Set<string>>(new Set());
+
   const displayedTasks = pendingReorder ?? tasks;
 
-  // ─── Optimistic helpers ─────────────────────────────────────────
   const setOptimisticTasks = (updater: (prev: Task[]) => Task[]) => {
     queryClient.setQueryData(queryKey, (old: Task[] = []) => updater([...old]));
   };
@@ -57,8 +55,6 @@ export function useListTasks(listId: string | null | undefined) {
       queryClient.setQueryData(queryKey, previous);
     }
   };
-
-  // ─── Mutations ──────────────────────────────────────────────────
 
   const reorder = useMutation(
     trpc.task.reorder.mutationOptions({
@@ -132,9 +128,8 @@ export function useListTasks(listId: string | null | undefined) {
 
         const previous = queryClient.getQueryData<Task[]>(queryKey) ?? [];
 
-        // Create a fake task for instant UI feedback
         const optimisticTask: Task = {
-          id: `temp-${crypto.randomUUID()}`, // temporary ID
+          id: `temp-${crypto.randomUUID()}`,
           title: newTaskInput.title,
           description: newTaskInput.description ?? null,
           listId: newTaskInput.listId,
@@ -179,6 +174,8 @@ export function useListTasks(listId: string | null | undefined) {
         await queryClient.cancelQueries({ queryKey });
         const previous = queryClient.getQueryData<Task[]>(queryKey) ?? [];
 
+        setPendingToggleIds((prev) => new Set([...prev, id]));
+
         setOptimisticTasks((prev) =>
           prev.map((t) =>
             t.id === id
@@ -208,7 +205,14 @@ export function useListTasks(listId: string | null | undefined) {
         });
       },
 
-      onSettled: () => queryClient.invalidateQueries({ queryKey }),
+      onSettled: (_, __, vars) => {
+        setPendingToggleIds((prev) => {
+          const next = new Set(prev);
+          next.delete(vars.id);
+          return next;
+        });
+        queryClient.invalidateQueries({ queryKey });
+      },
     }),
   );
 
@@ -301,19 +305,18 @@ export function useListTasks(listId: string | null | undefined) {
     }),
   );
 
-  // ─── Public API ─────────────────────────────────────────────────
   return {
     tasks: displayedTasks,
 
     isLoadingTasks:
       isLoading || (enabled && isFetching && displayedTasks.length === 0),
 
-    // Mutations
     createTask: create.mutate,
     createTaskPending: create.isPending,
 
     toggleTask: toggle.mutate,
     toggleTaskPending: toggle.isPending,
+    pendingToggleIds,
 
     deleteTask: remove.mutate,
     deleteTaskPending: remove.isPending,
