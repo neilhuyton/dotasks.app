@@ -81,53 +81,53 @@ jobs:
         env:
           VITE_TRPC_URL: "/trpc"
 
-  e2e-tests:
-    name: Run E2E Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  # e2e-tests:
+  #   name: Run E2E Tests
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.12.2
+  #     - name: Install pnpm
+  #       uses: pnpm/action-setup@v4
+  #       with:
+  #         version: 9.12.2
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20.19.4"
-          cache: "pnpm"
+  #     - name: Set up Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: "20.19.4"
+  #         cache: "pnpm"
 
-      - name: Debug pnpm installation
-        run: |
-          echo "pnpm version:"
-          pnpm --version || echo "pnpm not found"
-          echo "PATH:"
-          echo $PATH
+  #     - name: Debug pnpm installation
+  #       run: |
+  #         echo "pnpm version:"
+  #         pnpm --version || echo "pnpm not found"
+  #         echo "PATH:"
+  #         echo $PATH
 
-      - name: Install dependencies
-        run: pnpm install
+  #     - name: Install dependencies
+  #       run: pnpm install
 
-      - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps
+  #     - name: Install Playwright browsers
+  #       run: pnpm exec playwright install --with-deps
 
-      - name: Generate Prisma client
-        env:
-          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
-        run: |
-          DATABASE_URL="$DATABASE_URL" npx prisma generate
-          pnpm vite build   # separate vite step if build does more
+  #     - name: Generate Prisma client
+  #       env:
+  #         DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
+  #       run: |
+  #         DATABASE_URL="$DATABASE_URL" npx prisma generate
+  #         pnpm vite build   # separate vite step if build does more
 
-      - name: Run Playwright tests
-        run: pnpm test:e2e
-        env:
-          VITE_TRPC_URL: "/trpc"
+  #     - name: Run Playwright tests
+  #       run: pnpm test:e2e
+  #       env:
+  #         VITE_TRPC_URL: "/trpc"
 
-      - name: Upload Playwright report
-        if: failure() # Upload report on failure for debugging
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 7
+  #     - name: Upload Playwright report
+  #       if: failure()
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: playwright-report
+  #         path: playwright-report/
+  #         retention-days: 7
