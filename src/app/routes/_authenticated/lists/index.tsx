@@ -85,19 +85,6 @@ function ListsPage() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => {
-          if (import.meta.env.PROD) {
-            // Only active in production build/deploy
-            throw new Error("Sentry test error – checking sourcemaps!");
-          } else {
-            console.log("Test error skipped in development mode");
-          }
-        }}
-      >
-        Trigger Sentry Test Error (Prod Only)
-      </button>
       <div className="space-y-6 sm:space-y-8">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
