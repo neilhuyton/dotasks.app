@@ -29,9 +29,12 @@ export const Route = createFileRoute("/_authenticated/lists/")({
         <div className="h-6 w-24 animate-pulse rounded bg-muted" />
       </div>
 
-      <div className="space-y-4">
+      <div className="flex flex-col gap-2">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-32 animate-pulse rounded-xl bg-muted/70" />
+          <div
+            key={i}
+            className="h-[52px] animate-pulse rounded-md bg-muted/70 border"
+          />
         ))}
       </div>
     </div>
