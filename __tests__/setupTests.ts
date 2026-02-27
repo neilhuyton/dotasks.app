@@ -4,19 +4,19 @@ import { vi, beforeAll, afterEach, afterAll } from "vitest";
 import { server } from "../__mocks__/server";
 import fetch, { Request } from "node-fetch";
 import "@testing-library/jest-dom";
-import { http, HttpResponse, ws } from "msw";
+import { http, HttpResponse} from "msw";
 
 // ──────────────────────────────────────────────
 // Mock ResizeObserver (important for components using useResizeObserver / ResizeObserver)
 // ──────────────────────────────────────────────
 
-class MockResizeObserver {
+class MockResizeObserver implements ResizeObserver {
   observe = vi.fn();
   unobserve = vi.fn();
   disconnect = vi.fn();
 }
 
-global.ResizeObserver = MockResizeObserver as any;
+global.ResizeObserver = MockResizeObserver;
 
 // ──────────────────────────────────────────────
 // Polyfills & globals
