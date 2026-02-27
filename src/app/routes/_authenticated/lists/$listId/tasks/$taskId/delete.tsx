@@ -16,7 +16,6 @@ export const Route = createFileRoute(
 
     if (!listId || !taskId) return {};
 
-    // Pre-fetch the list of tasks for this list
     await queryClient.ensureQueryData(
       trpc.task.getByList.queryOptions(
         { listId },
@@ -57,7 +56,7 @@ function DeleteTaskConfirmPage() {
   const queryClient = useQueryClient();
   const { show: showBanner } = useBannerStore();
 
-  const queryInput = { listId };
+  const queryInput = { listId: listId ?? "" };
   const queryKey = trpc.task.getByList.queryKey(queryInput);
 
   const { data: tasks = [], isPending: isTasksPending } = useQuery(
@@ -71,17 +70,11 @@ function DeleteTaskConfirmPage() {
 
   const deleteMutation = useMutation(
     trpc.task.delete.mutationOptions({
-      onMutate: async ({ id }) => {
+      onMutate: async () => {
         await queryClient.cancelQueries({ queryKey });
-
-        const previousTasks =
-          queryClient.getQueryData<typeof tasks>(queryKey) ?? [];
-
-        queryClient.setQueryData<typeof tasks>(queryKey, (old = []) =>
-          old.filter((t) => t.id !== id),
-        );
-
-        return { previousTasks };
+        return {
+          previousTasks: queryClient.getQueryData<typeof tasks>(queryKey),
+        };
       },
 
       onError: (_, __, context) => {
@@ -95,21 +88,26 @@ function DeleteTaskConfirmPage() {
         });
       },
 
-      onSettled: () => {
-        queryClient.invalidateQueries({ queryKey });
-      },
-
       onSuccess: () => {
+        queryClient.setQueryData<typeof tasks>(queryKey, (old = []) =>
+          old.filter((t) => t.id !== taskId),
+        );
+
         showBanner({
           message: "Task deleted successfully.",
           variant: "success",
           duration: 3000,
         });
+
         navigate({
           to: "/lists/$listId",
           params: { listId },
           replace: true,
         });
+      },
+
+      onSettled: () => {
+        queryClient.invalidateQueries({ queryKey });
       },
     }),
   );
@@ -125,7 +123,6 @@ function DeleteTaskConfirmPage() {
   const isPending = deleteMutation.isPending;
   const taskTitle = task?.title ?? "this task";
 
-  // Early returns (mirroring list delete style)
   if (!listId || !taskId) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center text-muted-foreground">
@@ -161,7 +158,6 @@ function DeleteTaskConfirmPage() {
       )}
     >
       <div className="relative flex min-h-full flex-col px-6 pt-20 pb-10 sm:px-8">
-        {/* Back / Cancel button */}
         <Button
           variant="outline"
           size="icon"

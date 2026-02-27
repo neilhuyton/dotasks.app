@@ -1,4 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+// src/app/routes/_authenticated/profile.tsx
+
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -52,6 +54,7 @@ export const Route = createFileRoute("/_authenticated/profile")({
 
 function ProfilePage() {
   const navigate = Route.useNavigate();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { show: showBanner } = useBannerStore();
   const { logout } = useAuthStore();
@@ -161,6 +164,15 @@ function ProfilePage() {
   };
 
   const handleClose = () => {
+    try {
+      if (router.history.canGoBack()) {
+        router.history.back();
+        return;
+      }
+    } catch {
+      // Silently ignore any error from canGoBack() and fall back
+    }
+
     navigate({ to: "/lists", replace: true });
   };
 

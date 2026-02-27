@@ -45,6 +45,8 @@ describe("Profile Page (/_authenticated/profile)", () => {
       accessToken: "mock-access-token",
       refreshToken: "mock-refresh-token",
     });
+
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -219,10 +221,8 @@ describe("Profile Page (/_authenticated/profile)", () => {
 
     const navigateSpy = vi.spyOn(router, "navigate");
 
-    // Click the Logout button (opens dialog)
     await userEvent.click(screen.getByTestId("logout-button"));
 
-    // Dialog should appear - wait for confirm button
     await waitFor(() => {
       expect(
         screen.getByRole("heading", {
@@ -231,35 +231,97 @@ describe("Profile Page (/_authenticated/profile)", () => {
       ).toBeInTheDocument();
     });
 
-    // Confirm logout
-    const confirmButton = screen.getByRole("button", { name: /Logout/i }); // the destructive one in dialog
+    const confirmButton = screen.getByRole("button", { name: /Logout/i });
     await userEvent.click(confirmButton);
 
-    // Assert navigation
     await waitFor(() => {
       expect(navigateSpy).toHaveBeenCalledWith(
         expect.objectContaining({ to: "/login", replace: true }),
       );
     });
 
-    // Also check auth store updated
     expect(useAuthStore.getState().isLoggedIn).toBe(false);
 
     navigateSpy.mockRestore();
   });
 
-  it("closes profile and navigates back to /lists", async () => {
-    const { router } = renderProfile();
-    await waitForProfileReady();
+  describe("Close button navigation", () => {
+    it("navigates back using history.back() when there is previous history", async () => {
+      const { router } = renderProfile();
+      await waitForProfileReady();
 
-    const navigateSpy = vi.spyOn(router, "navigate");
+      const canGoBackSpy = vi
+        .spyOn(router.history, "canGoBack")
+        .mockReturnValue(true);
+      const backSpy = vi.spyOn(router.history, "back");
 
-    await userEvent.click(screen.getByTestId("close-profile"));
+      // Spy on navigate only if needed — but here we expect it NOT called
+      const navigateSpy = vi.spyOn(router, "navigate");
 
-    expect(navigateSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ to: "/lists" }),
-    );
+      await userEvent.click(screen.getByTestId("close-profile"));
 
-    navigateSpy.mockRestore();
+      expect(canGoBackSpy).toHaveBeenCalledTimes(1);
+      expect(backSpy).toHaveBeenCalledTimes(1);
+      expect(navigateSpy).not.toHaveBeenCalled();
+
+      canGoBackSpy.mockRestore();
+      backSpy.mockRestore();
+      navigateSpy.mockRestore();
+    });
+
+    it("falls back to /lists when there is no previous history", async () => {
+      const { router } = renderProfile();
+      await waitForProfileReady();
+
+      const canGoBackSpy = vi
+        .spyOn(router.history, "canGoBack")
+        .mockReturnValue(false);
+      const backSpy = vi.spyOn(router.history, "back");
+      const navigateSpy = vi.spyOn(router, "navigate");
+
+      await userEvent.click(screen.getByTestId("close-profile"));
+
+      expect(canGoBackSpy).toHaveBeenCalledTimes(1);
+      expect(backSpy).not.toHaveBeenCalled();
+      expect(navigateSpy).toHaveBeenCalledTimes(1);
+      expect(navigateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: "/lists",
+          replace: true,
+        }),
+      );
+
+      canGoBackSpy.mockRestore();
+      backSpy.mockRestore();
+      navigateSpy.mockRestore();
+    });
+
+    it("falls back to /lists when canGoBack throws or is unavailable (defensive)", async () => {
+      const { router } = renderProfile();
+      await waitForProfileReady();
+
+      const canGoBackSpy = vi
+        .spyOn(router.history, "canGoBack")
+        .mockImplementation(() => {
+          throw new Error("canGoBack unavailable");
+        });
+
+      const navigateSpy = vi.spyOn(router, "navigate");
+
+      await userEvent.click(screen.getByTestId("close-profile"));
+
+      // With the try/catch fix, fallback should still happen
+      expect(canGoBackSpy).toHaveBeenCalledTimes(1);
+      expect(navigateSpy).toHaveBeenCalledTimes(1);
+      expect(navigateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: "/lists",
+          replace: true,
+        }),
+      );
+
+      canGoBackSpy.mockRestore();
+      navigateSpy.mockRestore();
+    });
   });
 });
