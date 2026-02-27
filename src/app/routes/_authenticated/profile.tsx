@@ -1,5 +1,3 @@
-// src/app/routes/_authenticated/profile.tsx
-
 import { createFileRoute } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,7 +10,18 @@ import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { Label } from "@/app/components/ui/label";
 import { Loader2, ArrowLeft, Mail, Lock, LogOut } from "lucide-react";
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const emailChangeSchema = z.object({
   email: z.string().email("Invalid email address").trim().toLowerCase(),
@@ -141,7 +150,7 @@ function ProfilePage() {
     requestResetMutation.mutate({ email: data.email });
   };
 
-  const handleLogout = () => {
+  const handleLogoutConfirm = () => {
     logout();
     navigate({ to: "/login", replace: true });
     showBanner({
@@ -161,14 +170,14 @@ function ProfilePage() {
   return (
     <div
       className={cn(
-        "fixed inset-0 z-[9999] isolate pointer-events-auto",
+        "fixed inset-0 z-[30] isolate pointer-events-auto",
         "h-dvh w-dvw max-h-none max-w-none",
         "m-0 p-0 left-0 top-0 right-0 bottom-0 translate-x-0 translate-y-0",
         "rounded-none border-0 shadow-none",
         "bg-background overscroll-none touch-none",
       )}
     >
-      <div className="relative flex min-h-full flex-col px-6 pb-20 pt-20 sm:px-8">
+      <div className="relative flex min-h-full flex-col overflow-y-auto px-6 pb-20 pt-20 sm:px-8">
         <Button
           variant="outline"
           size="icon"
@@ -209,7 +218,7 @@ function ProfilePage() {
                   </div>
                 ) : (
                   <div
-                    className="p-4 bg-muted/50 rounded-lg border text-base font-medium break-all"
+                    className="p-2 bg-muted/50 rounded-lg border text-base font-medium break-all"
                     data-testid="current-email"
                   >
                     {currentEmail}
@@ -254,7 +263,7 @@ function ProfilePage() {
                     type="submit"
                     variant="outline"
                     disabled={isAnyPending || !emailForm.formState.isDirty}
-                    className="w-full sm:w-48"
+                    className="w-full sm:w-auto px-6"
                     data-testid="email-submit"
                   >
                     {updateEmailMutation.isPending && (
@@ -304,7 +313,7 @@ function ProfilePage() {
                     type="submit"
                     variant="outline"
                     disabled={isAnyPending || !resetForm.formState.isDirty}
-                    className="w-full sm:w-48"
+                    className="w-full sm:w-auto px-6"
                     data-testid="reset-submit"
                   >
                     {requestResetMutation.isPending && (
@@ -319,16 +328,40 @@ function ProfilePage() {
 
               {/* Logout */}
               <div className="pt-12 border-t flex justify-center">
-                <Button
-                  variant="destructive"
-                  onClick={handleLogout}
-                  className="w-full sm:w-48 gap-2"
-                  disabled={isAnyPending}
-                  data-testid="logout-button"
-                >
-                  <LogOut className="h-5 w-5" />
-                  Logout
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      className="w-full sm:w-auto px-6 gap-2"
+                      disabled={isAnyPending}
+                      data-testid="logout-button"
+                    >
+                      <LogOut className="h-5 w-5" />
+                      Logout
+                    </Button>
+                  </AlertDialogTrigger>
+
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        Are you sure you want to log out?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        You will be signed out of your account. Any unsaved
+                        changes may be lost.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleLogoutConfirm}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Logout
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </div>
           </div>

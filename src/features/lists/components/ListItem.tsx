@@ -1,6 +1,6 @@
 // src/features/lists/components/ListItem.tsx
 
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/lib/utils";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "server/trpc";
 import { Item, ItemContent, ItemTitle } from "@/app/components/ui/item";

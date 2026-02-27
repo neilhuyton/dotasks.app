@@ -7,7 +7,7 @@ import { Input } from "@/app/components/ui/input";
 import { Textarea } from "@/app/components/ui/textarea";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { useState } from "react";
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/lib/utils";
 import { trpc, useTRPC } from "@/trpc";
 import { useBannerStore } from "@/shared/store/bannerStore";
 import { useAuthStore } from "@/shared/store/authStore";

@@ -1,11 +1,6 @@
 // src/features/tasks/components/TaskActionsDropdown.tsx
 
-import {
-  Star,
-  Trash2,
-  Pencil,
-  MoreHorizontal,
-} from "lucide-react";
+import { Star, Trash2, Pencil, MoreHorizontal } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { type Task } from "@/hooks/useListTasks";
 
@@ -16,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/app/components/ui/dropdown-menu";
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/lib/utils";
 
 interface TaskActionsDropdownProps {
   task: Task;

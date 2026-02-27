@@ -3,7 +3,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/app/components/ui/button";
 import { Loader2, ArrowLeft } from "lucide-react";
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/lib/utils";
 import { trpc } from "@/trpc";
 import { useBannerStore } from "@/shared/store/bannerStore";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";

@@ -9,8 +9,8 @@ import {
   DropdownMenuTrigger,
 } from "@/app/components/ui/dropdown-menu";
 import { Paintbrush } from "lucide-react";
-import { colorThemes } from "@/shared/lib/theme-presets";
-import { cn } from "@/shared/lib/utils";
+import { colorThemes } from "@/lib/theme-presets";
+import { cn } from "@/lib/utils";
 
 type ColorTheme = keyof typeof colorThemes;
 

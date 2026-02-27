@@ -213,17 +213,36 @@ describe("Profile Page (/_authenticated/profile)", () => {
     );
   });
 
-  it("logs out and navigates to /login when Logout is clicked", async () => {
+  it("logs out and navigates to /login after confirming dialog", async () => {
     const { router } = renderProfile();
     await waitForProfileReady();
 
     const navigateSpy = vi.spyOn(router, "navigate");
 
+    // Click the Logout button (opens dialog)
     await userEvent.click(screen.getByTestId("logout-button"));
 
-    expect(navigateSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ to: "/login" }),
-    );
+    // Dialog should appear - wait for confirm button
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", {
+          name: /Are you sure you want to log out/i,
+        }),
+      ).toBeInTheDocument();
+    });
+
+    // Confirm logout
+    const confirmButton = screen.getByRole("button", { name: /Logout/i }); // the destructive one in dialog
+    await userEvent.click(confirmButton);
+
+    // Assert navigation
+    await waitFor(() => {
+      expect(navigateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ to: "/login", replace: true }),
+      );
+    });
+
+    // Also check auth store updated
     expect(useAuthStore.getState().isLoggedIn).toBe(false);
 
     navigateSpy.mockRestore();

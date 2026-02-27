@@ -2,7 +2,7 @@
 
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/lib/utils";
 import { useTRPC } from "@/trpc";
 import type { TRPCClientErrorLike } from "@trpc/client";
 import { useMutation } from "@tanstack/react-query";

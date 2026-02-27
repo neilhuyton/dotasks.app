@@ -4,7 +4,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
 import type { Task } from "@/hooks/useListTasks";
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/lib/utils";
 import { TaskItem } from "./TaskItem";
 
 interface SortableTaskItemProps {

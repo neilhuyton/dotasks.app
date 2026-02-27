@@ -1,6 +1,6 @@
 // src/features/tasks/components/TaskItem.tsx
 
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/lib/utils";
 import { type Task } from "@/hooks/useListTasks";
 
 import {
@@ -74,7 +74,12 @@ export function TaskItem({
               toggleTask({ id: task.id });
             }
           }}
-          disabled={isThisTaskToggling || isDeleting || isSettingCurrent || clearCurrentTaskPending}
+          disabled={
+            isThisTaskToggling ||
+            isDeleting ||
+            isSettingCurrent ||
+            clearCurrentTaskPending
+          }
           className="cursor-pointer"
         />
 

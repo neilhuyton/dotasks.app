@@ -3,7 +3,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import { TaskItem } from "@/features/tasks/components/TaskItem";
 import { useListTasks } from "@/hooks/useListTasks";
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute(
   "/_authenticated/lists/$listId/tasks/completed",

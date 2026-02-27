@@ -6,7 +6,7 @@ import * as React from "react";
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import { Check } from "lucide-react";
 
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/lib/utils";
 
 const TaskCheckbox = React.forwardRef<
   React.ElementRef<typeof CheckboxPrimitive.Root>,
