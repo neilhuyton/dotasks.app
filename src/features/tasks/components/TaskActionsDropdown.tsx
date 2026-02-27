@@ -56,7 +56,11 @@ export function TaskActionsDropdown({
           </Button>
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent align="end" className="min-w-[180px]">
+        <DropdownMenuContent
+          onCloseAutoFocus={(event) => event.preventDefault()}
+          align="end"
+          className="min-w-[180px]"
+        >
           {!task.isCompleted && (
             <DropdownMenuItem
               onClick={handleToggleCurrent}

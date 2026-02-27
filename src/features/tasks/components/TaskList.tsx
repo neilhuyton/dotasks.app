@@ -2,7 +2,7 @@
 
 import { type Task } from "@/hooks/useListTasks";
 import { Link } from "@tanstack/react-router";
-import { SortableTaskList } from "@/app/components/SortableTaskList";
+import { SortableTaskList } from "./SortableTaskList";
 
 interface TaskListProps {
   tasks: Task[];
@@ -81,7 +81,7 @@ export default function TaskList({
         </section>
       ) : (
         <div className="text-center py-12 text-muted-foreground">
-          <p className="text-lg">All tasks are completed! 🎉</p>
+          <p className="text-lg">All tasks are completed!</p>
           {completedCount > 0 && (
             <Link
               to="/lists/$listId/tasks/completed"

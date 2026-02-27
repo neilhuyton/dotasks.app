@@ -1,3 +1,5 @@
+// src/features/tasks/components/SortableTaskList.tsx
+
 import {
   DndContext,
   closestCenter,
@@ -91,7 +93,7 @@ export function SortableTaskList({
   if (activeTasks.length === 0) {
     return (
       <div className="text-center py-16 text-muted-foreground">
-        <p className="text-lg">All tasks are completed! 🎉</p>
+        <p className="text-lg">All tasks are completed!</p>
       </div>
     );
   }
