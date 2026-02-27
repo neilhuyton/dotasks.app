@@ -13,6 +13,8 @@ import { PersistedQueryClientProvider } from "./app/components/PersistedQueryCli
 
 import { ErrorBoundary } from "react-error-boundary";
 
+import "./sentry";
+
 import "./index.css";
 
 const rootElement = document.getElementById("root");
