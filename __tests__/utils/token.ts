@@ -1,9 +1,0 @@
-// __tests__/utils/token.ts
-
-import jwt from "jsonwebtoken";
-
-export const generateToken = (userId: string) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET || "your-secret-key", {
-    expiresIn: "1h",
-  });
-};

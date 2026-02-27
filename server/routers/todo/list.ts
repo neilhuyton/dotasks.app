@@ -11,21 +11,19 @@ export const listRouter = router({
         userId: ctx.userId,
         isArchived: false,
       },
-      orderBy: [{ isPinned: "desc" }, { order: "asc" }, { createdAt: "desc" }],
+      orderBy: [{ order: "asc" }, { createdAt: "desc" }],
       select: {
         id: true,
         title: true,
         description: true,
         color: true,
         icon: true,
-        isPinned: true,
+        isPinned: true, // ← can keep if you want to return it
+        order: true,
         createdAt: true,
         updatedAt: true,
-        order: true,
         _count: {
-          select: {
-            tasks: true,
-          },
+          select: { tasks: true },
         },
         tasks: {
           where: { isCompleted: false },

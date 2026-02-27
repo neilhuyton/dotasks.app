@@ -2,15 +2,14 @@
 
 import { TRPCError } from "@trpc/server";
 import { trpcMsw } from "../trpcMsw";
+import { delay } from "msw";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-
-const TEST_DELAY_MS = 600;
 
 export let mockUsers: {
   id: string;
   email: string;
-  password: string; // hashed
+  password: string;
   verificationToken: string;
   isEmailVerified: boolean;
   resetPasswordToken: string | null;
@@ -30,8 +29,7 @@ interface RegisterInput {
 }
 
 export const registerHandler = trpcMsw.register.mutation(async ({ input }) => {
-  // Artificial delay for tests – makes loading states visible
-  await new Promise((resolve) => setTimeout(resolve, TEST_DELAY_MS));
+  await delay(150);
 
   const rawInput = "0" in input ? input["0"] : input;
   const typedInput = rawInput as RegisterInput | undefined;

@@ -1,295 +1,314 @@
 // src/hooks/useListTasks.ts
 
 import { useMemo, useState } from "react";
-import { trpc } from "@/trpc";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
+import { useTRPC } from "@/trpc";
+import { useBannerStore } from "@/shared/store/bannerStore";
+import { useSupabaseTaskRealtime } from "../shared/hooks/useSupabaseTaskRealtime";
+
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/../server/trpc";
-import { useBannerStore } from "@/store/bannerStore";
-import { useSupabaseTaskRealtime } from "./useSupabaseTaskRealtime";
-import { keepPreviousData } from "@tanstack/react-query";
 
 type RouterOutput = inferRouterOutputs<AppRouter>;
 export type Task = RouterOutput["task"]["getByList"][number];
 
 export function useListTasks(listId: string | null | undefined) {
-  const utils = trpc.useUtils();
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
   const { show: showBanner } = useBannerStore();
 
   const enabled = !!listId;
-  const queryKey = useMemo(() => ({ listId: listId! }), [listId]);
+  const input = useMemo(() => ({ listId: listId! }), [listId]);
 
+  const queryKey = trpc.task.getByList.queryKey(input);
+
+  // ─── Tasks Query ────────────────────────────────────────────────
   const {
     data: tasks = [],
-    isFetching,
     isLoading,
-  } = trpc.task.getByList.useQuery(queryKey, {
+    isFetching,
+  } = useQuery({
+    ...trpc.task.getByList.queryOptions(input),
     enabled,
-    staleTime: 1000 * 60 * 15, // 15 minutes – good balance for mobile
-    gcTime: 1000 * 60 * 60 * 2, // 2 hours – survive app background/foreground
-    placeholderData: keepPreviousData, // Show previous data instantly when switching lists
+    staleTime: 15 * 60 * 1000, // 15 min
+    gcTime: 2 * 60 * 60 * 1000, // 2 hours
+    placeholderData: keepPreviousData,
   });
 
-  // Real-time updates via Supabase subscription
+  // Realtime subscription
   useSupabaseTaskRealtime({ listId });
 
+  // Pending local reorder state (optimistic UI)
   const [pendingReorder, setPendingReorder] = useState<Task[] | null>(null);
-
-  // Use pending reordering state during drag, otherwise use server/cached data
   const displayedTasks = pendingReorder ?? tasks;
 
-  const optimisticUpdate = (updater: (prev: Task[]) => Task[]) => {
-    utils.task.getByList.setData(queryKey, (prev = []) => updater([...prev]));
+  // ─── Optimistic helpers ─────────────────────────────────────────
+  const setOptimisticTasks = (updater: (prev: Task[]) => Task[]) => {
+    queryClient.setQueryData(queryKey, (old: Task[] = []) => updater([...old]));
   };
 
-  const rollbackTo = (previous?: Task[]) => {
+  const rollback = (previous?: Task[]) => {
     if (previous) {
-      utils.task.getByList.setData(queryKey, previous);
+      queryClient.setQueryData(queryKey, previous);
     }
   };
 
-  // ──────────────────────────────────────────────
-  // Reordering (drag & drop)
-  // ──────────────────────────────────────────────
-  const reorderTasks = trpc.task.reorder.useMutation({
-    onMutate: async (updates: { id: string; order: number }[]) => {
-      if (!enabled || updates.length === 0) return { previous: [] as Task[] };
+  // ─── Mutations ──────────────────────────────────────────────────
 
-      await utils.task.getByList.cancel(queryKey);
-      const previous = utils.task.getByList.getData(queryKey) ?? [];
+  const reorder = useMutation(
+    trpc.task.reorder.mutationOptions({
+      onMutate: async (updates: { id: string; order: number }[]) => {
+        if (!enabled || !updates.length) return { previous: [] as Task[] };
 
-      const newTasks = previous.map((t) => {
-        const update = updates.find((u) => u.id === t.id);
-        return update ? { ...t, order: update.order } : t;
-      });
+        await queryClient.cancelQueries({ queryKey });
+        const previous = queryClient.getQueryData<Task[]>(queryKey) ?? [];
 
-      // Sort same way server does (isCurrent first, then by order)
-      newTasks.sort((a, b) => {
-        if (a.isCurrent !== b.isCurrent) return a.isCurrent ? -1 : 1;
-        return a.order - b.order;
-      });
+        const updated = previous.map((t) => {
+          const change = updates.find((u) => u.id === t.id);
+          return change ? { ...t, order: change.order } : t;
+        });
 
-      setPendingReorder(newTasks);
-      optimisticUpdate(() => newTasks);
-
-      return { previous };
-    },
-
-    onSuccess: (result) => {
-      if (result.updated) {
-        optimisticUpdate((prev) =>
-          prev.map((t) => {
-            const update = result.updated.find((u) => u.id === t.id);
-            return update ? { ...t, order: update.order } : t;
-          }),
+        updated.sort((a, b) =>
+          a.isCurrent === b.isCurrent
+            ? a.order - b.order
+            : a.isCurrent
+              ? -1
+              : 1,
         );
-      }
-    },
 
-    onError: (_, __, context) => {
-      rollbackTo(context?.previous);
-      showBanner({
-        message: "Failed to reorder tasks. Please try again.",
-        variant: "error",
-        duration: 4000,
-      });
-    },
+        setPendingReorder(updated);
+        setOptimisticTasks(() => updated);
 
-    onSettled: () => {
-      setPendingReorder(null);
-      utils.task.getByList.invalidate(queryKey);
-    },
-  });
+        return { previous };
+      },
 
-  // ──────────────────────────────────────────────
-  // Create task – no optimistic insert (realtime handles it well)
-  // ──────────────────────────────────────────────
-  const create = trpc.task.create.useMutation({
-    onSuccess: () => {
-      showBanner({
-        message: `Task has been added.`,
-        variant: "success",
-        duration: 3000,
-      });
-    },
+      onSuccess: (result) => {
+        if (result?.updated) {
+          setOptimisticTasks((prev) =>
+            prev.map((t) => {
+              const u = result.updated.find((up) => up.id === t.id);
+              return u ? { ...t, order: u.order } : t;
+            }),
+          );
+        }
+        showBanner({
+          message: "Tasks reordered",
+          variant: "success",
+          duration: 2000,
+        });
+      },
 
-    onError: () => {
-      showBanner({
-        message: "Failed to create task. Please try again.",
-        variant: "error",
-        duration: 4000,
-      });
-    },
+      onError: (_, __, ctx) => {
+        rollback(ctx?.previous);
+        showBanner({
+          message: "Failed to reorder tasks",
+          variant: "error",
+          duration: 4000,
+        });
+      },
 
-    onSettled: () => utils.task.getByList.invalidate(queryKey),
-  });
+      onSettled: () => {
+        setPendingReorder(null);
+        queryClient.invalidateQueries({ queryKey });
+      },
+    }),
+  );
 
-  // ──────────────────────────────────────────────
-  // Toggle complete
-  // ──────────────────────────────────────────────
-  const toggle = trpc.task.toggle.useMutation({
-    onMutate: async ({ id }) => {
-      if (!enabled) return { previous: [] as Task[] };
+  const create = useMutation(
+    trpc.task.create.mutationOptions({
+      onMutate: async (newTaskInput: {
+        title: string;
+        listId: string;
+        description?: string;
+      }) => {
+        if (!enabled) return { previous: [] as Task[] };
 
-      await utils.task.getByList.cancel(queryKey);
-      const previous = utils.task.getByList.getData(queryKey) ?? [];
+        await queryClient.cancelQueries({ queryKey });
 
-      optimisticUpdate((prev) =>
-        prev.map((t) =>
-          t.id === id
-            ? { ...t, isCompleted: !t.isCompleted, isCurrent: false }
-            : t,
-        ),
-      );
+        const previous = queryClient.getQueryData<Task[]>(queryKey) ?? [];
 
-      return { previous };
-    },
-
-    onError: (_, __, context) => {
-      rollbackTo(context?.previous);
-      showBanner({
-        message: "Failed to update task status. Please try again.",
-        variant: "error",
-        duration: 4000,
-      });
-    },
-
-    onSuccess: (updatedTask) => {
-      const action = updatedTask.isCompleted ? "completed" : "re-opened";
-      showBanner({
-        message: `Task marked as ${action}.`,
-        variant: "success",
-        duration: 2800,
-      });
-    },
-
-    onSettled: () => utils.task.getByList.invalidate(queryKey),
-  });
-
-  // ──────────────────────────────────────────────
-  // Delete task
-  // ──────────────────────────────────────────────
-  const remove = trpc.task.delete.useMutation({
-    onMutate: async ({ id }) => {
-      if (!enabled) return { previous: [] as Task[] };
-
-      await utils.task.getByList.cancel(queryKey);
-      const previous = utils.task.getByList.getData(queryKey) ?? [];
-
-      optimisticUpdate((prev) => prev.filter((t) => t.id !== id));
-
-      return { previous };
-    },
-
-    onError: (_, __, context) => {
-      rollbackTo(context?.previous);
-      showBanner({
-        message: "Failed to delete task.",
-        variant: "error",
-        duration: 4000,
-      });
-    },
-
-    onSettled: () => utils.task.getByList.invalidate(queryKey),
-  });
-
-  // ──────────────────────────────────────────────
-  // Set current task – optimistic move to top + clear others
-  // Uses large negative gap so it reliably stays at top after refetch
-  // ──────────────────────────────────────────────
-  const setCurrentMutation = trpc.task.setCurrent.useMutation({
-    onMutate: async ({ id }) => {
-      if (!enabled) return { previous: [] as Task[] };
-
-      await utils.task.getByList.cancel(queryKey);
-      const previous = utils.task.getByList.getData(queryKey) ?? [];
-
-      const optimisticTasks = previous.map((t) => ({
-        ...t,
-        isCurrent: t.id === id, // only target is current
-      }));
-
-      const targetIndex = optimisticTasks.findIndex((t) => t.id === id);
-      if (targetIndex === -1) return { previous };
-
-      const targetTask = optimisticTasks[targetIndex];
-
-      // Remove from current position
-      optimisticTasks.splice(targetIndex, 1);
-
-      // Find current minimum order (or 0 if empty)
-      const currentMin =
-        optimisticTasks.length > 0
-          ? Math.min(...optimisticTasks.map((t) => t.order ?? 0))
-          : 0;
-
-      // Large negative gap → survives future inserts at top
-      const newOrder = currentMin - 100;
-
-      const updatedTarget = {
-        ...targetTask,
-        isCurrent: true,
-        order: newOrder,
-      };
-
-      // Insert at beginning (visual move to top)
-      optimisticTasks.unshift(updatedTarget);
-
-      optimisticUpdate(() => optimisticTasks);
-
-      return { previous };
-    },
-
-    onError: (_, __, context) => {
-      rollbackTo(context?.previous);
-      showBanner({
-        message: "Failed to set current task.",
-        variant: "error",
-        duration: 4000,
-      });
-    },
-
-    onSettled: () => {
-      utils.task.getByList.invalidate(queryKey);
-    },
-  });
-
-  // ──────────────────────────────────────────────
-  // Clear current task
-  // ──────────────────────────────────────────────
-  const clearCurrentMutation = trpc.task.clearCurrent.useMutation({
-    onMutate: async () => {
-      if (!enabled) return { previous: [] as Task[] };
-
-      await utils.task.getByList.cancel(queryKey);
-      const previous = utils.task.getByList.getData(queryKey) ?? [];
-
-      optimisticUpdate((prev) =>
-        prev.map((t) => ({
-          ...t,
+        // Create a fake task for instant UI feedback
+        const optimisticTask: Task = {
+          id: `temp-${crypto.randomUUID()}`, // temporary ID
+          title: newTaskInput.title,
+          description: newTaskInput.description ?? null,
+          listId: newTaskInput.listId,
+          order: previous.length,
+          isCompleted: false,
           isCurrent: false,
-        })),
-      );
+          isPinned: false,
+          dueDate: null,
+          priority: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
 
-      return { previous };
-    },
+        setOptimisticTasks((prev) => [...prev, optimisticTask]);
 
-    onError: (_, __, context) => {
-      rollbackTo(context?.previous);
-      showBanner({
-        message: "Failed to clear current task.",
-        variant: "error",
-        duration: 4000,
-      });
-    },
+        return { previous };
+      },
+      onError: (_, __, ctx) => {
+        rollback(ctx?.previous);
+        showBanner({
+          message: "Failed to create task",
+          variant: "error",
+          duration: 4000,
+        });
+      },
 
-    onSettled: () => utils.task.getByList.invalidate(queryKey),
-  });
+      onSuccess: () =>
+        showBanner({
+          message: "Task added",
+          variant: "success",
+          duration: 3000,
+        }),
 
+      onSettled: () => queryClient.invalidateQueries({ queryKey }),
+    }),
+  );
+
+  const toggle = useMutation(
+    trpc.task.toggle.mutationOptions({
+      onMutate: async ({ id }: { id: string }) => {
+        if (!enabled) return { previous: [] };
+        await queryClient.cancelQueries({ queryKey });
+        const previous = queryClient.getQueryData<Task[]>(queryKey) ?? [];
+
+        setOptimisticTasks((prev) =>
+          prev.map((t) =>
+            t.id === id
+              ? { ...t, isCompleted: !t.isCompleted, isCurrent: false }
+              : t,
+          ),
+        );
+
+        return { previous };
+      },
+
+      onError: (_, __, ctx) => {
+        rollback(ctx?.previous);
+        showBanner({
+          message: "Failed to update task status",
+          variant: "error",
+          duration: 4000,
+        });
+      },
+
+      onSuccess: (task) => {
+        const action = task.isCompleted ? "completed" : "re-opened";
+        showBanner({
+          message: `Task marked as ${action}`,
+          variant: "success",
+          duration: 2800,
+        });
+      },
+
+      onSettled: () => queryClient.invalidateQueries({ queryKey }),
+    }),
+  );
+
+  const remove = useMutation(
+    trpc.task.delete.mutationOptions({
+      onMutate: async ({ id }: { id: string }) => {
+        if (!enabled) return { previous: [] };
+        await queryClient.cancelQueries({ queryKey });
+        const previous = queryClient.getQueryData<Task[]>(queryKey) ?? [];
+
+        setOptimisticTasks((prev) => prev.filter((t) => t.id !== id));
+
+        return { previous };
+      },
+
+      onError: (_, __, ctx) => {
+        rollback(ctx?.previous);
+        showBanner({
+          message: "Failed to delete task",
+          variant: "error",
+          duration: 4000,
+        });
+      },
+
+      onSettled: () => queryClient.invalidateQueries({ queryKey }),
+    }),
+  );
+
+  const setCurrent = useMutation(
+    trpc.task.setCurrent.mutationOptions({
+      onMutate: async ({ id }: { id: string }) => {
+        if (!enabled) return { previous: [] };
+        await queryClient.cancelQueries({ queryKey });
+        const previous = queryClient.getQueryData<Task[]>(queryKey) ?? [];
+
+        const copy = previous.map((t) => ({ ...t, isCurrent: t.id === id }));
+
+        const idx = copy.findIndex((t) => t.id === id);
+        if (idx === -1) return { previous };
+
+        const [target] = copy.splice(idx, 1);
+        const minOrder = copy.length
+          ? Math.min(...copy.map((t) => t.order ?? 0))
+          : 0;
+        target.order = minOrder - 100;
+
+        copy.unshift(target);
+        setOptimisticTasks(() => copy);
+
+        return { previous };
+      },
+
+      onError: (_, __, ctx) => {
+        rollback(ctx?.previous);
+        showBanner({
+          message: "Failed to set current task",
+          variant: "error",
+          duration: 4000,
+        });
+      },
+
+      onSettled: () => queryClient.invalidateQueries({ queryKey }),
+    }),
+  );
+
+  const clearCurrent = useMutation(
+    trpc.task.clearCurrent.mutationOptions({
+      onMutate: async () => {
+        if (!enabled) return { previous: [] };
+        await queryClient.cancelQueries({ queryKey });
+        const previous = queryClient.getQueryData<Task[]>(queryKey) ?? [];
+
+        setOptimisticTasks((prev) =>
+          prev.map((t) => ({ ...t, isCurrent: false })),
+        );
+
+        return { previous };
+      },
+
+      onError: (_, __, ctx) => {
+        rollback(ctx?.previous);
+        showBanner({
+          message: "Failed to clear current task",
+          variant: "error",
+          duration: 4000,
+        });
+      },
+
+      onSettled: () => queryClient.invalidateQueries({ queryKey }),
+    }),
+  );
+
+  // ─── Public API ─────────────────────────────────────────────────
   return {
     tasks: displayedTasks,
+
     isLoadingTasks:
       isLoading || (enabled && isFetching && displayedTasks.length === 0),
 
+    // Mutations
     createTask: create.mutate,
     createTaskPending: create.isPending,
 
@@ -299,13 +318,13 @@ export function useListTasks(listId: string | null | undefined) {
     deleteTask: remove.mutate,
     deleteTaskPending: remove.isPending,
 
-    setCurrentTask: setCurrentMutation.mutate,
-    setCurrentTaskPending: setCurrentMutation.isPending,
+    setCurrentTask: setCurrent.mutate,
+    setCurrentTaskPending: setCurrent.isPending,
 
-    clearCurrentTask: clearCurrentMutation.mutate,
-    clearCurrentTaskPending: clearCurrentMutation.isPending,
+    clearCurrentTask: clearCurrent.mutate,
+    clearCurrentTaskPending: clearCurrent.isPending,
 
-    updateTaskOrder: reorderTasks.mutate,
-    isReordering: reorderTasks.isPending,
+    updateTaskOrder: reorder.mutate,
+    isReordering: reorder.isPending,
   };
 }

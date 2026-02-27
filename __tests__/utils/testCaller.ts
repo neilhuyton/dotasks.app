@@ -1,48 +1,68 @@
 // __tests__/utils/testCaller.ts
 
-import { vi } from 'vitest';
-import { mockDeep } from 'vitest-mock-extended';
-import { PrismaClient } from '@prisma/client';
+import { vi } from "vitest";
+import { mockDeep } from "vitest-mock-extended";
+import { PrismaClient, Prisma } from "@prisma/client";
 
-import { createCaller } from '../../server/trpc';
-import type { Context } from '../../server/context';
+import { createCaller } from "../../server/trpc";
+import type { Context } from "../../server/context";
 
-// Create a deep mock of PrismaClient
+// Deep mock of the entire PrismaClient
 export const mockPrisma = mockDeep<PrismaClient>();
 
-// Make $transaction behave like the real one:
-// - If called with a function, execute it with the mock as the transaction client
-// - This is the key fix for setCurrent (and any future transactional procedures)
-mockPrisma.$transaction.mockImplementation(async (arg) => {
-  if (typeof arg === 'function') {
-    // Pass the same mockPrisma as the transaction client (tx)
-    return arg(mockPrisma);
+// Helper type for transaction arguments (most common patterns)
+type TransactionArg =
+  | ((tx: Prisma.TransactionClient) => Promise<unknown>)
+  | Prisma.PrismaPromise<unknown>[];
+
+// Make $transaction behave realistically in tests
+mockPrisma.$transaction.mockImplementation(async (arg: TransactionArg) => {
+  if (typeof arg === "function") {
+    // Single transaction function → pass the mock as tx
+    return arg(mockPrisma as Prisma.TransactionClient);
   }
-  // If used with array of operations (rare), we could handle it too — but for now keep simple
-  throw new Error('$transaction called with unsupported format in tests');
+
+  if (Array.isArray(arg)) {
+    // Array of Prisma promises → execute them sequentially
+    const results: unknown[] = [];
+    for (const op of arg) {
+      const result = await op;
+      results.push(result);
+    }
+    return results;
+  }
+
+  throw new Error("$transaction called with unsupported format in tests");
 });
 
-// Reset all mocks (useful in beforeEach)
+// Reset all mocks between tests
 export function resetPrismaMocks() {
   vi.clearAllMocks();
-  // Optionally re-apply $transaction mock if needed after clear
-  // (usually not necessary as mockImplementation survives clearAllMocks)
 }
 
-// Public caller — no authentication
+/**
+ * Creates a public (unauthenticated) caller for testing public procedures.
+ */
 export function createPublicCaller(overrides: Partial<Context> = {}) {
   return createCaller({
-    userId: undefined,  // No user → public context
     prisma: mockPrisma,
+    userId: null, // Explicit null for unauthenticated
+    email: null, // Provide null if email is part of Context
+    // Add other required context fields with defaults if necessary
     ...overrides,
   });
 }
 
-// Protected caller — fake authenticated user
+/**
+ * Creates a protected (authenticated) caller with a fake user.
+ * Use this for most of your protected router tests.
+ */
 export function createProtectedCaller(overrides: Partial<Context> = {}) {
   return createCaller({
-    userId: 'test-user-id',  // Fixed fake user ID
     prisma: mockPrisma,
+    userId: "test-user-id",
+    email: "test-user@example.com", // fake email – adjust if your auth uses different field
+    // Add other context fields your middleware/context expects (session, etc.)
     ...overrides,
   });
 }

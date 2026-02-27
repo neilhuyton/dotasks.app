@@ -1,4 +1,4 @@
-// __tests__/pages/register.test.tsx
+// __tests__/routes/register.test.tsx
 
 import {
   describe,
@@ -8,80 +8,61 @@ import {
   beforeEach,
   afterEach,
   afterAll,
-  vi,
 } from "vitest";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+
 import { server } from "../../__mocks__/server";
-import "@testing-library/jest-dom";
-
 import { registerHandler } from "../../__mocks__/handlers/register";
-import { router } from "../../src/router";
 
-import {
-  renderWithTrpcRouter,
-  expectSuccessMessage,
-  expectErrorMessage,
-} from "../utils/test-helpers";
-import { suppressActWarnings } from "../act-suppress";
-
-suppressActWarnings();
-
-function renderRegister() {
-  renderWithTrpcRouter({
-    initialPath: "/register",
-    routeTree: router.routeTree,
-  });
-}
-
-const waitForFormReady = async (timeout = 2000) =>
-  waitFor(() => screen.getByTestId("email-input"), { timeout });
-
-const fillRegistrationForm = async (email: string, password: string) => {
-  const emailInput = screen.getByTestId("email-input");
-  const passwordInput = screen.getByTestId("password-input");
-  const confirmInput = screen.getByTestId("confirm-password-input");
-
-  await userEvent.clear(emailInput);
-  await userEvent.clear(passwordInput);
-  await userEvent.clear(confirmInput);
-
-  await userEvent.type(emailInput, email);
-  await userEvent.type(passwordInput, password);
-  await userEvent.type(confirmInput, password); // ← only change here
-};
-
-const submitForm = () => {
-  const button = screen.getByTestId("register-button");
-  fireEvent.click(button); // ← only change here (from dispatchEvent)
-};
+import { renderWithProviders } from "../utils/test-helpers";
 
 describe("RegisterPage", () => {
-  beforeAll(() => {
-    server.listen({ onUnhandledRequest: "warn" });
-  });
-
+  beforeAll(() => server.listen({ onUnhandledRequest: "warn" }));
   beforeEach(() => {
     server.use(registerHandler);
-    vi.clearAllMocks();
   });
+  afterEach(() => server.resetHandlers());
+  afterAll(() => server.close());
 
-  afterEach(() => {
-    server.resetHandlers();
-  });
+  function renderRegister() {
+    renderWithProviders( { initialEntries: ["/register"] });
+  }
 
-  afterAll(() => {
-    server.close();
-  });
+  async function waitForFormReady() {
+    await waitFor(() => screen.getByLabelText(/email/i), { timeout: 2000 });
+  }
+
+  async function fillRegistrationForm(email: string, password: string) {
+    const emailInput = screen.getByLabelText(/email/i);
+    const passwordInput = screen.getByLabelText(/^password$/i);
+    const confirmInput = screen.getByLabelText(/confirm password/i);
+
+    await userEvent.clear(emailInput);
+    await userEvent.clear(passwordInput);
+    await userEvent.clear(confirmInput);
+
+    await userEvent.type(emailInput, email);
+    await userEvent.type(passwordInput, password);
+    await userEvent.type(confirmInput, password);
+  }
+
+  function submitForm() {
+    const form = screen.getByTestId("register-form");
+    fireEvent.submit(form);
+  }
 
   it("renders form fields, register button and login link", async () => {
     renderRegister();
     await waitForFormReady();
 
-    expect(screen.getByTestId("email-input")).toBeInTheDocument();
-    expect(screen.getByTestId("password-input")).toBeInTheDocument();
-    expect(screen.getByTestId("register-button")).toBeInTheDocument();
-    expect(screen.getByTestId("login-link")).toBeInTheDocument();
+    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/confirm password/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /register/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /login/i })).toBeInTheDocument();
   });
 
   it("submits valid registration → shows success message", async () => {
@@ -91,15 +72,17 @@ describe("RegisterPage", () => {
     await fillRegistrationForm("newuser@example.com", "StrongPass123!");
     submitForm();
 
-    await expectSuccessMessage(
-      "register-message",
-      /Registration successful/i,
-      "text-green-500",
-      8000,
-    );
+    await waitFor(() => {
+      const message = screen.getByText(/registration successful/i);
+      expect(message).toBeInTheDocument();
+      expect(message).toHaveClass(/text-green-500/);
+    });
 
-    const messageEl = screen.getByTestId("register-message");
-    expect(messageEl).toHaveTextContent(/check your email to verify/i);
+    await waitFor(() =>
+      expect(
+        screen.getByText(/check your email to verify/i),
+      ).toBeInTheDocument(),
+    );
   });
 
   it("shows loading state during registration", async () => {
@@ -109,65 +92,58 @@ describe("RegisterPage", () => {
     await fillRegistrationForm("test@example.com", "password123");
     submitForm();
 
-    await waitFor(
-      () => {
-        const btn = screen.getByTestId("register-button");
-        expect(btn).toBeDisabled();
-        expect(btn).toHaveTextContent("Registering...");
-        expect(screen.getByTestId("register-loading")).toBeInTheDocument();
-      },
-      { timeout: 5000 },
-    );
+    await waitFor(() => {
+      const btn = screen.getByRole("button", { name: /registering/i });
+      expect(btn).toBeDisabled();
+      expect(btn).toHaveTextContent(/registering/i);
+      expect(btn.querySelector("svg.animate-spin")).toBeInTheDocument();
+    });
   });
 
-  it("disables button during registration", async () => {
+  it("disables button when form is invalid and during submission", async () => {
     renderRegister();
     await waitForFormReady();
 
-    const button = screen.getByTestId("register-button");
-    expect(button).not.toBeDisabled();
+    const button = screen.getByRole("button", { name: /register/i });
+    expect(button).toBeDisabled();
 
     await fillRegistrationForm("test@example.com", "password123");
     submitForm();
 
-    await waitFor(
-      () => {
-        expect(screen.getByTestId("register-button")).toHaveTextContent(
-          "Registering...",
-        );
-        expect(screen.getByTestId("register-button")).toBeDisabled();
-      },
-      { timeout: 5000 },
-    );
+    await waitFor(() => {
+      const submittingBtn = screen.getByRole("button", {
+        name: /registering/i,
+      });
+      expect(submittingBtn).toBeDisabled();
+      expect(submittingBtn).toHaveTextContent(/registering/i);
+    });
   });
 
   it("shows error when trying to register with already used email", async () => {
     renderRegister();
-    await waitForFormReady(2500);
+    await waitForFormReady();
 
-    await fillRegistrationForm("duplicate@example.com", "password123");
-    submitForm();
-    await expectSuccessMessage(
-      "register-message",
-      /Registration successful/i,
-      "text-green-500",
-      8000,
-    );
-
-    await new Promise((r) => setTimeout(r, 150));
-
+    // First registration (should succeed)
     await fillRegistrationForm("duplicate@example.com", "password123");
     submitForm();
 
-    await expectErrorMessage(
-      "register-message",
-      "Email already exists",
-      "text-red-500",
-      8000,
+    await waitFor(() =>
+      expect(screen.getByText(/registration successful/i)).toBeInTheDocument(),
     );
-  }, 20000);
 
-  it.todo(
-    "shows client-side validation errors for invalid email or weak password",
-  );
+    // Second attempt with same email (should fail)
+    await fillRegistrationForm("duplicate@example.com", "password123");
+    submitForm();
+
+    await waitFor(() => {
+      const error = screen.getByText(/email already exists/i);
+      expect(error).toBeInTheDocument();
+      expect(error).toHaveClass(/text-red-500/);
+    });
+  }, 15000);
+
+  // Uncomment & implement when ready
+  // it("shows client-side validation errors for invalid email or weak password", async () => {
+  //   // ...
+  // });
 });

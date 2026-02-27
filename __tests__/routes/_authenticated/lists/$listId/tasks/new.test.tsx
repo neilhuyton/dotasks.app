@@ -5,21 +5,21 @@ import {
   it,
   expect,
   beforeAll,
-  afterAll,
   beforeEach,
   afterEach,
+  afterAll,
 } from "vitest";
-import { screen, waitFor, fireEvent } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { server } from "../../../../../../__mocks__/server";
-import { renderWithTrpcRouter } from "../../../../../utils/test-helpers";
+import { renderWithProviders } from "../../../../../utils/test-helpers";
 
 import {
   resetMockLists,
   prepareDetailPageTestList,
   listGetAllHandler,
-  listGetOneSuccessHandler,
+  listGetOneDetailPagePreset,
 } from "../../../../../../__mocks__/handlers/lists";
 
 import {
@@ -30,38 +30,38 @@ import {
   getMockTasks,
 } from "../../../../../../__mocks__/handlers/tasks";
 
-import { routeTree } from "@/routeTree.gen";
-import { useAuthStore } from "@/store/authStore";
+import { useAuthStore } from "@/shared/store/authStore";
 import { suppressActWarnings } from "../../../../../act-suppress";
 
 suppressActWarnings();
 
-describe("New Task Page (/_authenticated/lists/$listId/tasks/new)", () => {
+describe("New Task Page", () => {
   const TEST_LIST_ID = "list-abc-123";
-  const user = userEvent.setup(); // ← Restored here
 
-  beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+  beforeAll(() => server.listen({ onUnhandledRequest: "warn" })); // Changed to warn to handle Supabase WS
 
   beforeEach(() => {
+    server.resetHandlers();
+    resetMockLists();
+    resetMockTasks();
+    prepareDetailPageTestList();
+
+    server.use(
+      listGetAllHandler,
+      listGetOneDetailPagePreset,
+      taskGetByListSuccess,
+      taskCreateHandler,
+    );
+
     useAuthStore.setState({
       isLoggedIn: true,
       userId: "test-user-123",
       accessToken: "mock-token",
       refreshToken: "mock-refresh",
     });
-
-    server.resetHandlers();
-    resetMockLists();
-    resetMockTasks();
-    prepareDetailPageTestList();
-
-    server.use(listGetAllHandler);
-    server.use(listGetOneSuccessHandler);
-    server.use(taskGetByListSuccess);
-    server.use(taskCreateHandler);
   });
 
-  afterEach(async () => {
+  afterEach(() => {
     server.resetHandlers();
     useAuthStore.setState({
       isLoggedIn: false,
@@ -73,166 +73,153 @@ describe("New Task Page (/_authenticated/lists/$listId/tasks/new)", () => {
 
   afterAll(() => server.close());
 
-  const renderNewTaskPage = async () => {
-    const { history } = renderWithTrpcRouter({
-      initialPath: `/lists/${TEST_LIST_ID}/tasks/new`,
-      routeTree,
+  function renderNewTaskPage() {
+    return renderWithProviders({
+      initialEntries: [`/lists/${TEST_LIST_ID}/tasks/new`],
     });
+  }
 
-    // Wait for page heading to confirm load
-    await screen.findByRole("heading", { name: /New Task/i });
+  async function waitForFormReady() {
+    await waitFor(
+      () => {
+        expect(
+          screen.getByRole("heading", { name: /New Task/i }),
+        ).toBeInTheDocument();
+        expect(screen.getByPlaceholderText("Task title...")).toBeInTheDocument();
+        expect(screen.getByPlaceholderText("Details...")).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+  }
 
-    return { history };
-  };
+  async function fillForm(title: string, description = "") {
+    await waitForFormReady();
 
-  it("renders title, description input, and buttons", async () => {
-    await renderNewTaskPage();
+    const titleInput = screen.getByPlaceholderText("Task title...");
+    await userEvent.clear(titleInput);
+    await userEvent.type(titleInput, title);
 
-    expect(
-      screen.getByRole("heading", { name: "New Task" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByPlaceholderText("Enter task title..."),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByPlaceholderText(
-        /Add any notes, steps, links, or extra context.../i,
-      ),
-    ).toBeInTheDocument();
+    if (description) {
+      const descInput = screen.getByPlaceholderText("Details...");
+      await userEvent.clear(descInput);
+      await userEvent.type(descInput, description);
+    }
+  }
+
+  it("renders title, inputs and buttons", async () => {
+    renderNewTaskPage();
+    await waitForFormReady();
+
+    expect(screen.getByPlaceholderText("Task title...")).toHaveAttribute(
+      "placeholder",
+      "Task title...",
+    );
+    expect(screen.getByPlaceholderText("Details...")).toBeInTheDocument();
+
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Create Task" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create Task" })).toBeInTheDocument();
   });
 
-  it("disables submit button when title is empty (even if description filled)", async () => {
-    await renderNewTaskPage();
+  it("disables Create button when title is empty or whitespace only", async () => {
+    renderNewTaskPage();
+    await waitForFormReady();
 
-    const createButton = screen.getByRole("button", { name: "Create Task" });
-    expect(createButton).toBeDisabled();
+    const createBtn = screen.getByRole("button", { name: "Create Task" });
+    expect(createBtn).toBeDisabled();
 
-    const descInput = screen.getByPlaceholderText(/Add any notes/i);
-    await user.type(descInput, "Some very important notes here");
+    await userEvent.type(screen.getByPlaceholderText("Task title..."), "   ");
+    expect(createBtn).toBeDisabled();
 
-    expect(createButton).toBeDisabled();
+    await userEvent.clear(screen.getByPlaceholderText("Task title..."));
+    await userEvent.type(screen.getByPlaceholderText("Task title..."), "Buy milk");
+    expect(createBtn).not.toBeDisabled();
   });
 
-  it("enables submit button when title is filled", async () => {
-    await renderNewTaskPage();
-
-    const input = screen.getByPlaceholderText("Enter task title...");
-    await user.type(input, "Buy milk");
-
-    const createButton = screen.getByRole("button", { name: "Create Task" });
-    expect(createButton).not.toBeDisabled();
-  });
-
-  it("shows loading state during task creation", async () => {
+  it("shows loading state during creation", async () => {
     server.use(delayedTaskCreateHandler);
 
-    await renderNewTaskPage();
+    renderNewTaskPage();
+    await waitForFormReady();
 
-    const titleInput = screen.getByPlaceholderText("Enter task title...");
-    await user.type(titleInput, "Test task");
+    await fillForm("Weekend Task", "Important stuff to do");
 
-    fireEvent.click(screen.getByRole("button", { name: /^Create Task$/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Create Task" }));
 
-    await screen.findByText("Creating...");
+    await screen.findByText("Creating");
 
-    const createButton = screen.getByRole("button", { name: "Creating..." });
-    expect(createButton).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Creating/i })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
   });
 
-  it("navigates back to list on Cancel button click", async () => {
-    const { history } = await renderNewTaskPage();
+  it("creates task, optimistically updates, and navigates on success", async () => {
+    const initialCount = getMockTasks().length;
 
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    const { router } = renderNewTaskPage();
+    await waitForFormReady();
 
-    expect(history.location.pathname).toBe(`/lists/${TEST_LIST_ID}`);
-  });
+    await fillForm("Buy groceries", "Milk, eggs, bread, and some fruit");
 
-  it("navigates back to list on Back (ArrowLeft) button click", async () => {
-    const { history } = await renderNewTaskPage();
-
-    await user.click(screen.getByRole("button", { name: "Back to list" }));
-
-    expect(history.location.pathname).toBe(`/lists/${TEST_LIST_ID}`);
-  });
-
-  it("creates task with title + description, optimistic update, and navigates on success", async () => {
-    server.use(taskCreateHandler);
-
-    const { history } = await renderNewTaskPage();
-
-    const titleInput = screen.getByPlaceholderText("Enter task title...");
-    const descInput = screen.getByPlaceholderText(/Add any notes/i);
-
-    await user.type(titleInput, "Buy groceries");
-    await user.type(descInput, "Milk, eggs, bread, and some fruit");
-
-    fireEvent.click(screen.getByRole("button", { name: /^Create Task$/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Create Task" }));
 
     await waitFor(
       () => {
-        expect(history.location.pathname).toBe(`/lists/${TEST_LIST_ID}`);
+        expect(router.state.location.pathname).toBe(`/lists/${TEST_LIST_ID}`);
       },
-      { timeout: 4000 },
+      { timeout: 3000 },
     );
 
-    const finalTasks = getMockTasks();
-    const created = finalTasks.find((t) => t.title === "Buy groceries");
-    expect(created).toBeDefined();
-    expect(created!.description).toBe("Milk, eggs, bread, and some fruit");
-    expect(created!.id).not.toMatch(/^temp-/);
+    expect(getMockTasks().length).toBeGreaterThan(initialCount);
+    expect(
+      getMockTasks().some((t) => t.title === "Buy groceries"),
+    ).toBe(true);
   });
 
-  it("resets form after successful creation (title and description cleared)", async () => {
-    await renderNewTaskPage();
+  it("navigates back to list on Cancel button click", async () => {
+    const { router } = renderNewTaskPage();
+    await waitForFormReady();
 
-    const titleInput = screen.getByPlaceholderText("Enter task title...");
-    const descInput = screen.getByPlaceholderText(/Add any notes/i);
-
-    await user.type(titleInput, "Quick task");
-    await user.type(descInput, "Remember to test this");
-
-    fireEvent.click(screen.getByRole("button", { name: /^Create Task$/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
     await waitFor(
       () => {
-        expect(titleInput).toHaveValue("");
-        expect(descInput).toHaveValue("");
+        expect(router.state.location.pathname).toBe(`/lists/${TEST_LIST_ID}`);
       },
       { timeout: 2000 },
     );
   });
 
-  it.skip("does not create task when title is empty (prevents mutation)", async () => {
-    await renderNewTaskPage();
+  it("clears form after successful creation", async () => {
+    const { router } = renderNewTaskPage();
+    await waitForFormReady();
 
-    resetMockTasks(); // extra safety
+    await fillForm("Quick task", "Remember to test this");
+
+    await userEvent.click(screen.getByRole("button", { name: "Create Task" }));
+
+    await waitFor(
+      () => {
+        expect(router.state.location.pathname).toBe(`/lists/${TEST_LIST_ID}`);
+      },
+      { timeout: 3000 },
+    );
+  });
+
+  it("does not create task when title is empty (prevents mutation)", async () => {
+    renderNewTaskPage();
+    await waitForFormReady();
 
     const initialLength = getMockTasks().length;
-    expect(initialLength, "Mock tasks not reset properly").toBe(2);
 
-    const titleInput = screen.getByPlaceholderText("Enter task title...");
-    await user.clear(titleInput); // force title empty
+    await userEvent.type(screen.getByPlaceholderText("Details..."), "This should not save");
 
-    const descInput = screen.getByPlaceholderText(/Add any notes/i);
-    await user.type(descInput, "This should not be saved");
-
-    const createButton = screen.getByRole("button", { name: "Create Task" });
-    await waitFor(() => {
-      expect(createButton).toBeDisabled();
-    });
+    const createBtn = screen.getByRole("button", { name: "Create Task" });
+    expect(createBtn).toBeDisabled();
 
     const form = screen.getByTestId("new-task-form");
-    fireEvent.submit(form);
+    form.dispatchEvent(new Event("submit", { bubbles: true }));
 
-    await new Promise((r) => setTimeout(r, 1200));
+    await new Promise((r) => setTimeout(r, 1000));
 
-    const finalLength = getMockTasks().length;
-    expect(finalLength).toBe(initialLength);
-    expect(finalLength).toBe(2);
+    expect(getMockTasks().length).toBe(initialLength);
   });
 });

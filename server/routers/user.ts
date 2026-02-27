@@ -82,8 +82,6 @@ export const userRouter = router({
       if (oldEmail !== email) {
         try {
           await sendEmailChangeNotification(oldEmail, email);
-          // Optional: structured logging if you have it
-          // console.log(`Email change notification sent to ${oldEmail}`);
         } catch (err) {
           console.error("Failed to send email change notification:", {
             userId,

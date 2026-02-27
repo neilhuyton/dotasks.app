@@ -1,9 +1,11 @@
-// __mocks__/handlers/lists.ts
-
 import { TRPCError } from "@trpc/server";
 import { trpcMsw } from "../trpcMsw";
 
-let mockLists: {
+// ──────────────────────────────────────────────
+// Types
+// ──────────────────────────────────────────────
+
+type MockList = {
   id: string;
   userId: string;
   title: string;
@@ -13,32 +15,34 @@ let mockLists: {
   isArchived: boolean;
   createdAt: Date;
   updatedAt: Date;
-}[] = [
-  {
-    id: "l1",
-    userId: "test-user-id",
-    title: "Groceries",
-    description: "Weekend shopping",
-    color: "#FF6B6B",
-    icon: "shopping-cart",
-    isArchived: false,
-    createdAt: new Date("2025-02-10T09:30:00Z"),
-    updatedAt: new Date("2025-02-10T09:30:00Z"),
-  },
-  {
-    id: "l2",
-    userId: "test-user-id",
-    title: "Work Tasks",
-    description: null,
-    color: null,
-    icon: null,
-    isArchived: false,
-    createdAt: new Date("2025-02-12T14:15:00Z"),
-    updatedAt: new Date("2025-02-12T14:15:00Z"),
-  },
-];
+  order: number;
+  isPinned: boolean;
+};
 
-export function resetMockLists() {
+type ListCreateInput = {
+  title: string;
+  description?: string | null;
+  color?: string | null;
+  icon?: string | null;
+};
+
+type ListUpdateInput = Partial<ListCreateInput> & {
+  id: string;
+  isArchived?: boolean;
+  order?: number;
+  isPinned?: boolean;
+};
+
+// ──────────────────────────────────────────────
+// In-memory storage
+// ──────────────────────────────────────────────
+
+let mockLists: MockList[] = [];
+
+function initializeDefaultLists() {
+  const now1 = new Date("2025-02-10T09:30:00Z");
+  const now2 = new Date("2025-02-12T14:15:00Z");
+
   mockLists = [
     {
       id: "l1",
@@ -48,8 +52,10 @@ export function resetMockLists() {
       color: "#FF6B6B",
       icon: "shopping-cart",
       isArchived: false,
-      createdAt: new Date("2025-02-10T09:30:00Z"),
-      updatedAt: new Date("2025-02-10T09:30:00Z"),
+      createdAt: now1,
+      updatedAt: now1,
+      order: 0,
+      isPinned: false,
     },
     {
       id: "l2",
@@ -59,23 +65,29 @@ export function resetMockLists() {
       color: null,
       icon: null,
       isArchived: false,
-      createdAt: new Date("2025-02-12T14:15:00Z"),
-      updatedAt: new Date("2025-02-12T14:15:00Z"),
+      createdAt: now2,
+      updatedAt: now2,
+      order: 1,
+      isPinned: false,
     },
   ];
 }
 
-export function getMockLists() {
+export function resetMockLists(): void {
+  initializeDefaultLists();
+}
+
+export function getMockLists(): MockList[] {
   return [...mockLists];
 }
 
 // ──────────────────────────────────────────────
-// Preset & helper for detail page tests ($listId)
+// Preset for detail page tests
 // ──────────────────────────────────────────────
 
 export const TEST_LIST_DETAIL_ID = "list-abc-123";
 
-export const detailPageListPreset = {
+const detailPageListPreset: Omit<MockList, "createdAt" | "updatedAt"> = {
   id: TEST_LIST_DETAIL_ID,
   userId: "test-user-123",
   title: "My Important Projects",
@@ -83,11 +95,13 @@ export const detailPageListPreset = {
   color: null,
   icon: null,
   isArchived: false,
+  order: 0,
+  isPinned: false,
 };
 
-export function prepareDetailPageTestList() {
-  resetMockLists(); // isolation: remove default lists
+function addDetailPageListToMock(): void {
   const now = new Date();
+  mockLists = mockLists.filter((l) => l.id !== TEST_LIST_DETAIL_ID);
   mockLists.push({
     ...detailPageListPreset,
     createdAt: now,
@@ -95,123 +109,27 @@ export function prepareDetailPageTestList() {
   });
 }
 
-export const listGetOneDetailPagePreset = trpcMsw.list.getOne.query(() => {
-  prepareDetailPageTestList();
-  const found = mockLists.find((l) => l.id === TEST_LIST_DETAIL_ID);
-  if (!found) {
-    throw new TRPCError({ code: "NOT_FOUND", message: "List not found" });
-  }
+export function prepareDetailPageTestList(): void {
+  addDetailPageListToMock();
+}
+
+// ──────────────────────────────────────────────
+// Shared utilities
+// ──────────────────────────────────────────────
+
+function formatListForResponse(list: MockList) {
   return {
-    id: found.id,
-    userId: found.userId,
-    title: found.title,
-    description: found.description,
-    color: found.color,
-    icon: found.icon,
-    isArchived: found.isArchived,
-    createdAt: found.createdAt.toISOString(),
-    updatedAt: found.updatedAt.toISOString(),
-  };
-});
-
-// ──────────────────────────────────────────────
-// Input type for update (matches real Zod schema)
-// ──────────────────────────────────────────────
-
-type ListUpdateInput = {
-  id: string;
-  title: string;
-  description?: string | null;
-  color?: string | null;
-  icon?: string | null;
-};
-
-const updateListResolver = ({ input }: { input: ListUpdateInput }) => {
-  const { id, ...patch } = input;
-
-  const listIndex = mockLists.findIndex((l) => l.id === id);
-  if (listIndex === -1) {
-    throw new TRPCError({ code: "NOT_FOUND", message: "List not found" });
-  }
-
-  const now = new Date();
-  const current = mockLists[listIndex];
-
-  mockLists[listIndex] = {
-    ...current,
-    ...patch,
-    updatedAt: now,
-  };
-
-  const updated = mockLists[listIndex];
-
-  return {
-    id: updated.id,
-    userId: updated.userId,
-    title: updated.title,
-    description: updated.description,
-    color: updated.color,
-    icon: updated.icon,
-    isArchived: updated.isArchived,
-    createdAt: updated.createdAt.toISOString(),
-    updatedAt: updated.updatedAt.toISOString(),
-  };
-};
-
-// ──────────────────────────────────────────────
-// CRUD Handlers – Queries
-// ──────────────────────────────────────────────
-
-export const listGetAllHandler = trpcMsw.list.getAll.query(() => {
-  return mockLists.map((list) => ({
-    id: list.id,
-    userId: list.userId,
-    title: list.title,
-    description: list.description,
-    color: list.color,
-    icon: list.icon,
-    isArchived: list.isArchived,
+    ...list,
     createdAt: list.createdAt.toISOString(),
     updatedAt: list.updatedAt.toISOString(),
-  }));
-});
-
-export const listGetEmptyHandler = trpcMsw.list.getAll.query(() => []);
-
-// ──────────────────────────────────────────────
-// CRUD Handlers – Mutations: CREATE
-// ──────────────────────────────────────────────
-
-export const listCreateHandler = trpcMsw.list.create.mutation(({ input }) => {
-  const now = new Date();
-
-  const newList = {
-    id: `list-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    userId: "test-user-123", // match test auth store
-    title: input.title,
-    description: input.description ?? null,
-    color: input.color ?? null,
-    icon: input.icon ?? null,
-    isArchived: false,
-    createdAt: now,
-    updatedAt: now,
+    _count: { tasks: 0 },
+    tasks: [],
   };
+}
 
-  mockLists.push(newList);
-
+function createListFromInput(input: ListCreateInput): MockList {
+  const now = new Date();
   return {
-    ...newList,
-    createdAt: newList.createdAt.toISOString(),
-    updatedAt: newList.updatedAt.toISOString(),
-  };
-});
-
-export const delayedListCreateHandler = trpcMsw.list.create.mutation(async ({ input }) => {
-  await new Promise((resolve) => setTimeout(resolve, 800)); // simulate loading
-
-  const now = new Date();
-
-  const newList = {
     id: `list-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     userId: "test-user-123",
     title: input.title,
@@ -221,108 +139,83 @@ export const delayedListCreateHandler = trpcMsw.list.create.mutation(async ({ in
     isArchived: false,
     createdAt: now,
     updatedAt: now,
+    order: mockLists.length,
+    isPinned: false,
   };
+}
 
-  mockLists.push(newList);
-
-  return {
-    ...newList,
-    createdAt: newList.createdAt.toISOString(),
-    updatedAt: newList.updatedAt.toISOString(),
-  };
-});
-
-// ──────────────────────────────────────────────
-// CRUD Handlers – Mutations: UPDATE
-// ──────────────────────────────────────────────
-
-export const listUpdateHandler = trpcMsw.list.update.mutation(updateListResolver);
-
-export const delayedListUpdateHandler = trpcMsw.list.update.mutation(async ({ input }) => {
-  await new Promise((resolve) => setTimeout(resolve, 900));
-  return updateListResolver({ input });
-});
-
-// ──────────────────────────────────────────────
-// CRUD Handlers – Mutations: DELETE
-// ──────────────────────────────────────────────
-
-const deleteListResolver = ({ input }: { input: { id: string } }) => {
-  const { id } = input;
-
-  const initialLength = mockLists.length;
-  const deletedList = mockLists.find((l) => l.id === id);
-
-  mockLists = mockLists.filter((l) => l.id !== id);
-
-  if (mockLists.length === initialLength || !deletedList) {
+function updateListInMock(id: string, updates: ListUpdateInput): MockList {
+  const index = mockLists.findIndex((l) => l.id === id);
+  if (index === -1) {
     throw new TRPCError({
       code: "NOT_FOUND",
-      message: "List not found",
+      message: "List not found or you don't have access",
     });
   }
 
-  return {
-    id: deletedList.id,
-    userId: deletedList.userId,
-    title: deletedList.title,
-    description: deletedList.description,
-    color: deletedList.color,
-    icon: deletedList.icon,
-    isArchived: deletedList.isArchived,
-    createdAt: deletedList.createdAt.toISOString(),
-    updatedAt: deletedList.updatedAt.toISOString(),
+  const now = new Date();
+
+  const updated: MockList = {
+    ...mockLists[index],
+    ...updates,
+    userId: mockLists[index].userId, // immutable
+    createdAt: mockLists[index].createdAt, // immutable
+    updatedAt: now,
+    isArchived: updates.isArchived ?? mockLists[index].isArchived,
+    order: updates.order ?? mockLists[index].order,
+    isPinned: updates.isPinned ?? mockLists[index].isPinned,
   };
-};
 
-export const listDeleteHandler = trpcMsw.list.delete.mutation(deleteListResolver);
-
-export const delayedListDeleteHandler = trpcMsw.list.delete.mutation(async (ctx) => {
-  await new Promise((resolve) => setTimeout(resolve, 400));
-  return deleteListResolver(ctx);
-});
+  mockLists[index] = updated;
+  return updated;
+}
 
 // ──────────────────────────────────────────────
-// getOne variants (used in detail & other list tests)
+// Handlers – getOne variants
 // ──────────────────────────────────────────────
 
-export const listGetOneSuccessHandler = trpcMsw.list.getOne.query(({ input }) => {
-  const found = mockLists.find((l) => l.id === input.id);
-  if (!found) {
-    throw new TRPCError({ code: "NOT_FOUND", message: "List not found" });
-  }
-  return {
-    id: found.id,
-    userId: found.userId,
-    title: found.title,
-    description: found.description,
-    color: found.color,
-    icon: found.icon,
-    isArchived: found.isArchived,
-    createdAt: found.createdAt.toISOString(),
-    updatedAt: found.updatedAt.toISOString(),
-  };
-});
+export const listGetOneDetailPagePreset = trpcMsw.list.getOne.query(
+  ({ input }) => {
+    const id = input?.id;
+    if (!id) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "List ID is required",
+      });
+    }
 
-export const listLoadingHandler = trpcMsw.list.getOne.query(async ({ input }) => {
-  await new Promise((resolve) => setTimeout(resolve, 1200));
+    if (id === TEST_LIST_DETAIL_ID) {
+      addDetailPageListToMock();
+    }
 
-  const found = mockLists.find((l) => l.id === input.id);
-  if (!found) {
-    throw new TRPCError({ code: "NOT_FOUND", message: "List not found" });
-  }
-  return {
-    id: found.id,
-    userId: found.userId,
-    title: found.title,
-    description: found.description,
-    color: found.color,
-    icon: found.icon,
-    isArchived: found.isArchived,
-    createdAt: found.createdAt.toISOString(),
-    updatedAt: found.updatedAt.toISOString(),
-  };
-});
+    const list = mockLists.find((l) => l.id === id);
+    if (!list) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "List not found or you don't have access.",
+      });
+    }
+
+    return {
+      ...formatListForResponse(list),
+      _count: { tasks: 1 }, // detail-page specific
+    };
+  },
+);
+
+export const listLoadingHandler = trpcMsw.list.getOne.query(
+  async ({ input }) => {
+    await new Promise((r) => setTimeout(r, 1200));
+
+    const id = input?.id;
+    if (id === TEST_LIST_DETAIL_ID) addDetailPageListToMock();
+
+    const list = mockLists.find((l) => l.id === id);
+    if (!list) throw new TRPCError({ code: "NOT_FOUND" });
+
+    return formatListForResponse(list);
+  },
+);
 
 export const getListNotFoundHandler = trpcMsw.list.getOne.query(() => {
   throw new TRPCError({
@@ -331,10 +224,157 @@ export const getListNotFoundHandler = trpcMsw.list.getOne.query(() => {
   });
 });
 
-// Optional: commonly used array for global setup (rarely needed)
+// ──────────────────────────────────────────────
+// Handlers – getAll
+// ──────────────────────────────────────────────
+
+export const listGetAllHandler = trpcMsw.list.getAll.query(() => {
+  return mockLists.map(formatListForResponse);
+});
+
+// ──────────────────────────────────────────────
+// Handlers – create
+// ──────────────────────────────────────────────
+
+export const listCreateHandler = trpcMsw.list.create.mutation(({ input }) => {
+  const data = Array.isArray(input) ? input[0] : input;
+
+  if (!data?.title || typeof data.title !== "string") {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Title is required and must be a string",
+    });
+  }
+
+  const newList = createListFromInput(data as ListCreateInput);
+  mockLists.push(newList);
+
+  return formatListForResponse(newList);
+});
+
+export const delayedListCreateHandler = trpcMsw.list.create.mutation(
+  async ({ input }) => {
+    await new Promise((r) => setTimeout(r, 800));
+
+    const data = Array.isArray(input) ? input[0] : input;
+
+    if (!data?.title || typeof data.title !== "string") {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Title is required and must be a string",
+      });
+    }
+
+    const newList = createListFromInput(data as ListCreateInput);
+    mockLists.push(newList);
+
+    return formatListForResponse(newList);
+  },
+);
+
+// ──────────────────────────────────────────────
+// Handlers – update
+// ──────────────────────────────────────────────
+
+export const listUpdateHandler = trpcMsw.list.update.mutation(({ input }) => {
+  const listIndex = mockLists.findIndex((l) => l.id === input.id);
+
+  if (listIndex === -1) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "List not found or you don't have access",
+    });
+  }
+
+  const now = new Date();
+
+  mockLists[listIndex] = {
+    ...mockLists[listIndex],
+    ...input,
+    updatedAt: now, // keep as Date object internally
+  };
+
+  // Return the FULL formatted response that matches what the real procedure returns
+  return formatListForResponse(mockLists[listIndex]);
+});
+
+export const delayedListUpdateHandler = trpcMsw.list.update.mutation(
+  async ({ input }) => {
+    await new Promise((r) => setTimeout(r, 900));
+
+    const data = Array.isArray(input) ? input[0] : input;
+
+    if (!data?.id || typeof data.id !== "string") {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "List ID is required",
+      });
+    }
+
+    const updated = updateListInMock(data.id, data as ListUpdateInput);
+    return formatListForResponse(updated);
+  },
+);
+
+export const failingListUpdateHandler = trpcMsw.list.update.mutation(() => {
+  throw new TRPCError({
+    code: "INTERNAL_SERVER_ERROR",
+    message: "Failed to update list – server error",
+  });
+});
+
+export const listUpdateNotFoundHandler = trpcMsw.list.update.mutation(
+  ({ input }) => {
+    const data = Array.isArray(input) ? input[0] : input;
+
+    if (!data?.id || typeof data.id !== "string") {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "List ID is required",
+      });
+    }
+
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "List not found or you don't have access",
+    });
+  },
+);
+
+// ──────────────────────────────────────────────
+// Handlers – delete (placeholder)
+// ──────────────────────────────────────────────
+
+export const listDeleteHandler = trpcMsw.list.delete.mutation(() => {
+  throw new TRPCError({
+    code: "NOT_IMPLEMENTED",
+    message: "Delete not implemented in mock yet",
+  });
+});
+
+// ──────────────────────────────────────────────
+// All handlers – ordered from most to least specific
+// ──────────────────────────────────────────────
+
 export const listHandlers = [
+  // getOne
+  listGetOneDetailPagePreset,
+  listLoadingHandler,
+  getListNotFoundHandler,
+
+  // getAll
   listGetAllHandler,
+
+  // create
   listCreateHandler,
+  delayedListCreateHandler,
+
+  // update
   listUpdateHandler,
+  delayedListUpdateHandler,
+  failingListUpdateHandler,
+  listUpdateNotFoundHandler,
+
+  // delete
   listDeleteHandler,
-];
+] as const;

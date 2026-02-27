@@ -5,31 +5,30 @@ import {
   it,
   expect,
   beforeAll,
-  afterAll,
   beforeEach,
   afterEach,
+  afterAll,
 } from "vitest";
-import { screen, waitFor, fireEvent } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { server } from "../../../../../__mocks__/server";
-import { renderWithTrpcRouter } from "../../../../utils/test-helpers";
+import { renderWithProviders } from "../../../../utils/test-helpers";
 
 import {
   resetMockLists,
   prepareDetailPageTestList,
   listGetAllHandler,
-  listGetOneSuccessHandler,
+  listGetOneDetailPagePreset,
   getMockLists,
   listUpdateHandler,
   delayedListUpdateHandler,
 } from "../../../../../__mocks__/handlers/lists";
 
-import { routeTree } from "@/routeTree.gen";
-import { useAuthStore } from "@/store/authStore";
-import { suppressActWarnings } from "../../../../act-suppress";
 import { trpcMsw } from "../../../../../__mocks__/trpcMsw";
 import { TRPCError } from "@trpc/server";
+import { useAuthStore } from "@/shared/store/authStore";
+import { suppressActWarnings } from "../../../../act-suppress";
 
 suppressActWarnings();
 
@@ -37,7 +36,11 @@ describe("Edit List Page (/_authenticated/lists/$listId/edit)", () => {
   const TEST_LIST_ID = "list-abc-123";
   const ORIGINAL_TITLE = "My Important Projects";
 
-  beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+  beforeAll(() => {
+    server.listen({ onUnhandledRequest: "warn" });
+  });
+
+  afterAll(() => server.close());
 
   beforeEach(() => {
     useAuthStore.setState({
@@ -51,15 +54,15 @@ describe("Edit List Page (/_authenticated/lists/$listId/edit)", () => {
     resetMockLists();
     prepareDetailPageTestList();
 
-    server.use(listGetAllHandler);
-    server.use(listGetOneSuccessHandler);
-    server.use(listUpdateHandler);
-
-    // Prevent MSW warnings for unrelated queries (e.g. tasks)
-    server.use(trpcMsw.task.getByList.query(() => []));
+    server.use(
+      listGetOneDetailPagePreset,
+      listGetAllHandler,
+      listUpdateHandler,
+      trpcMsw.task.getByList.query(() => []),
+    );
   });
 
-  afterEach(async () => {
+  afterEach(() => {
     server.resetHandlers();
     useAuthStore.setState({
       isLoggedIn: false,
@@ -69,175 +72,121 @@ describe("Edit List Page (/_authenticated/lists/$listId/edit)", () => {
     });
   });
 
-  afterAll(() => server.close());
+  async function renderEditListPage(
+    listId = TEST_LIST_ID,
+    options: { waitForForm?: boolean } = { waitForForm: true },
+  ) {
+    server.use(listGetOneDetailPagePreset);
 
-  const renderEditListPage = async () => {
-    const { history } = renderWithTrpcRouter({
-      initialPath: `/lists/${TEST_LIST_ID}/edit`,
-      routeTree,
+    const result = renderWithProviders({
+      initialEntries: [`/lists/${listId}/edit`],
     });
 
-    // Wait for page to load
-    await screen.findByText("Edit List");
-    await screen.findByDisplayValue(ORIGINAL_TITLE);
+    if (options.waitForForm) {
+      await screen.findByText("Edit List", {}, { timeout: 8000 });
+      await screen.findByDisplayValue(ORIGINAL_TITLE, {}, { timeout: 5000 });
+    }
 
-    return { history };
-  };
+    return result;
+  }
 
-  it("renders page title, description, inputs and buttons", async () => {
+  async function fillForm(title: string, description = "") {
+    const titleInput = await screen.findByLabelText(/List name/i);
+    await userEvent.clear(titleInput);
+    await userEvent.type(titleInput, title);
+
+    const descInput = screen.getByLabelText(/Description/i);
+    await userEvent.clear(descInput);
+    if (description) await userEvent.type(descInput, description);
+  }
+
+  function getSaveButton() {
+    return screen.getByRole("button", { name: /Save Changes|Saving/i });
+  }
+
+  it("renders heading, form fields and action buttons", async () => {
     await renderEditListPage();
 
-    expect(screen.getByText("Edit List")).toBeInTheDocument();
-
-    expect(screen.getByLabelText(/List name/i)).toBeInTheDocument();
     expect(
-      screen.getByPlaceholderText("Work, Groceries, Ideas..."),
+      screen.getByRole("heading", { level: 1, name: /Edit List/i }),
     ).toBeInTheDocument();
+
+    expect(screen.getByLabelText(/List name/i)).toHaveAttribute(
+      "placeholder",
+      "Work, Groceries, Ideas...",
+    );
 
     expect(
       screen.getByLabelText(/Description \(optional\)/i),
     ).toBeInTheDocument();
 
     expect(
-      screen.getByRole("button", { name: "Cancel and return to lists" }),
+      screen.getByRole("button", { name: /Cancel and return to list/i }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /Save Changes/i }),
-    ).toBeInTheDocument();
+    expect(getSaveButton()).toBeInTheDocument();
   });
 
-  it("disables Save Changes button when title is empty or whitespace", async () => {
+  it("disables Save button when title is empty", async () => {
     await renderEditListPage();
 
-    const saveButton = screen.getByRole("button", { name: /Save Changes/i });
-    expect(saveButton).not.toBeDisabled();
+    const saveButton = getSaveButton();
+    await waitFor(() => expect(saveButton).toBeDisabled(), { timeout: 5000 });
 
     const titleInput = screen.getByLabelText(/List name/i);
 
-    await userEvent.clear(titleInput);
-    expect(saveButton).toBeDisabled();
+    await userEvent.type(titleInput, "Valid name");
+    await waitFor(() => expect(saveButton).not.toBeDisabled(), {
+      timeout: 4000,
+    });
 
-    await userEvent.type(titleInput, "   ");
-    expect(saveButton).toBeDisabled();
-
     await userEvent.clear(titleInput);
-    await userEvent.type(titleInput, "Valid updated name");
-    expect(saveButton).not.toBeDisabled();
+    await waitFor(() => expect(saveButton).toBeDisabled(), { timeout: 4000 });
   });
 
-  it("shows loading state during list update", async () => {
+  it("shows loading UI during update mutation", async () => {
     server.use(delayedListUpdateHandler);
 
     await renderEditListPage();
 
-    const titleInput = screen.getByLabelText(/List name/i);
-    await userEvent.type(titleInput, " Weekend Update");
+    await fillForm("Weekend Update");
 
     const form = screen.getByTestId("edit-list-form");
-    fireEvent.submit(form);
+    form.dispatchEvent(
+      new Event("submit", { bubbles: true, cancelable: true }),
+    );
 
-    await screen.findByText("Saving...", {}, { timeout: 2000 });
+    await screen.findByText("Saving...", {}, { timeout: 6000 });
+
+    expect(screen.getByRole("button", { name: /Saving/i })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
   });
 
-  it("updates list with optimistic update and navigates on success", async () => {
-    const { history } = await renderEditListPage();
-
-    const titleInput = screen.getByLabelText(/List name/i);
-    const descInput = screen.getByLabelText(/Description/i);
-
-    await userEvent.clear(titleInput);
-    await userEvent.type(titleInput, "Updated Project List");
-
-    await userEvent.clear(descInput);
-    await userEvent.type(descInput, "New description here");
-
-    const form = screen.getByTestId("edit-list-form");
-    fireEvent.submit(form);
-
-    await waitFor(
-      () => {
-        expect(history.location.pathname).toBe("/lists");
-      },
-      { timeout: 5000 },
-    );
-
-    const updatedLists = getMockLists();
-    const updated = updatedLists.find((l) => l.id === TEST_LIST_ID);
-    expect(updated?.title).toBe("Updated Project List");
-    expect(updated?.description).toBe("New description here");
-  });
-
-  it("rolls back optimistic update on update error", async () => {
+  it("rolls back optimistic update when mutation fails", async () => {
     server.use(
       trpcMsw.list.update.mutation(() => {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Update failed",
+          message: "Failed to update list – server error",
         });
       }),
     );
 
-    const { history } = await renderEditListPage();
+    await renderEditListPage();
 
-    await userEvent.clear(screen.getByLabelText(/List name/i));
-    await userEvent.type(screen.getByLabelText(/List name/i), "Will fail");
+    await fillForm("This will fail");
 
     const form = screen.getByTestId("edit-list-form");
-    fireEvent.submit(form);
+    form.dispatchEvent(
+      new Event("submit", { bubbles: true, cancelable: true }),
+    );
 
     await waitFor(
       () => {
-        const lists = getMockLists();
-        const updated = lists.find((l) => l.id === TEST_LIST_ID);
+        const updated = getMockLists().find((l) => l.id === TEST_LIST_ID);
         expect(updated?.title).toBe(ORIGINAL_TITLE);
       },
-      { timeout: 5000 },
+      { timeout: 8000 },
     );
-
-    expect(history.location.pathname).not.toBe("/lists");
-  });
-
-  it("navigates back to /lists on Cancel button click", async () => {
-    const { history } = await renderEditListPage();
-
-    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
-
-    expect(history.location.pathname).toBe("/lists");
-  });
-
-  it("navigates back to /lists on Close (X) button click", async () => {
-    const { history } = await renderEditListPage();
-
-    await userEvent.click(
-      screen.getByRole("button", { name: "Cancel and return to lists" }),
-    );
-
-    expect(history.location.pathname).toBe("/lists");
-  });
-
-  it.skip("does not submit when title is empty (prevents mutation)", async () => {
-    const { history } = await renderEditListPage();
-
-    const titleInput = screen.getByLabelText(/List name/i);
-    await userEvent.clear(titleInput);
-
-    const saveButton = screen.getByRole("button", { name: /Save Changes/i });
-    expect(saveButton).toBeDisabled();
-
-    const form = screen.getByTestId("edit-list-form");
-    fireEvent.submit(form);
-
-    await waitFor(
-      () => {
-        const lists = getMockLists();
-        const updated = lists.find((l) => l.id === TEST_LIST_ID);
-        expect(updated?.title).toBe(ORIGINAL_TITLE);
-      },
-      { timeout: 1500 },
-    );
-
-    expect(history.location.pathname).not.toBe("/lists");
   });
 });

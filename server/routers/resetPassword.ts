@@ -51,8 +51,6 @@ export const resetPasswordRouter = router({
       // Send email directly (non-blocking in practice, but awaited for logging)
       try {
         await sendResetPasswordEmail(email, resetToken);
-        // Optional: log success if you have structured logging
-        // console.log(`Password reset email sent to ${email}`);
       } catch (err) {
         console.error("Failed to send password reset email:", err);
         // Still return success to user — don't fail the flow on email error

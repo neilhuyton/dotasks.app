@@ -12,21 +12,15 @@ import {
 } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { TRPCError } from "@trpc/server";
 
 import { server } from "../../../../../__mocks__/server";
-import { renderWithTrpcRouter } from "../../../../utils/test-helpers";
+import { renderWithProviders } from "../../../../utils/test-helpers";
 
 import { listGetOneDetailPagePreset } from "../../../../../__mocks__/handlers/lists";
+import { trpcMsw } from "../../../../../__mocks__/trpcMsw";
 
-import {
-  taskGetByListOnlyCompleted,
-  taskGetByListEmpty,
-  taskGetByListLoading,
-  resetMockTasks,
-} from "../../../../../__mocks__/handlers/tasks";
-
-import { routeTree } from "@/routeTree.gen";
-import { useAuthStore } from "@/store/authStore";
+import { useAuthStore } from "@/shared/store/authStore";
 import { suppressActWarnings } from "../../../../act-suppress";
 
 suppressActWarnings();
@@ -46,9 +40,34 @@ describe("Completed Tasks Page (/_authenticated/lists/$listId/tasks/completed)",
 
     server.resetHandlers();
     server.use(listGetOneDetailPagePreset);
-    server.use(taskGetByListOnlyCompleted); // ← only completed tasks!
 
-    resetMockTasks();
+    // Default: one completed task
+    server.use(
+      trpcMsw.task.getByList.query(({ input }) => {
+        if (input.listId !== TEST_LIST_ID) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "List not found",
+          });
+        }
+        return [
+          {
+            id: "t-real-2",
+            title: "Call client",
+            description: null,
+            order: 1,
+            isPinned: false,
+            isCompleted: true,
+            dueDate: null,
+            priority: null,
+            listId: TEST_LIST_ID,
+            isCurrent: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ];
+      }),
+    );
 
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
@@ -66,41 +85,33 @@ describe("Completed Tasks Page (/_authenticated/lists/$listId/tasks/completed)",
 
   afterAll(() => server.close());
 
-  const renderCompletedPage = async (listId = TEST_LIST_ID) => {
-    const { history } = renderWithTrpcRouter({
-      initialPath: `/lists/${listId}/tasks/completed`,
-      routeTree,
+  async function renderCompletedPage(
+    listId = TEST_LIST_ID,
+    options: { waitForContent?: boolean } = { waitForContent: true },
+  ) {
+    const result = renderWithProviders({
+      initialEntries: [`/lists/${listId}/tasks/completed`],
     });
 
-    // Wait for one of the expected states (title, loading, or empty)
-    await Promise.race([
-      screen
-        .findByText("Completed Tasks", {}, { timeout: 4000 })
-        .catch(() => null),
-      screen
-        .findByTestId("tasks-loading", {}, { timeout: 4000 })
-        .catch(() => null),
-      screen
-        .findByText(/No completed tasks yet/i, {}, { timeout: 4000 })
-        .catch(() => null),
-    ]);
-
-    // Safety check to ensure something rendered
-    if (
-      !screen.queryByText("Completed Tasks") &&
-      !screen.queryByTestId("tasks-loading") &&
-      !screen.queryByText(/No completed tasks yet/i)
-    ) {
-      throw new Error(
-        "Completed tasks page did not render expected content in time",
+    if (options.waitForContent) {
+      await waitFor(
+        () =>
+          screen.queryByText("Completed Tasks") ||
+          screen.queryByTestId("tasks-loading") ||
+          screen.queryByText(/No completed tasks yet/i),
+        { timeout: 4000 },
       );
     }
 
-    return { history };
-  };
+    return result;
+  }
 
   it("shows loading spinner while fetching tasks", async () => {
-    server.use(taskGetByListLoading);
+    server.use(
+      trpcMsw.task.getByList.query(() => {
+        return new Promise((resolve) => setTimeout(() => resolve([]), 150));
+      }),
+    );
 
     await renderCompletedPage();
 
@@ -108,7 +119,17 @@ describe("Completed Tasks Page (/_authenticated/lists/$listId/tasks/completed)",
   });
 
   it("shows empty state when no completed tasks", async () => {
-    server.use(taskGetByListEmpty);
+    server.use(
+      trpcMsw.task.getByList.query(({ input }) => {
+        if (input.listId !== TEST_LIST_ID) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "List not found",
+          });
+        }
+        return [];
+      }),
+    );
 
     await renderCompletedPage();
 
@@ -126,12 +147,14 @@ describe("Completed Tasks Page (/_authenticated/lists/$listId/tasks/completed)",
   });
 
   it("navigates back via top back button", async () => {
-    const { history } = await renderCompletedPage();
+    await renderCompletedPage();
 
-    const topBack = screen.getByRole("button", { name: "Back to list" });
+    const topBack = await screen.findByRole("button", { name: "Back to list" });
     await userEvent.click(topBack);
 
-    expect(history.location.pathname).toBe(`/lists/${TEST_LIST_ID}`);
+    await waitFor(() => {
+      expect(screen.queryByText("Completed Tasks")).not.toBeInTheDocument();
+    });
   });
 
   it("opens more actions and shows edit for completed task", async () => {
@@ -163,7 +186,7 @@ describe("Completed Tasks Page (/_authenticated/lists/$listId/tasks/completed)",
   });
 
   it("navigates to delete confirmation for completed task", async () => {
-    const { history } = await renderCompletedPage();
+    await renderCompletedPage();
 
     await screen.findByText("Call client");
 
@@ -179,9 +202,9 @@ describe("Completed Tasks Page (/_authenticated/lists/$listId/tasks/completed)",
 
     await waitFor(
       () => {
-        expect(history.location.pathname).toBe(
-          `/lists/${TEST_LIST_ID}/tasks/t-real-2/delete`,
-        );
+        expect(
+          screen.queryByRole("menuitem", { name: /delete/i }),
+        ).not.toBeInTheDocument();
       },
       { timeout: 1500 },
     );

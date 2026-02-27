@@ -9,15 +9,10 @@ import {
   afterEach,
   afterAll,
 } from "vitest";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { server } from "../../../../__mocks__/server";
-import { trpcMsw } from "../../../../__mocks__/trpcMsw";
-import { TRPCError } from "@trpc/server";
-
-import { renderWithTrpcRouter } from "../../../utils/test-helpers";
-
 import {
   listCreateHandler,
   delayedListCreateHandler,
@@ -25,54 +20,60 @@ import {
   getMockLists,
   listGetAllHandler,
 } from "../../../../__mocks__/handlers/lists";
-import { routeTree } from "@/routeTree.gen";
-import { useAuthStore } from "@/store/authStore";
+
+import { renderWithProviders } from "../../../utils/test-helpers";
+import { useAuthStore } from "@/shared/store/authStore";
 import { suppressActWarnings } from "../../../act-suppress";
+import { trpcMsw } from "../../../../__mocks__/trpcMsw";
+import { TRPCError } from "@trpc/server";
 
 suppressActWarnings();
 
 describe("Create New List Page (/_authenticated/lists/new)", () => {
-  beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+  beforeAll(() => server.listen({ onUnhandledRequest: "warn" }));
 
   beforeEach(() => {
+    server.resetHandlers();
+    resetMockLists();
+    server.use(listGetAllHandler);
+    server.use(listCreateHandler);
+
     useAuthStore.setState({
       isLoggedIn: true,
       userId: "test-user-123",
       accessToken: "mock-token",
       refreshToken: "mock-refresh",
     });
-
-    server.resetHandlers();
-    resetMockLists();
-
-    server.use(listGetAllHandler);
-    server.use(listCreateHandler);
   });
 
   afterEach(() => {
     server.resetHandlers();
-    useAuthStore.setState({
-      isLoggedIn: false,
-      userId: null,
-      accessToken: null,
-      refreshToken: null,
-    });
+    useAuthStore.getState().logout?.();
   });
 
   afterAll(() => server.close());
 
-  async function renderNewListPage(initialPath = "/lists/new") {
-    const result = renderWithTrpcRouter({
-      initialPath,
-      routeTree,
-    });
+  function renderNewListPage() {
+    return renderWithProviders({ initialEntries: ["/lists/new"] });
+  }
 
-    await screen.findByText("Create New List", {}, { timeout: 5000 });
-
-    return result;
+  async function waitForFormReady() {
+    await waitFor(
+      () => {
+        expect(
+          screen.getByRole("heading", { name: /Create New List/i }),
+        ).toBeInTheDocument();
+        expect(screen.getByLabelText(/List name/i)).toBeInTheDocument();
+        expect(screen.getByTestId("create-button")).toBeInTheDocument();
+        expect(screen.getByTestId("cancel-button")).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
   }
 
   async function fillForm(title: string, description = "") {
+    await waitForFormReady();
+
     const titleInput = await screen.findByLabelText(/List name/i);
     await userEvent.clear(titleInput);
     await userEvent.type(titleInput, title);
@@ -84,30 +85,30 @@ describe("Create New List Page (/_authenticated/lists/new)", () => {
     }
   }
 
-  async function getCreateButton() {
-    return await screen.findByRole("button", { name: /^Create List$/i });
-  }
-
   it("renders title, inputs and buttons", async () => {
-    await renderNewListPage();
+    renderNewListPage();
+    await waitForFormReady();
 
-    await screen.findByLabelText(/List name/i);
-    await screen.findByPlaceholderText("Work, Groceries, Ideas...");
+    expect(screen.getByLabelText(/List name/i)).toHaveAttribute(
+      "placeholder",
+      "Work, Groceries, Ideas...",
+    );
+    expect(
+      screen.getByLabelText(/Description \(optional\)/i),
+    ).toBeInTheDocument();
 
-    await screen.findByLabelText(/Description \(optional\)/i);
-
-    await screen.findByRole("button", { name: "Cancel" });
-    await screen.findByRole("button", { name: "Cancel and return to lists" });
-    await getCreateButton();
+    expect(screen.getByTestId("cancel-button")).toBeInTheDocument();
+    expect(screen.getByTestId("create-button")).toBeInTheDocument();
   });
 
   it("disables Create button when title is empty or whitespace only", async () => {
-    await renderNewListPage();
+    renderNewListPage();
+    await waitForFormReady();
 
-    const createBtn = await getCreateButton();
+    const createBtn = screen.getByTestId("create-button");
     expect(createBtn).toBeDisabled();
 
-    const titleInput = await screen.findByLabelText(/List name/i);
+    const titleInput = screen.getByLabelText(/List name/i);
 
     await userEvent.type(titleInput, "   ");
     expect(createBtn).toBeDisabled();
@@ -120,29 +121,41 @@ describe("Create New List Page (/_authenticated/lists/new)", () => {
   it("shows loading state during creation", async () => {
     server.use(delayedListCreateHandler);
 
-    await renderNewListPage();
+    const { router } = renderNewListPage();
+    await waitForFormReady();
 
     await fillForm("Weekend Plans");
-    const form = await screen.findByTestId("create-list-form");
+
+    const form = screen.getByTestId("create-list-form");
     fireEvent.submit(form);
 
     await screen.findByText("Creating...");
-    expect(
-      await screen.findByRole("button", { name: "Cancel" }),
-    ).toBeDisabled();
+
+    expect(screen.getByTestId("create-button")).toBeDisabled();
+    expect(screen.getByTestId("create-button")).toHaveTextContent(
+      "Creating...",
+    );
+    expect(screen.getByTestId("cancel-button")).toBeDisabled();
+
+    expect(router.state.location.pathname).toBe("/lists/new");
   });
 
   it("creates list, optimistically updates, and navigates on success", async () => {
     const initialCount = getMockLists().length;
-    const { history } = await renderNewListPage();
+    const { router } = renderNewListPage();
+    await waitForFormReady();
 
     await fillForm("Travel Bucket List", "Places I want to visit");
-    const form = await screen.findByTestId("create-list-form");
+
+    const form = screen.getByTestId("create-list-form");
     fireEvent.submit(form);
 
-    await waitFor(() => expect(history.location.pathname).toBe("/lists"), {
-      timeout: 4000,
-    });
+    await waitFor(
+      () => {
+        expect(router.state.location.pathname).toBe("/lists");
+      },
+      { timeout: 3000 },
+    );
 
     expect(getMockLists().length).toBeGreaterThan(initialCount);
     expect(getMockLists().some((l) => l.title === "Travel Bucket List")).toBe(
@@ -161,26 +174,33 @@ describe("Create New List Page (/_authenticated/lists/new)", () => {
     );
 
     const initialCount = getMockLists().length;
-    await renderNewListPage();
+    renderNewListPage();
+    await waitForFormReady();
 
     await fillForm("Bad List");
-    const form = await screen.findByTestId("create-list-form");
+
+    const form = screen.getByTestId("create-list-form");
     fireEvent.submit(form);
 
-    await waitFor(() => expect(getMockLists()).toHaveLength(initialCount), {
-      timeout: 4000,
-    });
+    await waitFor(
+      () => {
+        expect(getMockLists()).toHaveLength(initialCount);
+      },
+      { timeout: 3000 },
+    );
   });
 
-  it("navigates back to /lists on Cancel text button click", async () => {
-    const { history } = await renderNewListPage();
+  it("navigates back to /lists on Cancel button click", async () => {
+    const { router } = renderNewListPage();
+    await waitForFormReady();
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Cancel" }),
+    await userEvent.click(screen.getByTestId("cancel-button"));
+
+    await waitFor(
+      () => {
+        expect(router.state.location.pathname).toBe("/lists");
+      },
+      { timeout: 2000 },
     );
-
-    await waitFor(() => expect(history.location.pathname).toBe("/lists"), {
-      timeout: 2000,
-    });
   });
 });

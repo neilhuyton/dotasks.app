@@ -1,9 +1,13 @@
 // src/hooks/useLists.ts
 
 import { useState } from "react";
-import { trpc } from "@/trpc";
-import { keepPreviousData } from "@tanstack/react-query";
-import { useBannerStore } from "@/store/bannerStore";
+import {
+  useSuspenseQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useTRPC } from "@/trpc";
+import { useBannerStore } from "@/shared/store/bannerStore";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/../server/trpc";
 
@@ -11,66 +15,70 @@ type RouterOutput = inferRouterOutputs<AppRouter>;
 export type List = RouterOutput["list"]["getAll"][number];
 
 export function useLists() {
-  const utils = trpc.useUtils();
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
   const { show: showBanner } = useBannerStore();
 
-  const {
-    data: lists = [],
-    isLoading,
-    isFetching,
-  } = trpc.list.getAll.useQuery(undefined, {
-    staleTime: 1000 * 60 * 30,
-    gcTime: 1000 * 60 * 60 * 24,
-    placeholderData: keepPreviousData,
-  });
+  const listsQueryKey = trpc.list.getAll.queryKey();
+
+  const { data: lists = [] } = useSuspenseQuery(
+    trpc.list.getAll.queryOptions(undefined, {
+      staleTime: 1000 * 60 * 30,
+      gcTime: 1000 * 60 * 60 * 24,
+    }),
+  );
 
   const [pendingReorder, setPendingReorder] = useState<List[] | null>(null);
   const displayedLists = pendingReorder ?? lists;
 
-  const reorderMutation = trpc.list.reorder.useMutation({
-    onMutate: async (updates: { id: string; order: number }[]) => {
-      await utils.list.getAll.cancel();
-      const previous = utils.list.getAll.getData() ?? [];
+  const reorderMutation = useMutation(
+    trpc.list.reorder.mutationOptions({
+      onMutate: async (updates: { id: string; order: number }[]) => {
+        await queryClient.cancelQueries({ queryKey: listsQueryKey });
 
-      const newLists = previous.map((list) => {
-        const update = updates.find((u) => u.id === list.id);
-        return update ? { ...list, order: update.order } : list;
-      });
+        const previous = queryClient.getQueryData<List[]>(listsQueryKey) ?? [];
 
-      newLists.sort((a, b) => a.order - b.order);
+        const newLists = previous.map((list) => {
+          const update = updates.find((u) => u.id === list.id);
+          return update ? { ...list, order: update.order } : list;
+        });
 
-      setPendingReorder(newLists);
-      utils.list.getAll.setData(undefined, newLists);
+        newLists.sort((a, b) => a.order - b.order);
 
-      return { previous };
-    },
+        setPendingReorder(newLists);
+        queryClient.setQueryData(listsQueryKey, newLists);
 
-    onSuccess: () => {
-      showBanner({
-        message: "Lists reordered",
-        variant: "success",
-        duration: 2000,
-      });
-    },
+        return { previous };
+      },
 
-    onError: (_, __, context) => {
-      utils.list.getAll.setData(undefined, context?.previous);
-      showBanner({
-        message: "Failed to reorder lists",
-        variant: "error",
-        duration: 4000,
-      });
-    },
+      onSuccess: () => {
+        showBanner({
+          message: "Lists reordered",
+          variant: "success",
+          duration: 2000,
+        });
+      },
 
-    onSettled: () => {
-      setPendingReorder(null);
-      utils.list.getAll.invalidate();
-    },
-  });
+      onError: (_, __, context) => {
+        if (context?.previous) {
+          queryClient.setQueryData(listsQueryKey, context.previous);
+        }
+        showBanner({
+          message: "Failed to reorder lists",
+          variant: "error",
+          duration: 4000,
+        });
+      },
+
+      onSettled: () => {
+        setPendingReorder(null);
+        queryClient.invalidateQueries({ queryKey: listsQueryKey });
+      },
+    }),
+  );
 
   return {
     lists: displayedLists,
-    isLoadingLists: isLoading || (isFetching && displayedLists.length === 0),
     updateListOrder: reorderMutation.mutate,
     isReordering: reorderMutation.isPending,
   };

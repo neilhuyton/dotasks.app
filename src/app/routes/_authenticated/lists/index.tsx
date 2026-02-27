@@ -1,0 +1,122 @@
+// src/app/routes/_authenticated/lists/index.tsx
+
+import { Outlet, createFileRoute } from "@tanstack/react-router";
+import { useLists } from "@/hooks/useLists";
+
+import { SortableListsTable } from "@/features/lists/components/SortableListsTable";
+import { PageContainer } from "@/app/components/PageContainer";
+import { FabButton } from "@/app/components/FabButton";
+import { useAuthStore } from "@/shared/store/authStore";
+import { trpc } from "@/trpc";
+
+export const Route = createFileRoute("/_authenticated/lists/")({
+  loader: async ({ context: { queryClient } }) => {
+    const { accessToken } = useAuthStore.getState();
+    if (!accessToken) return {};
+
+    await queryClient.ensureQueryData(
+      trpc.list.getAll.queryOptions(undefined, {
+        staleTime: 30_000,
+      }),
+    );
+
+    return {};
+  },
+
+  pendingComponent: () => (
+    <PageContainer className="relative pb-20 md:pb-24">
+      <div className="space-y-6 sm:space-y-8">
+        <div className="flex items-center justify-between">
+          <div className="h-9 w-64 animate-pulse rounded bg-muted" />
+          <div className="h-6 w-24 animate-pulse rounded bg-muted" />
+        </div>
+
+        <div className="space-y-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-32 animate-pulse rounded-xl bg-muted/70"
+            />
+          ))}
+        </div>
+      </div>
+    </PageContainer>
+  ),
+
+  pendingMs: 0, // Show pending immediately on suspense (no delay)
+  pendingMinMs: 400, // Hold pending UI at least 400ms to avoid flicker on fast loads
+
+  errorComponent: ({ error }) => (
+    <PageContainer className="min-h-[60vh] flex items-center justify-center">
+      <div className="text-center text-muted-foreground">
+        <p className="text-lg font-medium">Failed to load your lists</p>
+        <p className="mt-2">
+          {error?.message || "Something went wrong. Please try again later."}
+        </p>
+      </div>
+    </PageContainer>
+  ),
+
+  component: ListsPage,
+});
+
+function ListsPage() {
+  const { lists = [], updateListOrder, isReordering } = useLists();
+
+  const listCount = lists.length;
+
+  if (listCount === 0) {
+    return (
+      <PageContainer className="relative pb-20 md:pb-24">
+        <div className="flex min-h-[50vh] flex-col items-center justify-center gap-6 text-center">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              Your Lists
+            </h1>
+            <p className="mt-3 text-muted-foreground">
+              You don't have any lists yet.
+            </p>
+          </div>
+
+          <FabButton
+            to="/lists/new"
+            label="Create your first list"
+            testId="fab-add-list"
+            size="lg"
+          />
+        </div>
+
+        <Outlet />
+      </PageContainer>
+    );
+  }
+
+  return (
+    <PageContainer className="relative pb-20 md:pb-24">
+      <div className="space-y-6 sm:space-y-8">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            Your Lists
+          </h1>
+          <div className="text-sm font-medium text-muted-foreground">
+            {listCount} {listCount === 1 ? "list" : "lists"}
+          </div>
+        </div>
+
+        <SortableListsTable
+          lists={lists}
+          updateListOrder={updateListOrder}
+          isReordering={isReordering}
+        />
+      </div>
+
+      <FabButton
+        to="/lists/new"
+        label="Create new list"
+        testId="fab-add-list"
+      />
+
+      <Outlet />
+    </PageContainer>
+  );
+}

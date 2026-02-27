@@ -290,6 +290,13 @@ export const delayedTaskUpdateHandler = trpcMsw.task.update.mutation(
   },
 );
 
+export const taskUpdateAlwaysFails = trpcMsw.task.update.mutation(() => {
+  throw new TRPCError({
+    code: "INTERNAL_SERVER_ERROR",
+    message: "Mock: update failed",
+  });
+});
+
 // ────────────────────────────────────────────────
 // DELETE handlers
 // ────────────────────────────────────────────────

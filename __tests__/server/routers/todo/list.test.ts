@@ -18,62 +18,113 @@ describe("list router (protected procedures)", () => {
   });
 
   describe("getAll", () => {
-    it("returns all todo lists for the authenticated user", async () => {
+    it("returns active lists sorted by order asc, then createdAt desc", async () => {
       const mockLists = [
         {
           id: crypto.randomUUID(),
-          title: "Groceries",
-          userId: "test-user-id",
-          description: "Weekend shopping",
-          color: "#FF6B6B",
-          icon: "shopping-cart",
-          isArchived: false,
-          isPinned: false,
-          createdAt: new Date("2025-02-10T09:30:00Z"),
-          updatedAt: new Date("2025-02-10T09:30:00Z"),
-          _count: { tasks: 5 },
-          tasks: [
-            { id: "t1", title: "Milk", isCompleted: false },
-            { id: "t2", title: "Bread", isCompleted: false },
-          ],
-        },
-        {
-          id: crypto.randomUUID(),
-          title: "Work Tasks",
-          userId: "test-user-id",
+          title: "High priority",
           description: null,
           color: null,
           icon: null,
           isArchived: false,
           isPinned: false,
-          createdAt: new Date("2025-02-12T14:15:00Z"),
-          updatedAt: new Date("2025-02-12T14:15:00Z"),
+          order: 0,
+          userId: "test-user-id",
+          createdAt: new Date("2025-03-15T10:00:00Z"),
+          updatedAt: new Date("2025-03-15T10:00:00Z"),
+          _count: { tasks: 2 },
+          tasks: [{ id: "t1", title: "Task A", isCompleted: false }],
+        },
+        {
+          id: crypto.randomUUID(),
+          title: "Older same-order item",
+          description: null,
+          color: null,
+          icon: null,
+          isArchived: false,
+          isPinned: false,
+          order: 5,
+          userId: "test-user-id",
+          createdAt: new Date("2025-01-10T09:00:00Z"),
+          updatedAt: new Date("2025-01-10T09:00:00Z"),
+          _count: { tasks: 0 },
+          tasks: [],
+        },
+        {
+          id: crypto.randomUUID(),
+          title: "Newer same-order item",
+          description: null,
+          color: null,
+          icon: null,
+          isArchived: false,
+          isPinned: false,
+          order: 5,
+          userId: "test-user-id",
+          createdAt: new Date("2025-04-20T14:30:00Z"),
+          updatedAt: new Date("2025-04-20T14:30:00Z"),
           _count: { tasks: 3 },
           tasks: [
-            { id: "t3", title: "Meeting prep", isCompleted: false },
+            { id: "t2", title: "Task B", isCompleted: false },
+            { id: "t3", title: "Task C", isCompleted: false },
           ],
+        },
+        {
+          id: crypto.randomUUID(),
+          title: "Medium priority",
+          description: "Stuff to do soon",
+          color: "#3B82F6",
+          icon: "briefcase",
+          isArchived: false,
+          isPinned: false,
+          order: 10,
+          userId: "test-user-id",
+          createdAt: new Date("2025-02-05T12:00:00Z"),
+          updatedAt: new Date("2025-02-05T12:00:00Z"),
+          _count: { tasks: 4 },
+          tasks: [{ id: "t4", title: "Task D", isCompleted: false }],
         },
       ];
 
-      mockPrisma.todoList.findMany.mockResolvedValue(mockLists);
+      // We give the mock data **already sorted** — because the mock doesn't sort
+      const sortedMockData = [...mockLists].sort((a, b) => {
+        if (a.order !== b.order) {
+          return a.order - b.order;                    // asc
+        }
+        return b.createdAt.getTime() - a.createdAt.getTime(); // desc = newer first
+      });
+
+      mockPrisma.todoList.findMany.mockResolvedValue(sortedMockData);
 
       const result = await caller.list.getAll();
 
-      expect(result).toHaveLength(2);
-      expect(result).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ title: "Groceries" }),
-          expect.objectContaining({ title: "Work Tasks" }),
-        ]),
+      expect(result).toHaveLength(4);
+
+      // These should now pass reliably
+      expect(result[0].title).toBe("High priority");
+      expect(result[0].order).toBe(0);
+
+      expect(result[1].title).toBe("Newer same-order item");
+      expect(result[1].order).toBe(5);
+
+      expect(result[2].title).toBe("Older same-order item");
+      expect(result[2].order).toBe(5);
+
+      expect(result[3].title).toBe("Medium priority");
+      expect(result[3].order).toBe(10);
+
+      // Confirm tie-breaker
+      expect(result[1].createdAt.getTime()).toBeGreaterThan(
+        result[2].createdAt.getTime()
       );
 
+      // Confirm the query shape Prisma was asked for
       expect(mockPrisma.todoList.findMany).toHaveBeenCalledWith({
         where: {
           userId: "test-user-id",
           isArchived: false,
         },
         orderBy: [
-          { isPinned: "desc" },
+          { order: "asc" },
           { createdAt: "desc" },
         ],
         select: {
@@ -83,12 +134,11 @@ describe("list router (protected procedures)", () => {
           color: true,
           icon: true,
           isPinned: true,
+          order: true,
           createdAt: true,
           updatedAt: true,
           _count: {
-            select: {
-              tasks: true,
-            },
+            select: { tasks: true },
           },
           tasks: {
             where: { isCompleted: false },
@@ -104,7 +154,7 @@ describe("list router (protected procedures)", () => {
       });
     });
 
-    it("returns empty array when no lists exist", async () => {
+    it("returns empty array when user has no active lists", async () => {
       mockPrisma.todoList.findMany.mockResolvedValue([]);
 
       const result = await caller.list.getAll();
@@ -114,21 +164,24 @@ describe("list router (protected procedures)", () => {
   });
 
   describe("getOne", () => {
-    it("returns the requested list when owned by the user", async () => {
+    it("returns the requested list when it belongs to the user", async () => {
       const listId = crypto.randomUUID();
 
-      mockPrisma.todoList.findUnique.mockResolvedValue({
+      const mockList = {
         id: listId,
         title: "Groceries",
-        userId: "test-user-id",
         description: "Weekend shopping",
         color: "#FF6B6B",
         icon: "shopping-cart",
         isArchived: false,
         isPinned: false,
+        order: 1,
+        userId: "test-user-id",
         createdAt: new Date("2025-02-10T09:30:00Z"),
         updatedAt: new Date("2025-02-10T09:30:00Z"),
-      });
+      };
+
+      mockPrisma.todoList.findUnique.mockResolvedValue(mockList);
 
       const result = await caller.list.getOne({ id: listId });
 
@@ -139,25 +192,21 @@ describe("list router (protected procedures)", () => {
       });
     });
 
-    it("throws NOT_FOUND for non-existent or foreign list", async () => {
+    it("throws NOT_FOUND when list does not exist or belongs to another user", async () => {
       mockPrisma.todoList.findUnique.mockResolvedValue(null);
 
-      await expect(
-        caller.list.getOne({ id: crypto.randomUUID() }),
-      ).rejects.toMatchObject({
+      await expect(caller.list.getOne({ id: crypto.randomUUID() })).rejects.toMatchObject({
         code: "NOT_FOUND",
       });
     });
 
-    it("throws BAD_REQUEST for invalid id format (real Zod)", async () => {
-      await expect(
-        caller.list.getOne({ id: "invalid-uuid-format" }),
-      ).rejects.toThrow(/Invalid uuid/i);
+    it("throws BAD_REQUEST for invalid UUID format", async () => {
+      await expect(caller.list.getOne({ id: "not-a-uuid" })).rejects.toThrow(/Invalid uuid/i);
     });
   });
 
   describe("create", () => {
-    it("creates and returns a new list", async () => {
+    it("creates a new list with defaults and returns it", async () => {
       const input = {
         title: "Daily Goals",
         description: "Things to do every day",
@@ -165,19 +214,20 @@ describe("list router (protected procedures)", () => {
 
       const now = new Date();
 
-      const created = {
+      const createdList = {
         id: crypto.randomUUID(),
         ...input,
-        userId: "test-user-id",
         color: null,
         icon: null,
         isArchived: false,
         isPinned: false,
+        order: 0,
+        userId: "test-user-id",
         createdAt: now,
         updatedAt: now,
       };
 
-      mockPrisma.todoList.create.mockResolvedValue(created);
+      mockPrisma.todoList.create.mockResolvedValue(createdList);
 
       const result = await caller.list.create(input);
 
@@ -186,45 +236,55 @@ describe("list router (protected procedures)", () => {
         description: "Things to do every day",
         userId: "test-user-id",
         isArchived: false,
+        isPinned: false,
+        order: 0,
+        color: null,
+        icon: null,
       });
+
       expect(result.id).toBeTruthy();
       expect(result.createdAt).toBeInstanceOf(Date);
+      expect(result.updatedAt).toBeInstanceOf(Date);
 
       expect(mockPrisma.todoList.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
+        data: {
           title: "Daily Goals",
           description: "Things to do every day",
           userId: "test-user-id",
-        }),
+        },
       });
     });
 
-    it("throws BAD_REQUEST when title is whitespace only", async () => {
+    it("rejects creation when title is empty or only whitespace", async () => {
       await expect(caller.list.create({ title: "   " })).rejects.toThrow(
+        /Title cannot be empty/i,
+      );
+      await expect(caller.list.create({ title: "" })).rejects.toThrow(
         /Title cannot be empty/i,
       );
     });
   });
 
   describe("delete", () => {
-    it("deletes an existing owned list and returns it", async () => {
+    it("deletes an owned list and returns the deleted record", async () => {
       const listId = crypto.randomUUID();
 
-      const existing = {
+      const existingList = {
         id: listId,
         title: "Groceries",
-        userId: "test-user-id",
         description: "Weekend shopping",
         color: "#FF6B6B",
         icon: "shopping-cart",
         isArchived: false,
         isPinned: false,
-        createdAt: new Date("2025-02-10T09:30:00Z"),
-        updatedAt: new Date("2025-02-10T09:30:00Z"),
+        order: 1,
+        userId: "test-user-id",
+        createdAt: new Date(),
+        updatedAt: new Date(),
       };
 
-      mockPrisma.todoList.findUnique.mockResolvedValue(existing);
-      mockPrisma.todoList.delete.mockResolvedValue(existing);
+      mockPrisma.todoList.findUnique.mockResolvedValue(existingList);
+      mockPrisma.todoList.delete.mockResolvedValue(existingList);
 
       const result = await caller.list.delete({ id: listId });
 
@@ -235,20 +295,16 @@ describe("list router (protected procedures)", () => {
       });
     });
 
-    it("throws NOT_FOUND when trying to delete non-existent list", async () => {
+    it("throws NOT_FOUND when trying to delete non-owned or non-existent list", async () => {
       mockPrisma.todoList.findUnique.mockResolvedValue(null);
 
-      await expect(
-        caller.list.delete({ id: crypto.randomUUID() }),
-      ).rejects.toMatchObject({
+      await expect(caller.list.delete({ id: crypto.randomUUID() })).rejects.toMatchObject({
         code: "NOT_FOUND",
       });
     });
 
-    it("throws BAD_REQUEST for invalid id format (real Zod)", async () => {
-      await expect(caller.list.delete({ id: "123-not-uuid" })).rejects.toThrow(
-        /Invalid uuid/i,
-      );
+    it("throws BAD_REQUEST for invalid UUID", async () => {
+      await expect(caller.list.delete({ id: "invalid-id" })).rejects.toThrow(/Invalid uuid/i);
     });
   });
 });

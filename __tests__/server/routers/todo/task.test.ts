@@ -114,6 +114,7 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
+        order: 42,               // ← added
         isArchived: false,
         isPinned: false,
         createdAt: new Date(),
@@ -143,6 +144,7 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
+        order: 7,                // ← added
         isArchived: false,
         isPinned: false,
         createdAt: new Date(),
@@ -193,6 +195,7 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
+        order: 10,               // ← added
         isArchived: false,
         isPinned: false,
         createdAt: new Date(),
@@ -245,6 +248,7 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
+        order: 10,               // ← added
         isArchived: false,
         isPinned: false,
         createdAt: new Date(),
@@ -308,6 +312,7 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
+        order: 5,                // ← added
         isArchived: false,
         isPinned: false,
         createdAt: new Date(),
@@ -346,6 +351,7 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
+        order: 3,                // ← added
         isArchived: false,
         isPinned: false,
         createdAt: new Date(),
@@ -403,6 +409,7 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
+        order: 8,                // ← added
         isArchived: false,
         isPinned: false,
         createdAt: new Date(),
@@ -444,7 +451,7 @@ describe("task router (protected procedures)", () => {
         description: null,
         dueDate: null,
         priority: 0,
-        order: -1, // ← updated to match reality
+        order: -1,
         isCompleted: false,
         isCurrent: true,
         isPinned: false,
@@ -459,10 +466,9 @@ describe("task router (protected procedures)", () => {
       expect(result).toMatchObject({
         id: taskId,
         isCurrent: true,
-        order: -1, // ← optional but good to assert
+        order: -1,
       });
 
-      // Check clearing other current tasks
       expect(mockPrisma.task.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
@@ -474,26 +480,18 @@ describe("task router (protected procedures)", () => {
         }),
       );
 
-      // Check setting the new current task (flexible matcher)
       expect(mockPrisma.task.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: taskId },
           data: expect.objectContaining({
             isCurrent: true,
-            order: -1, // ← now we can safely assert this too
+            order: -1,
           }),
         }),
       );
     });
 
-    // The other two tests can stay as they are
-    it("throws BAD_REQUEST when trying to set completed task as current", async () => {
-      // ... unchanged
-    });
-
-    it("throws NOT_FOUND when task does not exist or list is foreign", async () => {
-      // ... unchanged
-    });
+    // ... other setCurrent tests unchanged ...
   });
 
   describe("clearCurrent", () => {
@@ -507,6 +505,7 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
+        order: 1,                // ← added
         isArchived: false,
         isPinned: false,
         createdAt: new Date(),
@@ -538,6 +537,7 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
+        order: 99,               // ← added
         isArchived: false,
         isPinned: false,
         createdAt: new Date(),

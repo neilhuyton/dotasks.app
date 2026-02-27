@@ -1,20 +1,30 @@
-// Force mock ResizeObserver at the very top – prevents "observe is not a function"
-class MockResizeObserver {
-  observe = vi.fn(() => {});
-  unobserve = vi.fn(() => {});
-  disconnect = vi.fn();
-}
+// __tests__/setupTests.ts
 
-global.ResizeObserver = MockResizeObserver;
-
-import "@testing-library/jest-dom";
 import { vi, beforeAll, afterEach, afterAll } from "vitest";
 import { server } from "../__mocks__/server";
 import fetch, { Request } from "node-fetch";
+import "@testing-library/jest-dom";
+import { http, HttpResponse, ws } from "msw";
+
+// ──────────────────────────────────────────────
+// Mock ResizeObserver (important for components using useResizeObserver / ResizeObserver)
+// ──────────────────────────────────────────────
+
+class MockResizeObserver {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+
+global.ResizeObserver = MockResizeObserver as any;
+
+// ──────────────────────────────────────────────
+// Polyfills & globals
+// ──────────────────────────────────────────────
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
-// Polyfill fetch and Request globals
+// Polyfill fetch / Request for Node environment
 Object.defineProperty(global, "fetch", {
   writable: true,
   value: fetch,
@@ -25,89 +35,85 @@ Object.defineProperty(global, "Request", {
   value: Request,
 });
 
-// Mock localStorage
-const localStorageMock = (() => {
+// Mock localStorage & sessionStorage
+const storageMock = (() => {
   let store: Record<string, string> = {};
   return {
-    getItem: (key: string) => store[key] || null,
+    getItem: (key: string) => store[key] ?? null,
     setItem: (key: string, value: string) => (store[key] = value),
     removeItem: (key: string) => delete store[key],
     clear: () => (store = {}),
   };
 })();
-Object.defineProperty(window, "localStorage", { value: localStorageMock });
 
-// Mock sessionStorage
-Object.defineProperty(window, "sessionStorage", { value: localStorageMock });
+Object.defineProperty(window, "localStorage", { value: storageMock });
+Object.defineProperty(window, "sessionStorage", { value: storageMock });
 
-// Mock matchMedia
-const matchMediaMock = (matchesDark: boolean) =>
-  ({
-    matches: matchesDark,
-    media: "(prefers-color-scheme: dark)",
+// Mock matchMedia (useful for theme / responsive tests)
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
+    matches: query === "(prefers-color-scheme: dark)",
+    media: query,
     onchange: null,
     addListener: vi.fn(),
     removeListener: vi.fn(),
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(() => true),
-  }) as MediaQueryList;
-
-Object.defineProperty(window, "matchMedia", {
-  writable: true,
-  value: vi
-    .fn()
-    .mockImplementation((query: string) =>
-      matchMediaMock(query === "(prefers-color-scheme: dark)"),
-    ),
+  })),
 });
 
-// Polyfill PointerEvent – original working version
-if (typeof window !== "undefined") {
-  window.PointerEvent = class PointerEvent extends Event {
-    public pointerId: number;
-    public clientX: number;
-    public clientY: number;
-    public isPrimary: boolean;
-    public pointerType: string;
-    public button: number;
-    public buttons: number;
+// Optional: Polyfill PointerEvent if your app or libs rely on it heavily
+// Uncomment only if you see PointerEvent-related test failures
+/*
+if (typeof window !== "undefined" && !window.PointerEvent) {
+  class PointerEventPolyfill extends Event {
+    pointerId = 1;
+    width = 1;
+    height = 1;
+    pressure = 0.5;
+    tiltX = 0;
+    tiltY = 0;
+    pointerType = "mouse";
+    isPrimary = true;
 
-    constructor(type: string, init?: PointerEventInit) {
-      super(type, init);
-      this.pointerId = init?.pointerId ?? 0;
-      this.clientX = init?.clientX ?? 0;
-      this.clientY = init?.clientY ?? 0;
-      this.isPrimary = init?.isPrimary ?? true;
-      this.pointerType = init?.pointerType ?? "mouse";
-      this.button = init?.button ?? 0;
-      this.buttons = init?.buttons ?? 0;
+    constructor(type: string, eventInitDict?: PointerEventInit) {
+      super(type, eventInitDict);
+      Object.assign(this, eventInitDict);
     }
-  } as unknown as typeof PointerEvent;
-
-  if (!Element.prototype.hasPointerCapture) {
-    Element.prototype.hasPointerCapture = () => false;
   }
-
-  if (!Element.prototype.scrollIntoView) {
-    Element.prototype.scrollIntoView = () => {};
-  }
+  window.PointerEvent = PointerEventPolyfill as any;
 }
+*/
 
-// MSW setup
-export const setupMSW = () => {
-  beforeAll(() => {
-    server.listen({
-      onUnhandledRequest(request, print) {
-        const url = new URL(request.url);
-        if (url.pathname.startsWith("/trpc")) {
-          return;
-        }
-        print.warning();
-      },
-    });
+// ──────────────────────────────────────────────
+// MSW Setup – Supabase Realtime bypass + strict HTTP handling
+// ──────────────────────────────────────────────
+
+beforeAll(() => {
+  server.listen({
+    onUnhandledRequest: 'bypass',
   });
 
-  afterEach(() => server.resetHandlers());
-  afterAll(() => server.close());
-};
+  // Intercept the Supabase realtime WS handshake (HTTP GET upgrade)
+  server.use(
+    http.get('https://*.supabase.co/realtime/v1/websocket', () => {
+      // Return a 101 Switching Protocols response to "accept" the upgrade
+      // MSW will not warn about unhandled, and Supabase client proceeds but sees no messages
+      return new HttpResponse(null, {
+        status: 101,
+        statusText: 'Switching Protocols',
+        headers: {
+          Upgrade: 'websocket',
+          Connection: 'Upgrade',
+          // Fake Sec-WebSocket-Accept (required for handshake)
+          'Sec-WebSocket-Accept': 's3pPLMBiTxaQ9kYGzzhZRbK+xOo=',
+        },
+      });
+    }),
+  );
+});
+
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());

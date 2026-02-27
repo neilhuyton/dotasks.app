@@ -11,7 +11,6 @@ const ALLOWED_ORIGIN = process.env.VITE_APP_URL || 'http://localhost:8888';
 export default async function handler(req: Request): Promise<Response> {
   const url = new URL(req.url);
 
-  // If your local/dev setup still sees /.netlify/functions/trpc prefix (uncommon now, but safe to keep)
   // Remove or comment out if requests arrive at /trpc directly
   const pathname = url.pathname.replace(/^\/.netlify\/functions\/trpc/, '/trpc');
 

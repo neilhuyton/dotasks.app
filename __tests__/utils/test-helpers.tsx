@@ -1,120 +1,86 @@
 // __tests__/utils/test-helpers.tsx
 
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, type RenderResult } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { httpLink } from "@trpc/client";
-import { trpc } from "@/trpc"; // adjust path if needed
 import {
   RouterProvider,
   createMemoryHistory,
   createRouter,
+  type Router,
 } from "@tanstack/react-router";
-import { fireEvent } from "@testing-library/react";
+import { router as appRouter, type RouterContext } from "@/router";
+import { trpcClient, TRPCProvider } from "@/trpc";
+import type { QueryClient as QCType } from "@tanstack/react-query";
 
 // ────────────────────────────────────────────────
-// Render wrapper
+// Create a fresh QueryClient for tests (no retries, no stale time)
 // ────────────────────────────────────────────────
-
-interface RenderOptions {
-  initialPath: string;
-  routeTree: Parameters<typeof createRouter>[0]["routeTree"];
-}
-
-export function renderWithTrpcRouter({
-  initialPath,
-  routeTree,
-}: RenderOptions) {
-  const queryClient = new QueryClient({
+export function createTestQueryClient(): QCType {
+  return new QueryClient({
     defaultOptions: {
-      queries: { retry: false, gcTime: 0, staleTime: 0 },
-      mutations: { retry: false },
+      queries: {
+        retry: false,
+        staleTime: 0,
+        gcTime: 0,
+        refetchOnWindowFocus: false,
+      },
+      mutations: {
+        retry: false,
+      },
     },
   });
+}
 
-  const trpcClient = trpc.createClient({
-    links: [httpLink({ url: "http://localhost:8888/trpc" })],
-  });
+// ────────────────────────────────────────────────
+// Type for the router returned by renderWithProviders
+// ────────────────────────────────────────────────
+type RenderWithProvidersResult = RenderResult & {
+  router: Router<typeof appRouter.routeTree>;
+};
 
-  const history = createMemoryHistory({ initialEntries: [initialPath] });
+/**
+ * Renders the app with full providers (TRPC + QueryClient + Router)
+ * The router will render the component matching the initialEntries path.
+ *
+ * Note: Do NOT pass a custom ui/component here — let the router handle it.
+ *       If you need to test an isolated component, create a separate helper.
+ */
+export function renderWithProviders({
+  initialEntries = ["/"],
+  queryClient = createTestQueryClient(),
+}: {
+  initialEntries?: string[];
+  queryClient?: QueryClient;
+} = {}): RenderWithProvidersResult {
+  const history = createMemoryHistory({ initialEntries });
 
-  const router = createRouter({
-    routeTree,
+  const testRouter = createRouter({
+    routeTree: appRouter.routeTree,
     history,
-    context: { queryClient, trpcClient },
     defaultPreload: "intent",
+    context: { queryClient } satisfies RouterContext,
   });
 
-  render(
-    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+  const wrapped = (
+    <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
+        <RouterProvider router={testRouter} />
       </QueryClientProvider>
-    </trpc.Provider>,
+    </TRPCProvider>
   );
 
-  return { history, router, queryClient, trpcClient };
+  const renderResult = render(wrapped);
+
+  return {
+    ...renderResult,
+    router: testRouter,
+  };
 }
 
-// ────────────────────────────────────────────────
-// Message assertions
-// ────────────────────────────────────────────────
-
-export async function expectSuccessMessage(
-  testId: string,
-  text: string | RegExp,
-  className: string = "text-green-500",
-  timeout: number = 5000,
-): Promise<void> {
-  const message = await waitFor(() => screen.getByTestId(testId), { timeout });
-  expect(message).toBeInTheDocument();
-  expect(message).toHaveTextContent(text);
-  expect(message).toHaveClass(className);
-}
-
-export async function expectErrorMessage(
-  testId: string,
-  text: string | RegExp,
-  className: string = "text-red-500",
-  timeout: number = 5000,
-): Promise<void> {
-  const message = await waitFor(() => screen.getByTestId(testId), { timeout });
-  expect(message).toBeInTheDocument();
-  expect(message).toHaveTextContent(text);
-  expect(message).toHaveClass(className);
-}
-
-// ────────────────────────────────────────────────
-// Form helpers
-// ────────────────────────────────────────────────
-
-interface FillAndSubmitOptions {
-  emailTestId?: string;
-  passwordTestId?: string;
-  formTestId: string;
-  email?: string;
-  password?: string;
-}
-
-export async function fillAndSubmitForm({
-  emailTestId,
-  passwordTestId,
-  formTestId,
-  email = "",
-  password = "",
-}: FillAndSubmitOptions): Promise<void> {
-  if (email && emailTestId) {
-    const input = screen.getByTestId(emailTestId);
-    await userEvent.clear(input);
-    await userEvent.type(input, email);
-  }
-
-  if (password && passwordTestId) {
-    const input = screen.getByTestId(passwordTestId);
-    await userEvent.clear(input);
-    await userEvent.type(input, password);
-  }
-
-  const form = screen.getByTestId(formTestId);
-  fireEvent.submit(form);
+/**
+ * Convenience helper for rendering the VerifyEmail page with a token
+ */
+export function renderVerifyEmail(token: string) {
+  const url = `/verify-email?token=${encodeURIComponent(token)}`;
+  return renderWithProviders({ initialEntries: [url] });
 }

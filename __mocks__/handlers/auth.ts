@@ -18,22 +18,18 @@ interface RefreshInput {
 }
 
 // ────────────────────────────────────────────────
-// Login handler
+// Login handler — now using same simple pattern as register
 // ────────────────────────────────────────────────
 
 export const loginHandler = trpcMsw.login.mutation(async ({ input }) => {
   await delay(50);
 
-  // Handle tRPC batch format safely
-  const parsedInput = Array.isArray(input) && input.length > 0 ? input[0].json : input;
+  // Same safe extraction pattern as your register handler
+  const rawInput = "0" in input ? input["0"] : input;
+  const typedInput = rawInput as Partial<LoginInput> | undefined;
 
-  const email = typeof parsedInput === "object" && parsedInput !== null
-    ? (parsedInput as Partial<LoginInput>).email?.trim().toLowerCase() ?? ""
-    : "";
-
-  const password = typeof parsedInput === "object" && parsedInput !== null
-    ? (parsedInput as Partial<LoginInput>).password ?? ""
-    : "";
+  const email = (typedInput?.email ?? "").trim().toLowerCase();
+  const password = typedInput?.password ?? "";
 
   if (!email || !password) {
     throw new TRPCError({
@@ -70,7 +66,6 @@ export const loginHandler = trpcMsw.login.mutation(async ({ input }) => {
   const accessToken =
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZXN0LXVzZXItMSJ9.dummy-signature";
 
-  // Safe assertion – crypto.randomUUID() always matches UUID format
   const refreshToken = (user.refreshToken ?? crypto.randomUUID()) as `${string}-${string}-${string}-${string}-${string}`;
 
   return {
@@ -85,18 +80,17 @@ export const loginHandler = trpcMsw.login.mutation(async ({ input }) => {
 });
 
 // ────────────────────────────────────────────────
-// Refresh token handler
+// Refresh token handler — same pattern
 // ────────────────────────────────────────────────
 
 export const refreshTokenHandler = trpcMsw.refreshToken.refresh.mutation(async ({ input }) => {
   await delay(30);
 
-  // Handle tRPC batch format safely
-  const parsedInput = Array.isArray(input) && input.length > 0 ? input[0].json : input;
+  // Same safe extraction pattern
+  const rawInput = "0" in input ? input["0"] : input;
+  const typedInput = rawInput as Partial<RefreshInput> | undefined;
 
-  const refreshToken = typeof parsedInput === "object" && parsedInput !== null
-    ? (parsedInput as Partial<RefreshInput>).refreshToken ?? ""
-    : "";
+  const refreshToken = typedInput?.refreshToken ?? "";
 
   if (!refreshToken) {
     throw new TRPCError({
@@ -123,10 +117,8 @@ export const refreshTokenHandler = trpcMsw.refreshToken.refresh.mutation(async (
 
   const newAccessToken = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.refreshed.${user.id}.mock-signature`;
 
-  // Rotate refresh token – safe assertion
   const newRefreshToken = crypto.randomUUID() as `${string}-${string}-${string}-${string}-${string}`;
 
-  // Update in mock store
   user.refreshToken = newRefreshToken;
 
   return {
