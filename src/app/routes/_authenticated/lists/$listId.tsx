@@ -105,7 +105,7 @@ function ListDetail() {
 
   return (
     <>
-      <div className="space-y-6 sm:space-y-8">
+      <div className="space-y-6 sm:space-y-8 pb-18">
         <div className="flex items-center gap-3">
           <Link
             to="/lists"

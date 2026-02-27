@@ -90,10 +90,20 @@ function EditTaskPage() {
 
   useEffect(() => {
     if (task) {
-      form.reset({
-        title: task.title || "",
-        description: task.description ?? "",
-      });
+      form.reset(
+        {
+          title: task.title || "",
+          description: task.description ?? "",
+        },
+        {
+          keepDirty: false,
+          keepErrors: true,
+          keepIsSubmitted: false,
+          keepTouched: false,
+          keepIsValid: false,
+          keepDefaultValues: false,
+        }
+      );
     }
   }, [task, form]);
 
@@ -170,8 +180,6 @@ function EditTaskPage() {
   };
 
   const isPending = updateMutation.isPending || isTasksPending;
-
-  // ─── Early returns AFTER all hooks ───────────────────────────────
 
   if (!listId || !taskId) {
     return (
