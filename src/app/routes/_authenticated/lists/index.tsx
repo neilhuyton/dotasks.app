@@ -1,3 +1,5 @@
+// src/app/routes/_authenticated/lists/index.tsx
+
 import { Outlet, createFileRoute } from "@tanstack/react-router";
 import { useLists } from "@/hooks/useLists";
 

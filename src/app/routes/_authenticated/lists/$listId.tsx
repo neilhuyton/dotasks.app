@@ -1,3 +1,5 @@
+// src/app/routes/_authenticated/lists/$listId.tsx
+
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronLeft, Loader2 } from "lucide-react";
 
