@@ -102,7 +102,7 @@ function ListDetail() {
   }
 
   return (
-    <div className="relative pb-24 md:pb-28">
+    <>
       <div className="space-y-6 sm:space-y-8">
         <div className="flex items-center gap-3">
           <Link
@@ -165,6 +165,6 @@ function ListDetail() {
       />
 
       <Outlet />
-    </div>
+    </>
   );
 }

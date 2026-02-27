@@ -5,16 +5,25 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
     tanstackRouter({
-      routesDirectory: "./src/app/routes", // explicit
-      generatedRouteTree: "./src/types/routeTree.gen.ts", // explicit
-      routeFileIgnorePrefix: "-", // ignore _authenticated etc. if needed, but optional
-      // optional: verbose: true,  // add this to see logs during dev server start
+      routesDirectory: "./src/app/routes",
+      generatedRouteTree: "./src/types/routeTree.gen.ts",
+      routeFileIgnorePrefix: "-",
+    }),
+    sentryVitePlugin({
+      org: "your-org-slug",
+      project: "your-project-slug",
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      release: {
+        name: 'your-app@1.0.0',
+      },
+      sourcemaps: { assets: "./dist/**" },
     }),
   ],
   resolve: {
