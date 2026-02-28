@@ -4,7 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { type QueryClient } from "@tanstack/react-query";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
-import { Textarea } from "@/app/components/ui/textarea";
+// import { Textarea } from "@/app/components/ui/textarea";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -98,7 +98,7 @@ function NewTaskPage() {
   const trpc = useTRPC();
 
   const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  // const [description, setDescription] = useState("");
 
   const tasksQueryKey = trpc.task.getByList.queryKey({ listId });
 
@@ -146,7 +146,7 @@ function NewTaskPage() {
     mutation.mutate({
       title: trimmed,
       listId,
-      description: description.trim() || undefined,
+      // description: description.trim() || undefined,
     });
   };
 
@@ -202,7 +202,7 @@ function NewTaskPage() {
                   />
                 </div>
 
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <label
                     htmlFor="description"
                     className="text-sm font-medium block"
@@ -217,7 +217,7 @@ function NewTaskPage() {
                     rows={5}
                     disabled={isPending}
                   />
-                </div>
+                </div> */}
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 pt-8 justify-center">

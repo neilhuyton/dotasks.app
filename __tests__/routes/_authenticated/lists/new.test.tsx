@@ -71,18 +71,18 @@ describe("Create New List Page (/_authenticated/lists/new)", () => {
     );
   }
 
-  async function fillForm(title: string, description = "") {
+  async function fillForm(title: string, /*description = ""*/) {
     await waitForFormReady();
 
     const titleInput = screen.getByLabelText(/List name/i);
     await userEvent.clear(titleInput);
     await userEvent.type(titleInput, title);
 
-    if (description) {
-      const descInput = screen.getByLabelText(/Description/i);
-      await userEvent.clear(descInput);
-      await userEvent.type(descInput, description);
-    }
+    // if (description) {
+    //   const descInput = screen.getByLabelText(/Description/i);
+    //   await userEvent.clear(descInput);
+    //   await userEvent.type(descInput, description);
+    // }
   }
 
   it("renders title, inputs and buttons", async () => {
@@ -93,9 +93,9 @@ describe("Create New List Page (/_authenticated/lists/new)", () => {
       "placeholder",
       "Work, Groceries, Ideas...",
     );
-    expect(
-      screen.getByLabelText(/Description \(optional\)/i),
-    ).toBeInTheDocument();
+    // expect(
+    //   screen.getByLabelText(/Description \(optional\)/i),
+    // ).toBeInTheDocument();
 
     expect(screen.getByTestId("cancel-button")).toBeInTheDocument();
     expect(screen.getByTestId("create-button")).toBeInTheDocument();
@@ -153,7 +153,7 @@ describe("Create New List Page (/_authenticated/lists/new)", () => {
     const { router } = renderNewListPage();
     await waitForFormReady();
 
-    await fillForm("Travel Bucket List", "Places I want to visit");
+    await fillForm("Travel Bucket List", /*"Places I want to visit"*/);
 
     const form = screen.getByTestId("create-list-form");
     fireEvent.submit(form);

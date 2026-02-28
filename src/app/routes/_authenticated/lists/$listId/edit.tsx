@@ -10,7 +10,7 @@ import { useBannerStore } from "@/shared/store/bannerStore";
 import { useAuthStore } from "@/shared/store/authStore";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
-import { Textarea } from "@/app/components/ui/textarea";
+// import { Textarea } from "@/app/components/ui/textarea";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
@@ -265,7 +265,7 @@ function EditListPage() {
                   )}
                 </div>
 
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <label
                     htmlFor="description"
                     className="text-sm font-medium block"
@@ -285,7 +285,7 @@ function EditListPage() {
                       {form.formState.errors.description.message}
                     </p>
                   )}
-                </div>
+                </div> */}
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 pt-8 justify-center">

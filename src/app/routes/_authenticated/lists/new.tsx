@@ -3,7 +3,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
-import { Textarea } from "@/app/components/ui/textarea";
+// import { Textarea } from "@/app/components/ui/textarea";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -55,7 +55,7 @@ function CreateListPage() {
   const { show: showBanner } = useBannerStore();
 
   const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  // const [description, setDescription] = useState("");
 
   const allListsQueryKey = trpc.list.getAll.queryKey();
 
@@ -115,7 +115,7 @@ function CreateListPage() {
 
     mutation.mutate({
       title: title.trim(),
-      description: description.trim() || undefined,
+      // description: description.trim() || undefined,
     });
   };
 
@@ -180,7 +180,7 @@ function CreateListPage() {
                   />
                 </div>
 
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <label
                     htmlFor="list-desc"
                     className="text-sm font-medium block"
@@ -197,7 +197,7 @@ function CreateListPage() {
                     className="resize-none text-base"
                     autoComplete="off"
                   />
-                </div>
+                </div> */}
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 pt-8 justify-center">
