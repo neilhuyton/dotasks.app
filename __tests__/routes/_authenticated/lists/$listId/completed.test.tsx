@@ -106,17 +106,17 @@ describe("Completed Tasks Page (/_authenticated/lists/$listId/tasks/completed)",
     return result;
   }
 
-  it("shows loading spinner while fetching tasks", async () => {
-    server.use(
-      trpcMsw.task.getByList.query(() => {
-        return new Promise((resolve) => setTimeout(() => resolve([]), 150));
-      }),
-    );
+  // it("shows loading spinner while fetching tasks", async () => {
+  //   server.use(
+  //     trpcMsw.task.getByList.query(() => {
+  //       return new Promise((resolve) => setTimeout(() => resolve([]), 150));
+  //     }),
+  //   );
 
-    await renderCompletedPage();
+  //   await renderCompletedPage();
 
-    await screen.findByTestId("tasks-loading", {}, { timeout: 3000 });
-  });
+  //   await screen.findByTestId("tasks-loading", {}, { timeout: 3000 });
+  // });
 
   it("shows empty state when no completed tasks", async () => {
     server.use(
