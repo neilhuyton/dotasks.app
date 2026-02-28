@@ -58,6 +58,29 @@ export default defineConfig(({ mode }) => {
       },
       include: ["__tests__/**/*.{test,spec}.{ts,tsx}"],
       exclude: ["e2e/**/*", "node_modules", "dist", ".idea", ".git", ".cache"],
+      // ── Coverage settings ────────────────────────────────
+      coverage: {
+        provider: "v8", // ← this is what you just installed
+        reporter: ["text", "json", "html"], // text = console, html = nice report
+        reportsDirectory: "./coverage", // where the report goes
+        exclude: [
+          "node_modules/**",
+          "dist/**",
+          "**/*.d.ts",
+          "**/*.config.*",
+          "**/*.test.*",
+          "**/*.spec.*",
+        ],
+        // Optional but very useful:
+        all: true, // show coverage for untested files too
+        include: ["src/**/*.{ts,tsx}"], // only count source files
+        thresholds: {
+          lines: 80,
+          branches: 70,
+          functions: 75,
+          statements: 80,
+        },
+      },
     },
     build: {
       sourcemap: true,

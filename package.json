@@ -10,6 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:coverage": "vitest --coverage",
+    "test:coverage:ui": "vitest --coverage --ui --open",
     "test:watch": "vitest",
     "test:e2e": "playwright test"
   },
@@ -85,6 +87,8 @@
     "@types/react-dom": "^19.1.7",
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "@vitest/coverage-v8": "^4.0.18",
+    "@vitest/ui": "^4.0.18",
     "cross-fetch": "^4.1.0",
     "eslint": "^9.33.0",
     "eslint-plugin-react-hooks": "^5.2.0",
@@ -99,7 +103,7 @@
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.39.1",
     "vite": "^7.1.2",
-    "vitest": "^3.2.4",
+    "vitest": "^4.0.18",
     "vitest-mock-extended": "^3.1.0"
   }
 }
