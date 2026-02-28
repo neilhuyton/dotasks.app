@@ -81,6 +81,7 @@ jobs:
         env:
           VITE_TRPC_URL: "/trpc"
           VITE_SUPABASE_URL: "https://gmkfhkydrxmgynzhviip.supabase.co"
+          VITE_SUPABASE_ANON_KEY: "sb_publishable_NW3Ya-ox3bZkR8z96Rqw4w_lxGF912R"
 
   # e2e-tests:
   #   name: Run E2E Tests
