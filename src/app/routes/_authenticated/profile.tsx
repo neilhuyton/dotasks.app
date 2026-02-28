@@ -1,11 +1,11 @@
-// src/app/routes/_authenticated/profile.tsx
+// // src/app/routes/_authenticated/profile.tsx
 
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { trpc, useTRPC } from "@/trpc";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTRPC } from "@/trpc";
 import { useBannerStore } from "@/shared/store/bannerStore";
 import { useAuthStore } from "@/shared/store/authStore";
 import { Button } from "@/app/components/ui/button";
@@ -38,18 +38,6 @@ type EmailChangeData = z.infer<typeof emailChangeSchema>;
 type ResetRequestData = z.infer<typeof resetRequestSchema>;
 
 export const Route = createFileRoute("/_authenticated/profile")({
-  loader: async ({ context: { queryClient } }) => {
-    const { accessToken } = useAuthStore.getState();
-
-    if (!accessToken) {
-      return {};
-    }
-
-    await queryClient.ensureQueryData(trpc.user.getCurrent.queryOptions());
-
-    return {};
-  },
-
   component: ProfilePage,
 });
 
@@ -58,39 +46,22 @@ function ProfilePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { show: showBanner } = useBannerStore();
-  const { logout } = useAuthStore();
+  const { logout, user, updateUserEmail } = useAuthStore();
 
   const trpc = useTRPC();
 
   const userQueryKey = trpc.user.getCurrent.queryKey();
 
-  const {
-    data: user,
-    isLoading: isUserLoading,
-    isError: isUserError,
-  } = useQuery(
-    trpc.user.getCurrent.queryOptions(undefined, {
-      staleTime: 5 * 60 * 1000,
-    }),
-  );
-
   const currentEmail = user?.email ?? "";
 
   const updateEmailMutation = useMutation(
     trpc.user.updateEmail.mutationOptions({
-      onMutate: async (input: { email: string }) => {
+      onMutate: async () => {
         await queryClient.cancelQueries({ queryKey: userQueryKey });
-        const prevUser = queryClient.getQueryData(userQueryKey);
-
-        queryClient.setQueryData(userQueryKey, (old: typeof user) =>
-          old ? { ...old, email: input.email } : old,
-        );
-
-        return { prevUser };
+        // No longer optimistic update of query cache since we don't fetch user here
       },
 
-      onError: (_, __, ctx) => {
-        if (ctx?.prevUser) queryClient.setQueryData(userQueryKey, ctx.prevUser);
+      onError: () => {
         showBanner({
           message: "Failed to update email. Please try again.",
           variant: "error",
@@ -98,11 +69,9 @@ function ProfilePage() {
         });
       },
 
-      onSettled: () => {
-        queryClient.invalidateQueries({ queryKey: userQueryKey });
-      },
+      onSuccess: (result, input) => {
+        updateUserEmail(input.email);
 
-      onSuccess: (result) => {
         showBanner({
           message: result.message || "Email updated successfully.",
           variant: "success",
@@ -171,14 +140,15 @@ function ProfilePage() {
         return;
       }
     } catch {
-      // Silently ignore any error from canGoBack() and fall back
+      // empty catch
     }
-
     navigate({ to: "/lists", replace: true });
   };
 
   const isAnyPending =
     updateEmailMutation.isPending || requestResetMutation.isPending;
+
+  const hasUserData = !!user;
 
   return (
     <div
@@ -216,31 +186,24 @@ function ProfilePage() {
             </div>
 
             <div className="space-y-6">
-              {/* Current Email */}
               <div className="space-y-3">
                 <Label className="text-sm font-medium block">
                   Current Email
                 </Label>
-                {isUserLoading ? (
-                  <div
-                    className="h-10 bg-muted animate-pulse rounded-md"
-                    data-testid="email-skeleton"
-                  />
-                ) : isUserError || !user ? (
-                  <div className="text-destructive text-sm">
-                    Failed to load profile
-                  </div>
-                ) : (
+                {hasUserData ? (
                   <div
                     className="p-2 bg-muted/50 rounded-lg border text-base font-medium break-all"
                     data-testid="current-email"
                   >
                     {currentEmail}
                   </div>
+                ) : (
+                  <div className="text-muted-foreground text-sm">
+                    Loading profile information...
+                  </div>
                 )}
               </div>
 
-              {/* Change Email */}
               <form
                 onSubmit={emailForm.handleSubmit(handleEmailSubmit)}
                 className="space-y-2"
@@ -260,7 +223,7 @@ function ProfilePage() {
                       type="email"
                       placeholder="your.new@email.com"
                       className="pl-10"
-                      disabled={isAnyPending}
+                      disabled={isAnyPending || !hasUserData}
                       {...emailForm.register("email")}
                       data-testid="email-input"
                     />
@@ -276,7 +239,11 @@ function ProfilePage() {
                   <Button
                     type="submit"
                     variant="outline"
-                    disabled={isAnyPending || !emailForm.formState.isDirty}
+                    disabled={
+                      isAnyPending ||
+                      !emailForm.formState.isDirty ||
+                      !hasUserData
+                    }
                     className="w-full sm:w-auto px-6"
                     data-testid="email-submit"
                   >
@@ -290,7 +257,6 @@ function ProfilePage() {
                 </div>
               </form>
 
-              {/* Send Password Reset Link */}
               <form
                 onSubmit={resetForm.handleSubmit(handleResetSubmit)}
                 className="space-y-2 pt-8 border-t"
@@ -340,7 +306,6 @@ function ProfilePage() {
                 </div>
               </form>
 
-              {/* Logout */}
               <div className="pt-12 border-t flex justify-center">
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
