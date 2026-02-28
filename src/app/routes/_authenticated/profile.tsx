@@ -23,7 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+} from "@/app/components/ui/alert-dialog";
 
 const emailChangeSchema = z.object({
   email: z.string().email("Invalid email address").trim().toLowerCase(),

@@ -1,5 +1,7 @@
 # DoTasks App
 
+bump
+
 Text
 
 To view keyboard shortcuts, press question mark

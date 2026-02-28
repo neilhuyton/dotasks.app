@@ -1,3 +1,5 @@
+// __tests__/routes/_authenticated/lists/$listId.test.tsx
+
 import {
   describe,
   it,

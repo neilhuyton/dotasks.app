@@ -21,6 +21,9 @@ import {
 } from "../../__mocks__/handlers/resetPasswordConfirm";
 
 import { renderWithProviders } from "../utils/test-helpers";
+import { suppressActWarnings } from "../act-suppress";
+
+suppressActWarnings();
 
 describe("Confirm Reset Password Page", () => {
   beforeAll(() => server.listen({ onUnhandledRequest: "warn" }));

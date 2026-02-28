@@ -4,19 +4,19 @@ import { vi, beforeAll, afterEach, afterAll } from "vitest";
 import { server } from "../__mocks__/server";
 import fetch, { Request } from "node-fetch";
 import "@testing-library/jest-dom";
-import { http, HttpResponse, ws } from "msw";
+import { http, HttpResponse } from "msw";
 
 // ──────────────────────────────────────────────
 // Mock ResizeObserver (important for components using useResizeObserver / ResizeObserver)
 // ──────────────────────────────────────────────
 
-class MockResizeObserver {
+class MockResizeObserver implements ResizeObserver {
   observe = vi.fn();
   unobserve = vi.fn();
   disconnect = vi.fn();
 }
 
-global.ResizeObserver = MockResizeObserver as any;
+global.ResizeObserver = MockResizeObserver;
 
 // ──────────────────────────────────────────────
 // Polyfills & globals
@@ -87,28 +87,50 @@ if (typeof window !== "undefined" && !window.PointerEvent) {
 }
 */
 
+// Mock Supabase realtime globally for all tests
+vi.mock('@/lib/supabase', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/supabase')>();
+
+  return {
+    ...actual,
+    supabase: {
+      ...actual.supabase,
+      channel: vi.fn(() => ({
+        on: vi.fn().mockReturnThis(),
+        subscribe: vi.fn(),
+        unsubscribe: vi.fn(),
+      })),
+      removeChannel: vi.fn(),
+      removeAllChannels: vi.fn(),
+      realtime: {
+        setAuth: vi.fn(),
+      },
+    },
+  };
+});
+
 // ──────────────────────────────────────────────
 // MSW Setup – Supabase Realtime bypass + strict HTTP handling
 // ──────────────────────────────────────────────
 
 beforeAll(() => {
   server.listen({
-    onUnhandledRequest: 'bypass',
+    onUnhandledRequest: "bypass",
   });
 
   // Intercept the Supabase realtime WS handshake (HTTP GET upgrade)
   server.use(
-    http.get('https://*.supabase.co/realtime/v1/websocket', () => {
+    http.get("https://*.supabase.co/realtime/v1/websocket", () => {
       // Return a 101 Switching Protocols response to "accept" the upgrade
       // MSW will not warn about unhandled, and Supabase client proceeds but sees no messages
       return new HttpResponse(null, {
         status: 101,
-        statusText: 'Switching Protocols',
+        statusText: "Switching Protocols",
         headers: {
-          Upgrade: 'websocket',
-          Connection: 'Upgrade',
+          Upgrade: "websocket",
+          Connection: "Upgrade",
           // Fake Sec-WebSocket-Accept (required for handshake)
-          'Sec-WebSocket-Accept': 's3pPLMBiTxaQ9kYGzzhZRbK+xOo=',
+          "Sec-WebSocket-Accept": "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=",
         },
       });
     }),
