@@ -1,4 +1,4 @@
-# DoTasks App
+# Do Tasks App
 
 bump
 
