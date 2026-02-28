@@ -19,12 +19,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { useTRPC } from "@/trpc";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { TRPCClientErrorLike } from "@trpc/client";
 import type { AppRouter } from "server/trpc";
 
 const searchSchema = z.object({
-  token: z.string().min(1, "Token is required"),
+  token: z.string().optional(),
 });
 
 const formSchema = z
@@ -44,28 +44,14 @@ type FormValues = z.infer<typeof formSchema>;
 export const Route = createFileRoute("/confirm-reset-password")({
   validateSearch: searchSchema,
 
-  errorComponent: () => (
-    <div className="min-h-dvh flex flex-col items-center justify-center p-4">
-      <Logo />
-      <div className="w-full max-w-md bg-background rounded-lg p-6 text-center mt-8">
-        <h1 className="text-2xl font-bold mb-4">Invalid or missing token</h1>
-        <p className="text-muted-foreground mb-6">
-          Please request a new password reset link.
-        </p>
-        <Button asChild>
-          <a href="/reset-password">Reset Password</a>
-        </Button>
-      </div>
-    </div>
-  ),
-
   component: ConfirmResetPasswordPage,
 });
 
 function ConfirmResetPasswordPage() {
-  const { token } = Route.useSearch();
-  const navigate = Route.useNavigate();
+  const search = Route.useSearch();
+  const token = search.token?.trim() || "";
 
+  const navigate = Route.useNavigate();
   const trpc = useTRPC();
 
   const [message, setMessage] = useState<string | null>(null);
@@ -79,6 +65,13 @@ function ConfirmResetPasswordPage() {
     mode: "onChange",
   });
 
+  useEffect(() => {
+    const subscription = form.watch(() => {
+      if (message) setMessage(null);
+    });
+    return () => subscription.unsubscribe();
+  }, [form, message]);
+
   const mutation = useMutation(
     trpc.resetPassword.confirm.mutationOptions({
       onMutate: () => {
@@ -88,12 +81,13 @@ function ConfirmResetPasswordPage() {
       onSuccess: () => {
         setMessage("Password reset successfully! Redirecting to login...");
 
-        // Give user time to read the success message
-        setTimeout(() => {
+        const timeout = setTimeout(() => {
           form.reset();
           setMessage(null);
           navigate({ to: "/login" });
-        }, 2500);
+        }, 3000);
+
+        return () => clearTimeout(timeout);
       },
 
       onError: (err: TRPCClientErrorLike<AppRouter>) => {
@@ -111,14 +105,16 @@ function ConfirmResetPasswordPage() {
           errorMessage = "Invalid password format.";
         }
 
-        setMessage(`Reset failed: ${errorMessage}`);
+        setMessage(errorMessage);
       },
     }),
   );
 
   const onSubmit = (values: FormValues) => {
     if (!token) {
-      setMessage("Reset token is missing or invalid.");
+      setMessage(
+        "Reset token is missing or invalid. Please use the link from your email.",
+      );
       return;
     }
 
@@ -128,10 +124,22 @@ function ConfirmResetPasswordPage() {
     });
   };
 
-  // Clear message when user starts typing
-  form.watch(() => {
-    if (message) setMessage(null);
-  });
+  if (!token) {
+    return (
+      <div className="min-h-dvh flex flex-col items-center justify-center p-4">
+        <Logo />
+        <div className="w-full max-w-md bg-background rounded-lg p-6 text-center mt-8">
+          <h1 className="text-2xl font-bold mb-4">Invalid or missing token</h1>
+          <p className="text-muted-foreground mb-6">
+            Please request a new password reset link.
+          </p>
+          <Button asChild>
+            <a href="/reset-password">Reset Password</a>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-dvh flex flex-col items-center p-1 sm:p-2 lg:p-3">
@@ -210,12 +218,9 @@ function ConfirmResetPasswordPage() {
                   data-testid="confirm-reset-password-message"
                   className={cn(
                     "text-sm text-center",
-                    message.toLowerCase().includes("failed") ||
-                      message.toLowerCase().includes("match") ||
-                      message.toLowerCase().includes("invalid") ||
-                      message.toLowerCase().includes("expired")
-                      ? "text-red-500"
-                      : "text-green-500",
+                    message.toLowerCase().includes("success")
+                      ? "text-green-500"
+                      : "text-red-500",
                   )}
                 >
                   {message}

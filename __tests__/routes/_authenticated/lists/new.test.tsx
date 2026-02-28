@@ -15,7 +15,7 @@ import userEvent from "@testing-library/user-event";
 import { server } from "../../../../__mocks__/server";
 import {
   listCreateHandler,
-  delayedListCreateHandler,
+  listCreateDelayedHandler,
   resetMockLists,
   getMockLists,
   listGetAllHandler,
@@ -74,12 +74,12 @@ describe("Create New List Page (/_authenticated/lists/new)", () => {
   async function fillForm(title: string, description = "") {
     await waitForFormReady();
 
-    const titleInput = await screen.findByLabelText(/List name/i);
+    const titleInput = screen.getByLabelText(/List name/i);
     await userEvent.clear(titleInput);
     await userEvent.type(titleInput, title);
 
     if (description) {
-      const descInput = await screen.findByLabelText(/Description/i);
+      const descInput = screen.getByLabelText(/Description/i);
       await userEvent.clear(descInput);
       await userEvent.type(descInput, description);
     }
@@ -119,7 +119,7 @@ describe("Create New List Page (/_authenticated/lists/new)", () => {
   });
 
   it("shows loading state during creation", async () => {
-    server.use(delayedListCreateHandler);
+    server.use(listCreateDelayedHandler);
 
     const { router } = renderNewListPage();
     await waitForFormReady();
@@ -129,14 +129,22 @@ describe("Create New List Page (/_authenticated/lists/new)", () => {
     const form = screen.getByTestId("create-list-form");
     fireEvent.submit(form);
 
-    await screen.findByText("Creating...");
-
-    expect(screen.getByTestId("create-button")).toBeDisabled();
-    expect(screen.getByTestId("create-button")).toHaveTextContent(
-      "Creating...",
+    // Wait for the loading text to appear (gives time for the 800ms delay)
+    await waitFor(
+      () => {
+        expect(screen.getByText("Creating...")).toBeInTheDocument();
+      },
+      { timeout: 1500 },
     );
+
+    const createButton = screen.getByTestId("create-button");
+    expect(createButton).toBeDisabled();
+    expect(createButton).toHaveTextContent("Creating...");
+    expect(createButton.querySelector("svg.animate-spin")).toBeInTheDocument();
+
     expect(screen.getByTestId("cancel-button")).toBeDisabled();
 
+    // Form still visible during loading
     expect(router.state.location.pathname).toBe("/lists/new");
   });
 
@@ -158,9 +166,7 @@ describe("Create New List Page (/_authenticated/lists/new)", () => {
     );
 
     expect(getMockLists().length).toBeGreaterThan(initialCount);
-    expect(getMockLists().some((l) => l.title === "Travel Bucket List")).toBe(
-      true,
-    );
+    expect(getMockLists().some((l) => l.title === "Travel Bucket List")).toBe(true);
   });
 
   it("rolls back optimistic update on creation failure", async () => {

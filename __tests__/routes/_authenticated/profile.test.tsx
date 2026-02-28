@@ -37,7 +37,7 @@ describe("Profile Page (/_authenticated/profile)", () => {
 
   beforeEach(() => {
     server.resetHandlers();
-    server.use(getCurrentUserHandler, listGetAllHandler);
+    server.use(getCurrentUserHandler, listGetAllHandler, updateEmailHandler);
 
     useAuthStore.setState({
       isLoggedIn: true,

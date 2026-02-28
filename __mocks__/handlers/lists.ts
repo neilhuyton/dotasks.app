@@ -1,3 +1,4 @@
+// __mocks__/handlers/lists.ts
 import { TRPCError } from "@trpc/server";
 import { trpcMsw } from "../trpcMsw";
 
@@ -171,7 +172,31 @@ function updateListInMock(id: string, updates: ListUpdateInput): MockList {
 }
 
 // ──────────────────────────────────────────────
-// Handlers – getOne variants
+// Handlers – getAll
+// ──────────────────────────────────────────────
+
+export const listGetAllHandler = trpcMsw.list.getAll.query(() => {
+  return mockLists.map(formatListForResponse);
+});
+
+export const listGetAllEmptyHandler = trpcMsw.list.getAll.query(() => {
+  return [];
+});
+
+export const listGetAllErrorHandler = trpcMsw.list.getAll.query(() => {
+  throw new TRPCError({
+    code: "INTERNAL_SERVER_ERROR",
+    message: "Failed to fetch lists",
+  });
+});
+
+export const listGetAllDelayedHandler = trpcMsw.list.getAll.query(async () => {
+  await new Promise((r) => setTimeout(r, 1200));
+  return mockLists.map(formatListForResponse);
+});
+
+// ──────────────────────────────────────────────
+// Handlers – getOne
 // ──────────────────────────────────────────────
 
 export const listGetOneDetailPagePreset = trpcMsw.list.getOne.query(
@@ -203,7 +228,7 @@ export const listGetOneDetailPagePreset = trpcMsw.list.getOne.query(
   },
 );
 
-export const listLoadingHandler = trpcMsw.list.getOne.query(
+export const listGetOneLoadingHandler = trpcMsw.list.getOne.query(
   async ({ input }) => {
     await new Promise((r) => setTimeout(r, 1200));
 
@@ -217,19 +242,11 @@ export const listLoadingHandler = trpcMsw.list.getOne.query(
   },
 );
 
-export const getListNotFoundHandler = trpcMsw.list.getOne.query(() => {
+export const listGetOneNotFoundHandler = trpcMsw.list.getOne.query(() => {
   throw new TRPCError({
     code: "NOT_FOUND",
     message: "List not found or you don't have access.",
   });
-});
-
-// ──────────────────────────────────────────────
-// Handlers – getAll
-// ──────────────────────────────────────────────
-
-export const listGetAllHandler = trpcMsw.list.getAll.query(() => {
-  return mockLists.map(formatListForResponse);
 });
 
 // ──────────────────────────────────────────────
@@ -252,7 +269,7 @@ export const listCreateHandler = trpcMsw.list.create.mutation(({ input }) => {
   return formatListForResponse(newList);
 });
 
-export const delayedListCreateHandler = trpcMsw.list.create.mutation(
+export const listCreateDelayedHandler = trpcMsw.list.create.mutation(
   async ({ input }) => {
     await new Promise((r) => setTimeout(r, 800));
 
@@ -277,34 +294,26 @@ export const delayedListCreateHandler = trpcMsw.list.create.mutation(
 // ──────────────────────────────────────────────
 
 export const listUpdateHandler = trpcMsw.list.update.mutation(({ input }) => {
-  const listIndex = mockLists.findIndex((l) => l.id === input.id);
+  const data = Array.isArray(input) ? input[0] : input;
 
-  if (listIndex === -1) {
+  if (!data?.id) {
     throw new TRPCError({
-      code: "NOT_FOUND",
-      message: "List not found or you don't have access",
+      code: "BAD_REQUEST",
+      message: "List ID is required",
     });
   }
 
-  const now = new Date();
-
-  mockLists[listIndex] = {
-    ...mockLists[listIndex],
-    ...input,
-    updatedAt: now, // keep as Date object internally
-  };
-
-  // Return the FULL formatted response that matches what the real procedure returns
-  return formatListForResponse(mockLists[listIndex]);
+  const updated = updateListInMock(data.id, data as ListUpdateInput);
+  return formatListForResponse(updated);
 });
 
-export const delayedListUpdateHandler = trpcMsw.list.update.mutation(
+export const listUpdateDelayedHandler = trpcMsw.list.update.mutation(
   async ({ input }) => {
     await new Promise((r) => setTimeout(r, 900));
 
     const data = Array.isArray(input) ? input[0] : input;
 
-    if (!data?.id || typeof data.id !== "string") {
+    if (!data?.id) {
       throw new TRPCError({
         code: "BAD_REQUEST",
         message: "List ID is required",
@@ -316,7 +325,7 @@ export const delayedListUpdateHandler = trpcMsw.list.update.mutation(
   },
 );
 
-export const failingListUpdateHandler = trpcMsw.list.update.mutation(() => {
+export const listUpdateFailingHandler = trpcMsw.list.update.mutation(() => {
   throw new TRPCError({
     code: "INTERNAL_SERVER_ERROR",
     message: "Failed to update list – server error",
@@ -327,7 +336,7 @@ export const listUpdateNotFoundHandler = trpcMsw.list.update.mutation(
   ({ input }) => {
     const data = Array.isArray(input) ? input[0] : input;
 
-    if (!data?.id || typeof data.id !== "string") {
+    if (!data?.id) {
       throw new TRPCError({
         code: "BAD_REQUEST",
         message: "List ID is required",
@@ -353,26 +362,29 @@ export const listDeleteHandler = trpcMsw.list.delete.mutation(() => {
 });
 
 // ──────────────────────────────────────────────
-// All handlers – ordered from most to least specific
+// All exported handlers (for convenience)
 // ──────────────────────────────────────────────
 
 export const listHandlers = [
-  // getOne
-  listGetOneDetailPagePreset,
-  listLoadingHandler,
-  getListNotFoundHandler,
-
   // getAll
   listGetAllHandler,
+  listGetAllEmptyHandler,
+  listGetAllErrorHandler,
+  listGetAllDelayedHandler,
+
+  // getOne
+  listGetOneDetailPagePreset,
+  listGetOneLoadingHandler,
+  listGetOneNotFoundHandler,
 
   // create
   listCreateHandler,
-  delayedListCreateHandler,
+  listCreateDelayedHandler,
 
   // update
   listUpdateHandler,
-  delayedListUpdateHandler,
-  failingListUpdateHandler,
+  listUpdateDelayedHandler,
+  listUpdateFailingHandler,
   listUpdateNotFoundHandler,
 
   // delete
