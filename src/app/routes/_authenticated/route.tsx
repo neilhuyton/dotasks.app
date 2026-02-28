@@ -21,7 +21,7 @@ export const Route = createFileRoute("/_authenticated")({
       <div className="flex flex-col min-h-dvh overscroll-none bg-background">
         <header className="fixed top-0 left-0 right-0 z-30 bg-background px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between border-b">
           <div className="text-xl font-semibold tracking-tight flex items-center gap-2.5">
-            Do Tasks A
+            Do Tasks
             <GlobalFetchingIndicator />
           </div>
 
