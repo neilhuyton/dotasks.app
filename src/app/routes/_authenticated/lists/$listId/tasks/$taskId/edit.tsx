@@ -288,8 +288,8 @@ function EditTaskPage() {
                   type="submit"
                   disabled={
                     isPending ||
-                    !form.formState.isDirty ||
-                    !form.formState.isValid
+                    !form.formState.isValid ||
+                    Object.keys(form.formState.dirtyFields).length === 0
                   }
                   className="w-full sm:w-40"
                 >
