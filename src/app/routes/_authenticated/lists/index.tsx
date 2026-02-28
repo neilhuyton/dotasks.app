@@ -78,6 +78,7 @@ function ListsPage() {
             label="Create your first list"
             testId="fab-add-list"
             size="lg"
+            pulse={true}
           />
         </div>
 
