@@ -212,9 +212,7 @@ function ProfilePage() {
               >
                 Profile
               </h1>
-xxx
               <InstallPWA />
-              xxx
             </div>
 
             <div className="space-y-6">
