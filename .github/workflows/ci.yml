@@ -74,12 +74,13 @@ jobs:
         run: pnpm install
 
       - name: Generate Prisma client
-        run: pnpm build # Runs `npx prisma generate && vite build`
+        run: pnpm build
 
       - name: Run Vitest
         run: pnpm test
         env:
           VITE_TRPC_URL: "/trpc"
+          VITE_SUPABASE_URL: "https://gmkfhkydrxmgynzhviip.supabase.co"
 
   # e2e-tests:
   #   name: Run E2E Tests
