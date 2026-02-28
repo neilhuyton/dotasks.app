@@ -34,13 +34,13 @@ export function SortableListsTable({
   const sensors = useSensors(
     useSensor(MouseSensor, {
       activationConstraint: {
-        distance: 5, // desktop – start after small movement
+        distance: 5,
       },
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 180, // mobile – require ~180ms press before drag can start
-        tolerance: 5, // allow small finger wobble without starting drag
+        delay: 180,
+        tolerance: 5,
       },
     }),
     useSensor(KeyboardSensor),

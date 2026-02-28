@@ -4,7 +4,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 import { ListItem } from "./ListItem";
-import type { List } from "@/hooks/useLists";
+import type { List } from "@/hooks/useLists";  // or whatever your List type is
 import { Link } from "@tanstack/react-router";
 
 interface SortableListItemProps {
@@ -28,13 +28,15 @@ export function SortableListItem({
     disabled: isReordering,
   });
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition: transition ?? "transform 0.18s ease",
-    opacity: isDragging ? 0.82 : 1,
-  };
+const style = {
+  transform: CSS.Transform.toString(transform),
+  transition:
+    transition ||
+    "transform 0.18s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.18s ease",
+  opacity: isDragging ? 0.75 : 1,
+};
 
-  return (
+  const content = (
     <div
       ref={setNodeRef}
       style={style}
@@ -45,19 +47,19 @@ export function SortableListItem({
       {...attributes}
       {...listeners}
     >
-      {isDragging ? (
-        <div className="block touch-manipulation">
-          <ListItem list={list} isDragging={isDragging} />
-        </div>
-      ) : (
-        <Link
-          to="/lists/$listId"
-          params={{ listId: list.id }}
-          className="block touch-manipulation"
-        >
-          <ListItem list={list} isDragging={isDragging} />
-        </Link>
-      )}
+      <ListItem list={list} isDragging={isDragging} />
     </div>
+  );
+
+  // Only wrap in Link when NOT dragging
+  // (prevents navigation during drag + keeps ref stable)
+  return isDragging ? content : (
+    <Link
+      to="/lists/$listId"
+      params={{ listId: list.id }}
+      className="block touch-manipulation"
+    >
+      {content}
+    </Link>
   );
 }
