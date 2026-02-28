@@ -102,7 +102,7 @@ function EditTaskPage() {
           keepTouched: false,
           keepIsValid: false,
           keepDefaultValues: false,
-        }
+        },
       );
     }
   }, [task, form]);
