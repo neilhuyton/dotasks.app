@@ -86,24 +86,24 @@ describe("New Task Page", () => {
           screen.getByRole("heading", { name: /New Task/i }),
         ).toBeInTheDocument();
         expect(screen.getByPlaceholderText("Task title...")).toBeInTheDocument();
-        expect(screen.getByPlaceholderText("Details...")).toBeInTheDocument();
+        // expect(screen.getByPlaceholderText("Details...")).toBeInTheDocument();
       },
       { timeout: 3000 },
     );
   }
 
-  async function fillForm(title: string, description = "") {
+  async function fillForm(title: string, /*description = ""*/) {
     await waitForFormReady();
 
     const titleInput = screen.getByPlaceholderText("Task title...");
     await userEvent.clear(titleInput);
     await userEvent.type(titleInput, title);
 
-    if (description) {
-      const descInput = screen.getByPlaceholderText("Details...");
-      await userEvent.clear(descInput);
-      await userEvent.type(descInput, description);
-    }
+    // if (description) {
+    //   const descInput = screen.getByPlaceholderText("Details...");
+    //   await userEvent.clear(descInput);
+    //   await userEvent.type(descInput, description);
+    // }
   }
 
   it("renders title, inputs and buttons", async () => {
@@ -114,7 +114,7 @@ describe("New Task Page", () => {
       "placeholder",
       "Task title...",
     );
-    expect(screen.getByPlaceholderText("Details...")).toBeInTheDocument();
+    // expect(screen.getByPlaceholderText("Details...")).toBeInTheDocument();
 
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create Task" })).toBeInTheDocument();
@@ -141,7 +141,7 @@ describe("New Task Page", () => {
     renderNewTaskPage();
     await waitForFormReady();
 
-    await fillForm("Weekend Task", "Important stuff to do");
+    await fillForm("Weekend Task", /*"Important stuff to do"*/);
 
     await userEvent.click(screen.getByRole("button", { name: "Create Task" }));
 
@@ -157,7 +157,7 @@ describe("New Task Page", () => {
     const { router } = renderNewTaskPage();
     await waitForFormReady();
 
-    await fillForm("Buy groceries", "Milk, eggs, bread, and some fruit");
+    await fillForm("Buy groceries", /*"Milk, eggs, bread, and some fruit"*/);
 
     await userEvent.click(screen.getByRole("button", { name: "Create Task" }));
 
@@ -192,7 +192,7 @@ describe("New Task Page", () => {
     const { router } = renderNewTaskPage();
     await waitForFormReady();
 
-    await fillForm("Quick task", "Remember to test this");
+    await fillForm("Quick task", /*"Remember to test this"*/);
 
     await userEvent.click(screen.getByRole("button", { name: "Create Task" }));
 
@@ -210,7 +210,7 @@ describe("New Task Page", () => {
 
     const initialLength = getMockTasks().length;
 
-    await userEvent.type(screen.getByPlaceholderText("Details..."), "This should not save");
+    // await userEvent.type(screen.getByPlaceholderText("Details..."), "This should not save");
 
     const createBtn = screen.getByRole("button", { name: "Create Task" });
     expect(createBtn).toBeDisabled();

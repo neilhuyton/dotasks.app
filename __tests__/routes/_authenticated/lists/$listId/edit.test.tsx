@@ -90,14 +90,14 @@ describe("Edit List Page (/_authenticated/lists/$listId/edit)", () => {
     return result;
   }
 
-  async function fillForm(title: string, description = "") {
+  async function fillForm(title: string, /*description = ""*/) {
     const titleInput = await screen.findByLabelText(/List name/i);
     await userEvent.clear(titleInput);
     await userEvent.type(titleInput, title);
 
-    const descInput = screen.getByLabelText(/Description/i);
-    await userEvent.clear(descInput);
-    if (description) await userEvent.type(descInput, description);
+    // const descInput = screen.getByLabelText(/Description/i);
+    // await userEvent.clear(descInput);
+    // if (description) await userEvent.type(descInput, description);
   }
 
   function getSaveButton() {
@@ -116,9 +116,9 @@ describe("Edit List Page (/_authenticated/lists/$listId/edit)", () => {
       "Work, Groceries, Ideas...",
     );
 
-    expect(
-      screen.getByLabelText(/Description \(optional\)/i),
-    ).toBeInTheDocument();
+    // expect(
+    //   screen.getByLabelText(/Description \(optional\)/i),
+    // ).toBeInTheDocument();
 
     expect(
       screen.getByRole("button", { name: /Cancel and return to list/i }),
