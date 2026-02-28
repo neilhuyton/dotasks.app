@@ -12,5 +12,5 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: !isTest,
     storage: isTest ? undefined : localStorage,
   },
-  realtime: isTest ? { params: { eventsPerSecond: 0 } } : undefined,
+  realtime: isTest ? undefined : { params: { eventsPerSecond: 0 } },
 });
