@@ -8,6 +8,7 @@ import {
   afterEach,
   beforeAll,
   afterAll,
+  vi,
 } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -16,10 +17,11 @@ import { renderWithProviders } from "../../../utils/test-helpers";
 import { server } from "../../../../__mocks__/server";
 import {
   listGetAllHandler,
+  listGetAllEmptyHandler,
+  listGetAllErrorHandler,
   resetMockLists,
 } from "../../../../__mocks__/handlers/lists";
 import { useAuthStore } from "@/shared/store/authStore";
-import { trpcMsw } from "../../../../__mocks__/trpcMsw";
 
 describe("Lists Overview Page (/_authenticated/lists/)", () => {
   beforeAll(() => server.listen({ onUnhandledRequest: "warn" }));
@@ -49,7 +51,7 @@ describe("Lists Overview Page (/_authenticated/lists/)", () => {
   }
 
   it("shows empty state when no lists are returned", async () => {
-    server.use(trpcMsw.list.getAll.query(() => []));
+    server.use(listGetAllEmptyHandler);
 
     renderListsPage();
 
@@ -85,24 +87,22 @@ describe("Lists Overview Page (/_authenticated/lists/)", () => {
   });
 
   it("shows error message when getAll query fails", async () => {
-    server.use(
-      trpcMsw.list.getAll.query(() => {
-        throw new Error("Failed to fetch lists");
-      }),
-    );
+    // Silence expected TRPCClientError logging from React Query → TanStack Router boundary
+    // This keeps test output clean while still verifying the UI fallback renders correctly
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    server.use(listGetAllErrorHandler);
 
     renderListsPage();
 
     await waitFor(() => {
       expect(screen.getByText("Failed to load your lists")).toBeInTheDocument();
+      
+      expect(screen.getByText("Failed to fetch lists")).toBeInTheDocument();
     });
 
-    // Flexible matcher for the trpc client error message
-    await waitFor(() => {
-      expect(
-        screen.getByText(/Unable to transform response from server|Failed to fetch/i),
-      ).toBeInTheDocument();
-    });
+    // Cleanup
+    consoleErrorSpy.mockRestore();
   });
 
   it("navigates to /lists/new when FAB is clicked", async () => {

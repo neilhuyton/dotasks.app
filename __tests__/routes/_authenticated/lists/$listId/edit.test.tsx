@@ -22,7 +22,7 @@ import {
   listGetOneDetailPagePreset,
   getMockLists,
   listUpdateHandler,
-  delayedListUpdateHandler,
+  listUpdateDelayedHandler,
 } from "../../../../../__mocks__/handlers/lists";
 
 import { trpcMsw } from "../../../../../__mocks__/trpcMsw";
@@ -145,7 +145,7 @@ describe("Edit List Page (/_authenticated/lists/$listId/edit)", () => {
   });
 
   it("shows loading UI during update mutation", async () => {
-    server.use(delayedListUpdateHandler);
+    server.use(listUpdateDelayedHandler);
 
     await renderEditListPage();
 

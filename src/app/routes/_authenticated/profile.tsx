@@ -359,8 +359,7 @@ function ProfilePage() {
                         Are you sure you want to log out?
                       </AlertDialogTitle>
                       <AlertDialogDescription>
-                        You will be signed out of your account. Any unsaved
-                        changes may be lost.
+                        You will be signed out of your account.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

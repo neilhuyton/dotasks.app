@@ -16,7 +16,7 @@ import { server } from "../../../../__mocks__/server";
 import { renderWithProviders } from "../../../utils/test-helpers";
 
 import {
-  getListNotFoundHandler,
+  listGetOneNotFoundHandler,
   listGetOneDetailPagePreset,
 } from "../../../../__mocks__/handlers/lists";
 
@@ -94,7 +94,11 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
   });
 
   it("shows 'List not found' message when list does not exist", async () => {
-    server.use(getListNotFoundHandler);
+    // Silence the expected React error-boundary + TRPC error log for this test only
+    const originalConsoleError = console.error;
+    console.error = vi.fn();
+
+    server.use(listGetOneNotFoundHandler);
 
     await renderListDetail("list-abc-123", { waitForSuccess: false });
 
@@ -103,6 +107,9 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
       {},
       { timeout: 3000 },
     );
+
+    // Restore original console.error behavior
+    console.error = originalConsoleError;
   });
 
   it("renders Add Task FAB with correct navigation target", async () => {

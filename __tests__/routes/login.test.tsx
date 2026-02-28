@@ -19,11 +19,12 @@ import { TRPCError } from "@trpc/server";
 import { renderWithProviders } from "../utils/test-helpers";
 import { useAuthStore } from "@/shared/store/authStore";
 import { trpcMsw } from "../../__mocks__/trpcMsw";
+import { listGetAllHandler } from "../../__mocks__/handlers/lists";
 
 describe("LoginPage", () => {
   beforeAll(() => server.listen({ onUnhandledRequest: "warn" }));
   beforeEach(() => {
-    server.use(loginHandler);
+    server.use(loginHandler, listGetAllHandler);
     useAuthStore.getState().logout();
   });
   afterEach(() => server.resetHandlers());
