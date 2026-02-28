@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/app/components/ui/alert-dialog";
+import { InstallPWA } from "@/app/components/InstallPWA";
 
 const emailChangeSchema = z.object({
   email: z.string().email("Invalid email address").trim().toLowerCase(),
@@ -211,6 +212,9 @@ function ProfilePage() {
               >
                 Profile
               </h1>
+xxx
+              <InstallPWA />
+              xxx
             </div>
 
             <div className="space-y-6">
