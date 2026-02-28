@@ -142,8 +142,7 @@ function NewTaskPage() {
     e.preventDefault();
     const trimmed = title.trim();
     if (!trimmed) return;
-    setTitle("");
-    setDescription("");
+
     mutation.mutate({
       title: trimmed,
       listId,

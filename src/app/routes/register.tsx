@@ -18,7 +18,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation } from "@tanstack/react-query";
-import { useTRPC } from "@/trpc"; // ← modern import (adjust path if needed)
+import { useTRPC } from "@/trpc";
 import type { TRPCClientErrorLike } from "@trpc/client";
 import type { AppRouter } from "server/trpc";
 import { useState } from "react";
@@ -49,7 +49,7 @@ export const Route = createFileRoute("/register")({
 
 function RegisterPage() {
   const navigate = Route.useNavigate();
-  const trpc = useTRPC(); // ← get the typed tRPC proxy
+  const trpc = useTRPC();
 
   const [message, setMessage] = useState<string | null>(null);
 
@@ -77,7 +77,6 @@ function RegisterPage() {
 
         form.reset();
 
-        // Optional: auto-redirect after success
         setTimeout(() => {
           navigate({ to: "/login" });
         }, 1800);
@@ -106,7 +105,6 @@ function RegisterPage() {
     });
   };
 
-  // Watch form changes to clear message when user starts typing again
   form.watch(() => {
     if (message) setMessage(null);
   });

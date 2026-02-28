@@ -81,7 +81,7 @@ function VerifyEmailPage() {
     return () => {
       mutation.reset();
     };
-  }, [token, mutation]); // ← added mutation to deps (good practice)
+  }, [token, mutation]);
 
   const isLoading = status === "loading" || mutation.isPending;
   const isSuccess = status === "success";
