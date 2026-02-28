@@ -25,11 +25,7 @@ import type { TRPCClientErrorLike } from "@trpc/client";
 import type { AppRouter } from "server/trpc";
 
 const formSchema = z.object({
-  email: z
-    .string()
-    .email("Please enter a valid email address")
-    .trim()
-    .toLowerCase(),
+  email: z.email("Please enter a valid email address").trim().toLowerCase(),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
@@ -62,7 +58,12 @@ function LoginPage() {
       onSuccess: (data) => {
         setMessage("Login successful!");
 
-        login(data.user.id, data.accessToken, data.refreshToken);
+        login(
+          data.user.id,
+          data.user.email,
+          data.accessToken,
+          data.refreshToken,
+        );
 
         form.reset();
 

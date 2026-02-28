@@ -42,6 +42,7 @@ describe("Profile Page (/_authenticated/profile)", () => {
     useAuthStore.setState({
       isLoggedIn: true,
       userId: TEST_USER_ID,
+      user: { id: TEST_USER_ID, email: INITIAL_EMAIL },
       accessToken: "mock-access-token",
       refreshToken: "mock-refresh-token",
     });
@@ -74,6 +75,9 @@ describe("Profile Page (/_authenticated/profile)", () => {
         );
         expect(
           screen.queryByText(/failed to load profile/i),
+        ).not.toBeInTheDocument();
+        expect(
+          screen.queryByText(/loading profile information/i),
         ).not.toBeInTheDocument();
       },
       { timeout: 1500 },
@@ -255,7 +259,6 @@ describe("Profile Page (/_authenticated/profile)", () => {
         .mockReturnValue(true);
       const backSpy = vi.spyOn(router.history, "back");
 
-      // Spy on navigate only if needed — but here we expect it NOT called
       const navigateSpy = vi.spyOn(router, "navigate");
 
       await userEvent.click(screen.getByTestId("close-profile"));
@@ -310,7 +313,6 @@ describe("Profile Page (/_authenticated/profile)", () => {
 
       await userEvent.click(screen.getByTestId("close-profile"));
 
-      // With the try/catch fix, fallback should still happen
       expect(canGoBackSpy).toHaveBeenCalledTimes(1);
       expect(navigateSpy).toHaveBeenCalledTimes(1);
       expect(navigateSpy).toHaveBeenCalledWith(

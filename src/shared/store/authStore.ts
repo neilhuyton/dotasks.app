@@ -3,13 +3,20 @@
 import { create } from "zustand";
 import { queryClient } from "@/queryClient";
 
+export interface UserInfo {
+  id: string;
+  email: string;
+}
+
 export interface AuthState {
   isLoggedIn: boolean;
   userId: string | null;
+  user: UserInfo | null;
   accessToken: string | null;
   refreshToken: string | null;
-  login: (userId: string, accessToken: string, refreshToken: string) => void;
+  login: (userId: string, email: string, accessToken: string, refreshToken: string) => void;
   setAccessToken: (accessToken: string) => void;
+  updateUserEmail: (newEmail: string) => void;
   logout: () => void;
 }
 
@@ -20,13 +27,13 @@ const STORAGE_KEYS = {
 
 function getInitialState(): Pick<
   AuthState,
-  "isLoggedIn" | "userId" | "accessToken" | "refreshToken"
+  "isLoggedIn" | "userId" | "user" | "accessToken" | "refreshToken"
 > {
-  // SSR / server environment
   if (typeof window === "undefined") {
     return {
       isLoggedIn: false,
       userId: null,
+      user: null,
       accessToken: null,
       refreshToken: null,
     };
@@ -40,6 +47,7 @@ function getInitialState(): Pick<
   return {
     isLoggedIn: hasValidRefresh,
     userId: userId || null,
+    user: null,               // email not persisted → loaded at login
     accessToken: null,
     refreshToken: refreshToken || null,
   };
@@ -48,14 +56,15 @@ function getInitialState(): Pick<
 export const useAuthStore = create<AuthState>()((set) => ({
   ...getInitialState(),
 
-  login: (userId: string, accessToken: string, refreshToken: string) => {
-    if (!userId?.trim() || !accessToken?.trim() || !refreshToken?.trim()) {
+  login: (userId: string, email: string, accessToken: string, refreshToken: string) => {
+    if (!userId?.trim() || !email?.trim() || !accessToken?.trim() || !refreshToken?.trim()) {
       return;
     }
 
     set({
       isLoggedIn: true,
       userId,
+      user: { id: userId, email },
       accessToken,
       refreshToken,
     });
@@ -71,10 +80,17 @@ export const useAuthStore = create<AuthState>()((set) => ({
     set({ accessToken });
   },
 
+  updateUserEmail: (newEmail: string) => {
+    set((state) => ({
+      user: state.user ? { ...state.user, email: newEmail } : null,
+    }));
+  },
+
   logout: () => {
     set({
       isLoggedIn: false,
       userId: null,
+      user: null,
       accessToken: null,
       refreshToken: null,
     });
@@ -84,7 +100,6 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
     // Prevent showing stale data from previous user
     queryClient.removeQueries();
-    // Alternative (more aggressive): queryClient.clear();
   },
 }));
 
@@ -93,19 +108,3 @@ export const useAuthStore = create<AuthState>()((set) => ({
 // ────────────────────────────────────────────────
 
 export const getAuthState = () => useAuthStore.getState();
-
-// export const resetAuthStore = () => {
-//   useAuthStore.setState({
-//     isLoggedIn: false,
-//     userId: null,
-//     accessToken: null,
-//     refreshToken: null,
-//   });
-
-//   if (typeof window !== "undefined") {
-//     localStorage.removeItem(STORAGE_KEYS.userId);
-//     localStorage.removeItem(STORAGE_KEYS.refreshToken);
-//   }
-
-//   queryClient.removeQueries();
-// };
