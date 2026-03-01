@@ -14,9 +14,21 @@ import { screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 
+// Mock the entire email module at the top (hoisted, affects server code via tRPC flow)
+vi.mock("../../../server/email", () => {
+  return {
+    sendResetPasswordEmail: vi.fn().mockResolvedValue({
+      success: true,
+      requestId: `mock-reset-${Date.now()}`,
+    }),
+    sendEmailChangeNotification: vi.fn().mockResolvedValue({ success: true }),
+    sendPasswordChangeNotification: vi.fn().mockResolvedValue({ success: true }),
+    sendMailWithDebug: vi.fn().mockResolvedValue({ success: true }),
+  };
+});
+
 import { server } from "../../../__mocks__/server";
 import {
-  getCurrentUserHandler,
   updateEmailHandler,
   updateEmailSuccessHandler,
   sendPasswordResetHandler,
@@ -37,7 +49,7 @@ describe("Profile Page (/_authenticated/profile)", () => {
 
   beforeEach(() => {
     server.resetHandlers();
-    server.use(getCurrentUserHandler, listGetAllHandler, updateEmailHandler);
+    server.use(listGetAllHandler, updateEmailHandler);
 
     useAuthStore.setState({
       isLoggedIn: true,

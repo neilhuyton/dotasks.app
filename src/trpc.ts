@@ -65,9 +65,9 @@ function handleAuthError(
   next: (op: Operation) => OperationResultObservable<AppRouter, unknown>,
   observer: LinkObserver,
 ) {
-  const { refreshToken, userId } = useAuthStore.getState();
+  const { refreshToken, userId, user } = useAuthStore.getState();
 
-  if (!refreshToken || !userId) {
+  if (!refreshToken || !userId || !user) {
     performLogout();
     observer.error!(originalError);
     return;
@@ -88,7 +88,7 @@ function handleAuthError(
 
       useAuthStore
         .getState()
-        .login(userId, result.accessToken, result.refreshToken);
+        .login(userId, user.email, result.accessToken, result.refreshToken);
 
       retryOperation(op, next, observer);
     } catch (err: unknown) {

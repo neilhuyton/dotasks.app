@@ -86,6 +86,8 @@ export async function sendVerificationEmail(
 ) {
   const verificationUrl = `${process.env.VITE_APP_URL || "http://localhost:8888"}/verify-email?token=${verificationToken}`;
 
+  console.log('GOT HERE');
+
   const html = `
     <h1>Welcome!</h1>
     <p>Please verify your email address by clicking the link below:</p>

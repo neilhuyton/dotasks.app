@@ -1,7 +1,10 @@
+// __tests__/routes/reset-password.test.tsx
+
 import {
   describe,
   it,
   expect,
+  vi,
   beforeAll,
   beforeEach,
   afterEach,
@@ -22,14 +25,20 @@ import { renderWithProviders } from "../utils/test-helpers";
 
 describe("Reset Password Page (/reset-password)", () => {
   beforeAll(() => server.listen({ onUnhandledRequest: "warn" }));
-  beforeEach(() => {
-    server.use(resetPasswordRequestHandler);
-  });
-  afterEach(() => server.resetHandlers());
   afterAll(() => server.close());
 
+  beforeEach(() => {
+    server.resetHandlers();
+    server.use(resetPasswordRequestHandler);
+    vi.clearAllMocks(); // Consistency with other tests
+  });
+
+  afterEach(() => {
+    server.resetHandlers();
+  });
+
   it("renders the form and main elements", async () => {
-    renderWithProviders( { initialEntries: ["/reset-password"] });
+    renderWithProviders({ initialEntries: ["/reset-password"] });
 
     await screen.findByRole("heading", {
       name: /reset your password/i,
@@ -46,7 +55,7 @@ describe("Reset Password Page (/reset-password)", () => {
   });
 
   it("enables submit button after typing valid email", async () => {
-    renderWithProviders( { initialEntries: ["/reset-password"] });
+    renderWithProviders({ initialEntries: ["/reset-password"] });
 
     const emailInput = await screen.findByLabelText(/^email$/i);
     const submitBtn = screen.getByRole("button", { name: /send reset link/i });
@@ -59,7 +68,7 @@ describe("Reset Password Page (/reset-password)", () => {
   });
 
   it("shows validation error for invalid email", async () => {
-    renderWithProviders( { initialEntries: ["/reset-password"] });
+    renderWithProviders({ initialEntries: ["/reset-password"] });
 
     const emailInput = await screen.findByLabelText(/^email$/i);
 
@@ -71,7 +80,7 @@ describe("Reset Password Page (/reset-password)", () => {
   });
 
   it("submits valid email → resets form", async () => {
-    renderWithProviders( { initialEntries: ["/reset-password"] });
+    renderWithProviders({ initialEntries: ["/reset-password"] });
 
     const emailInput = await screen.findByLabelText(/^email$/i);
     await userEvent.type(emailInput, "user@example.com");
@@ -88,7 +97,7 @@ describe("Reset Password Page (/reset-password)", () => {
   it("shows loading state during submission", async () => {
     server.use(delayedResetPasswordRequestHandler);
 
-    renderWithProviders( { initialEntries: ["/reset-password"] });
+    renderWithProviders({ initialEntries: ["/reset-password"] });
 
     const emailInput = await screen.findByLabelText(/^email$/i);
     await userEvent.type(emailInput, "test@example.com");
@@ -110,7 +119,7 @@ describe("Reset Password Page (/reset-password)", () => {
   });
 
   it('navigates to /login when "Back to login" is clicked', async () => {
-    renderWithProviders( { initialEntries: ["/reset-password"] });
+    renderWithProviders({ initialEntries: ["/reset-password"] });
 
     const backBtn = await screen.findByRole("button", {
       name: /back to login/i,
@@ -126,7 +135,7 @@ describe("Reset Password Page (/reset-password)", () => {
   it("handles rate limit error without crashing", async () => {
     server.use(resetPasswordRequestRateLimitedHandler);
 
-    renderWithProviders( { initialEntries: ["/reset-password"] });
+    renderWithProviders({ initialEntries: ["/reset-password"] });
 
     const emailInput = await screen.findByLabelText(/^email$/i);
     await userEvent.type(emailInput, "spam@example.com");

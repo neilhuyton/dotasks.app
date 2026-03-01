@@ -4,15 +4,15 @@ import {
   describe,
   it,
   expect,
+  vi,
   beforeAll,
   afterAll,
   beforeEach,
   afterEach,
 } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
-import { server } from "../../__mocks__/server";
-import "@testing-library/jest-dom";
 
+import { server } from "../../__mocks__/server";
 import { verifyEmailHandler } from "../../__mocks__/handlers/verifyEmail";
 import { TEST_VERIFICATION_TOKENS } from "../test-constants";
 import { renderWithProviders } from "../utils/test-helpers";
@@ -27,7 +27,9 @@ describe("VerifyEmailPage", () => {
   afterAll(() => server.close());
 
   beforeEach(() => {
+    server.resetHandlers();
     server.use(verifyEmailHandler);
+    vi.clearAllMocks(); // Consistency with other tests
   });
 
   afterEach(() => {

@@ -64,7 +64,12 @@ describe('register procedure (public)', () => {
   beforeEach(() => {
     caller = createPublicCaller();
     resetPrismaMocks();
-    vi.spyOn(emailModule, 'sendVerificationEmail').mockResolvedValue({ success: true });
+
+    // Mock email sending to prevent real emails in tests
+    vi.spyOn(emailModule, 'sendVerificationEmail').mockResolvedValue({
+      success: true,
+      requestId: `mock-${Date.now()}`,
+    });
   });
 
   it('registers a new user successfully + sends verification email', async () => {
@@ -114,6 +119,8 @@ describe('register procedure (public)', () => {
 
     expect(mockPrisma.refreshToken.create).toHaveBeenCalledTimes(1);
 
+    // Verify email was "sent" (mock called)
+    expect(emailModule.sendVerificationEmail).toHaveBeenCalledTimes(1);
     expect(emailModule.sendVerificationEmail).toHaveBeenCalledWith(
       email,
       expect.any(String)
@@ -154,5 +161,8 @@ describe('register procedure (public)', () => {
     });
 
     expect(mockPrisma.user.create).not.toHaveBeenCalled();
+
+    // No email should be sent on failure
+    expect(emailModule.sendVerificationEmail).not.toHaveBeenCalled();
   });
 });

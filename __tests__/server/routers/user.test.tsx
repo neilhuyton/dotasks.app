@@ -1,6 +1,6 @@
 // __tests__/server/routers/user.test.ts
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import crypto from 'node:crypto';
 
 import {
@@ -9,14 +9,19 @@ import {
   mockPrisma,
 } from '../../utils/testCaller';
 
-import { mockUsers } from '../../../__mocks__/mockUsers';
 import type { User } from '@prisma/client';
 
-// Type for what getCurrent actually returns
-type GetCurrentReturn = {
-  id: string;
-  email: string;
-};
+vi.mock('../../../server/email', () => ({
+  sendEmailChangeNotification: vi.fn().mockResolvedValue({
+    success: true,
+    requestId: `mock-email-change-${Date.now()}`,
+  }),
+  sendResetPasswordEmail: vi.fn().mockResolvedValue({ success: true }),
+  sendPasswordChangeNotification: vi.fn().mockResolvedValue({ success: true }),
+  sendMailWithDebug: vi.fn().mockResolvedValue({ success: true }),
+}));
+
+import { sendEmailChangeNotification } from '../../../server/email';
 
 // Helper to create a complete Prisma User object
 function mockFullUser(partial: Partial<User> = {}): User {
@@ -35,8 +40,14 @@ function mockFullUser(partial: Partial<User> = {}): User {
   return {
     ...defaults,
     ...partial,
-    createdAt: partial.createdAt instanceof Date ? partial.createdAt : new Date(partial.createdAt || defaults.createdAt),
-    updatedAt: partial.updatedAt instanceof Date ? partial.updatedAt : new Date(partial.updatedAt || defaults.updatedAt),
+    createdAt:
+      partial.createdAt instanceof Date
+        ? partial.createdAt
+        : new Date(partial.createdAt || defaults.createdAt),
+    updatedAt:
+      partial.updatedAt instanceof Date
+        ? partial.updatedAt
+        : new Date(partial.updatedAt || defaults.updatedAt),
     resetPasswordTokenExpiresAt: partial.resetPasswordTokenExpiresAt
       ? new Date(partial.resetPasswordTokenExpiresAt)
       : null,
@@ -51,7 +62,10 @@ describe('user router (protected procedures)', () => {
     resetPrismaMocks();
   });
 
-  const currentUserBase = mockUsers.find((u) => u.id === 'test-user-id') || mockUsers[0];
+  const currentUserBase = {
+    id: 'test-user-id',
+    email: 'testuser@example.com',
+  };
 
   describe('getCurrent', () => {
     it('returns the current authenticated user data', async () => {
@@ -64,14 +78,13 @@ describe('user router (protected procedures)', () => {
 
       const result = await caller.user.getCurrent();
 
-      // Changed from .toEqual → .toMatchObject to ignore extra fields
       expect(result).toMatchObject({
         id: currentUserBase.id,
         email: currentUserBase.email,
-      } as GetCurrentReturn);
+      });
 
       expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
-        where: { id: 'test-user-id' },
+        where: { id: currentUserBase.id },
         select: {
           id: true,
           email: true,
@@ -88,7 +101,7 @@ describe('user router (protected procedures)', () => {
       });
 
       expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
-        where: { id: 'test-user-id' },
+        where: { id: currentUserBase.id },
         select: {
           id: true,
           email: true,
@@ -124,10 +137,17 @@ describe('user router (protected procedures)', () => {
 
       expect(mockPrisma.user.findUnique).toHaveBeenCalledTimes(2);
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
-        where: { id: 'test-user-id' },
+        where: { id: currentUserBase.id },
         data: { email: newEmail },
         select: { email: true },
       });
+
+      // Verify notification was sent (real email prevented by mock)
+      expect(sendEmailChangeNotification).toHaveBeenCalledTimes(1);
+      expect(sendEmailChangeNotification).toHaveBeenCalledWith(
+        currentUserBase.email,
+        newEmail
+      );
     });
 
     it('returns success message when email is unchanged (same value)', async () => {
@@ -148,12 +168,18 @@ describe('user router (protected procedures)', () => {
 
       expect(mockPrisma.user.findUnique).toHaveBeenCalledTimes(1);
       expect(mockPrisma.user.update).not.toHaveBeenCalled();
+
+      // No notification when email unchanged
+      expect(sendEmailChangeNotification).not.toHaveBeenCalled();
     });
 
     it('throws BAD_REQUEST for invalid email format (Zod)', async () => {
       await expect(
         caller.user.updateEmail({ email: 'invalid-email-format' })
       ).rejects.toThrow(/Invalid email address/);
+
+      // No email send attempted
+      expect(sendEmailChangeNotification).not.toHaveBeenCalled();
     });
 
     it('throws CONFLICT when new email is already taken by another user', async () => {
@@ -180,6 +206,9 @@ describe('user router (protected procedures)', () => {
       });
 
       expect(mockPrisma.user.update).not.toHaveBeenCalled();
+
+      // No email send on conflict
+      expect(sendEmailChangeNotification).not.toHaveBeenCalled();
     });
 
     it('throws NOT_FOUND when current user does not exist (edge case)', async () => {
@@ -191,6 +220,9 @@ describe('user router (protected procedures)', () => {
         code: 'NOT_FOUND',
         message: 'User not found',
       });
+
+      // No email send
+      expect(sendEmailChangeNotification).not.toHaveBeenCalled();
     });
   });
 });
