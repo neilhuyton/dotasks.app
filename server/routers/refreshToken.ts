@@ -4,7 +4,7 @@ import { publicProcedure, router } from "@/../server/trpc-base";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import crypto from "node:crypto";
-import { signSupabaseJwt } from "./auth-helpers"; // ← new import
+import { signSupabaseJwt } from "./auth-helpers";
 
 export const refreshTokenRouter = router({
   refresh: publicProcedure
@@ -46,11 +46,17 @@ export const refreshTokenRouter = router({
         .update(newRefreshToken)
         .digest("hex");
 
-      await ctx.prisma.refreshToken.create({
-        data: {
-          hashedToken: newHashedRefresh,
-          userId: user.id,
-        },
+      await ctx.prisma.$transaction(async (tx) => {
+        await tx.refreshToken.delete({
+          where: { hashedToken: hashedRefresh },
+        });
+
+        await tx.refreshToken.create({
+          data: {
+            hashedToken: newHashedRefresh,
+            userId: user.id,
+          },
+        });
       });
 
       return {
