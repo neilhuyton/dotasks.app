@@ -25,7 +25,10 @@ import type { TRPCClientErrorLike } from "@trpc/client";
 import type { AppRouter } from "server/trpc";
 
 const formSchema = z.object({
-  email: z.email("Please enter a valid email address").trim().toLowerCase(),
+  email: z
+    .email("Please enter a valid email address")
+    .trim()
+    .toLowerCase(),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
@@ -71,8 +74,14 @@ function LoginPage() {
       },
 
       onError: (err: TRPCClientErrorLike<AppRouter>) => {
-        const errorMessage =
+        let errorMessage =
           err.message || "Login failed. Please check your credentials.";
+
+        // Special handling for unverified email
+        if (err.message?.toLowerCase().includes("verify your email")) {
+          errorMessage =
+            "Please verify your email before logging in. Check your inbox/spam folder.";
+        }
 
         setMessage(`Login failed: ${errorMessage}`);
       },
@@ -170,6 +179,24 @@ function LoginPage() {
                   {message}
                 </p>
               )}
+
+              {/* Always-visible resend link */}
+              <div className="text-center text-sm mt-2">
+                Didn't receive verification email or can't log in?{" "}
+                <button
+                  type="button"
+                  className="text-primary hover:underline font-medium"
+                  onClick={() => {
+                    const email = form.getValues("email");
+                    navigate({
+                      to: "/resend-verification",
+                      search: email ? { email } : undefined,
+                    });
+                  }}
+                >
+                  Resend verification email
+                </button>
+              </div>
 
               <Button
                 type="submit"
