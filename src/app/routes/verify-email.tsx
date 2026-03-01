@@ -1,6 +1,6 @@
 // src/app/routes/verify-email.tsx
 
-import { createFileRoute, useSearch } from "@tanstack/react-router";
+import { createFileRoute, useSearch, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useTRPC } from "@/trpc";
@@ -27,6 +27,7 @@ type VerifyEmailOutput = {
 function VerifyEmailPage() {
   const search = useSearch({ from: Route.fullPath });
   const token = search.token;
+  const navigate = useNavigate();
 
   const trpc = useTRPC();
 
@@ -36,6 +37,7 @@ function VerifyEmailPage() {
   const [message, setMessage] = useState("");
 
   const hasVerified = useRef(false);
+  const hasRedirected = useRef(false);
 
   const mutation = useMutation(
     trpc.verifyEmail.mutationOptions({
@@ -44,6 +46,13 @@ function VerifyEmailPage() {
         setMessage(
           result.message || "Email verified successfully! You can now log in.",
         );
+
+        if (!hasRedirected.current) {
+          hasRedirected.current = true;
+          setTimeout(() => {
+            navigate({ to: "/login" });
+          }, 5000);
+        }
       },
       onError: (err: TRPCClientErrorLike<AppRouter>) => {
         setStatus("error");
@@ -102,9 +111,9 @@ function VerifyEmailPage() {
           {isLoading
             ? "Please wait while we verify your email..."
             : isSuccess
-              ? "Almost there..."
+              ? "Email verified!"
               : isError
-                ? "Something went wrong"
+                ? "Verification issue"
                 : "Preparing verification..."}
         </p>
 
@@ -124,8 +133,28 @@ function VerifyEmailPage() {
 
         {isSuccess && (
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            Redirecting to login...
+            Redirecting to login in 5 seconds...
           </p>
+        )}
+
+        {isError && (
+          <div className="mt-6 text-center text-sm">
+            <button
+              type="button"
+              className="text-primary hover:underline"
+              onClick={() => navigate({ to: "/login" })}
+            >
+              Go to login page
+            </button>
+            {" • "}
+            <button
+              type="button"
+              className="text-primary hover:underline"
+              onClick={() => navigate({ to: "/resend-verification" })}
+            >
+              Resend verification email
+            </button>
+          </div>
         )}
       </div>
     </div>
