@@ -86,92 +86,102 @@ function ResendVerificationPage() {
     if (message) setMessage(null);
   });
 
-  const isError =
+  const isErrorMessage =
     !!message &&
     (message.toLowerCase().includes("failed") ||
       message.toLowerCase().includes("error") ||
       message.toLowerCase().includes("try again"));
 
   return (
-    <div className="min-h-dvh flex flex-col items-center justify-center p-4 bg-background">
-      <div className="w-full max-w-md bg-card rounded-xl shadow-sm border p-6 sm:p-8">
-        <h1 className="text-2xl font-bold text-center mb-3">
+    <div className="min-h-dvh flex flex-col items-center p-1 sm:p-2 lg:p-3">
+      <div className="w-full max-w-md bg-background rounded-lg p-4 flex flex-col items-center mt-16 sm:mt-20">
+        <h1
+          className="text-2xl font-bold text-center mb-4"
+          role="heading"
+          aria-level={1}
+        >
           Resend Verification Email
         </h1>
 
-        <p className="text-muted-foreground text-center mb-8 text-sm">
-          If you didn't receive the verification email or it expired,
-          <br />
-          enter your email below and we'll send a new one.
+        <p className="text-muted-foreground text-center mb-6 text-sm">
+          If you didn't receive the verification email or it expired, enter your
+          email below and we'll send a new one.
         </p>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email address</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                      <Input
-                        placeholder="name@example.com"
-                        className="pl-9"
-                        disabled={mutation.isPending}
-                        {...field}
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {message && (
-              <div
-                className={cn(
-                  "text-sm text-center p-3 rounded-md border",
-                  isError
-                    ? "text-destructive bg-destructive/10 border-destructive/30"
-                    : "text-green-600 bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800",
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="w-full"
+            data-testid="resend-verification-form"
+          >
+            <div className="flex flex-col gap-6">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel htmlFor="email">Email</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                        <Input
+                          id="email"
+                          placeholder="name@example.com"
+                          className="pl-9"
+                          disabled={mutation.isPending}
+                          {...field}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              >
-                {message}
-              </div>
-            )}
+              />
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={mutation.isPending || !form.formState.isValid}
-            >
-              {mutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              {message && (
+                <p
+                  data-testid="resend-message"
+                  className={cn(
+                    "text-sm text-center",
+                    isErrorMessage ? "text-red-500" : "text-green-600 dark:text-green-500",
+                  )}
+                >
+                  {message}
+                </p>
               )}
-              {mutation.isPending ? "Sending..." : "Resend Verification Email"}
-            </Button>
+
+              <Button
+                type="submit"
+                className="w-full mt-2"
+                disabled={mutation.isPending || !form.formState.isValid}
+              >
+                {mutation.isPending && (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                )}
+                {mutation.isPending ? "Sending..." : "Resend Verification Email"}
+              </Button>
+
+              <div className="mt-4 text-center text-sm">
+                Back to{" "}
+                <button
+                  type="button"
+                  className="underline underline-offset-4 text-primary hover:text-primary/80"
+                  onClick={() => navigate({ to: "/login" })}
+                >
+                  Login
+                </button>
+                {" • "}
+                <button
+                  type="button"
+                  className="underline underline-offset-4 text-primary hover:text-primary/80"
+                  onClick={() => navigate({ to: "/register" })}
+                >
+                  Sign up
+                </button>
+              </div>
+            </div>
           </form>
         </Form>
-
-        <div className="mt-6 text-center text-sm text-muted-foreground">
-          <button
-            type="button"
-            className="text-primary hover:underline"
-            onClick={() => navigate({ to: "/login" })}
-          >
-            Back to login
-          </button>
-          {" • "}
-          <button
-            type="button"
-            className="text-primary hover:underline"
-            onClick={() => navigate({ to: "/register" })}
-          >
-            Create new account
-          </button>
-        </div>
       </div>
     </div>
   );

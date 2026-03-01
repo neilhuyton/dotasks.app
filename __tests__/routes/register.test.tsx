@@ -4,6 +4,7 @@ import {
   describe,
   it,
   expect,
+  vi,
   beforeAll,
   beforeEach,
   afterEach,
@@ -11,6 +12,11 @@ import {
 } from "vitest";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+
+// This line activates the mock file at __mocks__/server/email.ts
+// The path MUST match the real import used in server/routers/register.ts ("../email")
+// From test file location, that's "../../../server/email"
+vi.mock("../../../server/email");
 
 import { server } from "../../__mocks__/server";
 import { registerHandler } from "../../__mocks__/handlers/register";
@@ -26,7 +32,7 @@ describe("RegisterPage", () => {
   afterAll(() => server.close());
 
   function renderRegister() {
-    renderWithProviders( { initialEntries: ["/register"] });
+    renderWithProviders({ initialEntries: ["/register"] });
   }
 
   async function waitForFormReady() {
