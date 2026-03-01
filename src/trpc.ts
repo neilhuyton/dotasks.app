@@ -3,7 +3,7 @@
 import {
   createTRPCClient,
   httpBatchLink,
-  httpLink, // ← added for non-batch in tests
+  httpLink,
   TRPCClientError,
   type TRPCLink,
   type Operation,
@@ -30,7 +30,6 @@ let activeRefreshPromise: Promise<void> | null = null;
 const authRefreshLink: TRPCLink<AppRouter> = () => {
   return ({ op, next }) =>
     observable((observer) => {
-      // Inference handles observer perfectly here — do NOT add a type
       const subscription = next(op).subscribe({
         next(value) {
           observer.next(value);
@@ -54,7 +53,6 @@ const authRefreshLink: TRPCLink<AppRouter> = () => {
     });
 };
 
-// Helper type to extract the observer shape from next(op)
 type LinkObserver = Parameters<
   OperationResultObservable<AppRouter, unknown>["subscribe"]
 >[0];
@@ -65,14 +63,6 @@ function handleAuthError(
   next: (op: Operation) => OperationResultObservable<AppRouter, unknown>,
   observer: LinkObserver,
 ) {
-  const { refreshToken, userId, user } = useAuthStore.getState();
-
-  if (!refreshToken || !userId || !user) {
-    performLogout();
-    observer.error!(originalError);
-    return;
-  }
-
   if (activeRefreshPromise) {
     activeRefreshPromise
       .then(() => retryOperation(op, next, observer))
@@ -81,14 +71,30 @@ function handleAuthError(
   }
 
   activeRefreshPromise = (async () => {
+    // Always read fresh state here — avoids stale closure over initial null user
+    const state = useAuthStore.getState();
+    const { refreshToken, userId, user } = state;
+
+    if (!refreshToken || !userId || !user?.email) {
+      console.warn(
+        "Refresh skipped: missing refreshToken, userId, or user.email",
+      );
+      performLogout();
+      observer.error!(originalError);
+      return;
+    }
+
     try {
       const result = (await trpcClient.refreshToken.refresh.mutate({
         refreshToken,
       })) as { accessToken: string; refreshToken: string };
 
-      useAuthStore
-        .getState()
-        .login(userId, user.email, result.accessToken, result.refreshToken);
+      useAuthStore.getState().login(
+        userId,
+        user.email,
+        result.accessToken,
+        result.refreshToken,
+      );
 
       retryOperation(op, next, observer);
     } catch (err: unknown) {
@@ -139,7 +145,6 @@ function normalizeRefreshError(err: unknown): TRPCClientError<AppRouter> {
   }
 
   const message = err instanceof Error ? err.message : "Token refresh failed";
-
   return new TRPCClientError(
     message,
     err instanceof Error ? { cause: err } : undefined,
@@ -150,11 +155,14 @@ function performLogout() {
   useAuthStore.getState().logout();
   queryClient.clear();
   queryClient.cancelQueries();
-  void router.navigate({ to: "/login", replace: true });
+
+  if (router.state.location.pathname !== "/login") {
+    void router.navigate({ to: "/login", replace: true });
+  }
 }
 
 // ────────────────────────────────────────────────
-// TRPC Client – now conditional batching disabled only in tests
+// TRPC Client
 // ────────────────────────────────────────────────
 
 export function createTrpcClient() {
@@ -163,11 +171,7 @@ export function createTrpcClient() {
 
   return createTRPCClient<AppRouter>({
     links: [
-      // Skip auth refresh link in tests to prevent logout() from firing on every query
       ...(isTest ? [] : [authRefreshLink]),
-
-      // Use httpLink in tests (MSW friendly, no batching issues)
-      // In prod/dev keep batching if you want
       isTest
         ? httpLink({
             url: `${baseUrl}/trpc`,
