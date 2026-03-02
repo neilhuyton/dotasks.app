@@ -1,4 +1,5 @@
 // src/queryClient.ts
+
 import { QueryClient, QueryCache, MutationCache } from "@tanstack/react-query";
 import { TRPCClientError } from "@trpc/client";
 import type { AppRouter } from "../server/trpc";
