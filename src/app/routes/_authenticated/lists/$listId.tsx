@@ -1,7 +1,7 @@
 // src/app/routes/_authenticated/lists/$listId.tsx
 
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronLeft, Loader2 } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 
 import { useListTasks } from "@/hooks/useListTasks";
 import { trpc } from "@/trpc";
@@ -27,6 +27,27 @@ export const Route = createFileRoute("/_authenticated/lists/$listId")({
 
     return {};
   },
+
+  pendingComponent: () => (
+    <div className="space-y-6 sm:space-y-8">
+      <div className="flex items-center justify-between">
+        <div className="h-9 w-64 animate-pulse rounded bg-muted" />
+        <div className="h-6 w-24 animate-pulse rounded bg-muted" />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div
+            key={i}
+            className="h-[52px] animate-pulse rounded-md bg-muted/70 border"
+          />
+        ))}
+      </div>
+    </div>
+  ),
+
+  pendingMs: 0,
+  pendingMinMs: 400,
 
   errorComponent: ({ error }) => {
     const message = error?.message?.toLowerCase() ?? "";
@@ -84,13 +105,22 @@ function ListDetail() {
     );
   }
 
-  if (isListLoading) {
+  if (isListLoading || isLoadingTasks) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2
-          className="h-12 w-12 animate-spin text-blue-600"
-          data-testid="list-loading"
-        />
+      <div className="space-y-6 sm:space-y-8">
+        <div className="flex items-center justify-between">
+          <div className="h-9 w-64 animate-pulse rounded bg-muted" />
+          <div className="h-6 w-24 animate-pulse rounded bg-muted" />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-[52px] animate-pulse rounded-md bg-muted/70 border"
+            />
+          ))}
+        </div>
       </div>
     );
   }
@@ -126,37 +156,25 @@ function ListDetail() {
           </p>
         )}
 
-        {isLoadingTasks ? (
-          <div
-            className="flex min-h-[40vh] items-center justify-center"
-            data-testid="tasks-loading"
-          >
-            <Loader2
-              className="h-10 w-10 animate-spin text-primary"
-              data-testid="tasks-spinner"
-            />
-          </div>
-        ) : (
-          <TaskList
-            tasks={tasks}
-            toggleTask={toggleTask}
-            pendingToggleIds={pendingToggleIds}
-            onDelete={(taskId) =>
-              navigate({
-                to: "/lists/$listId/tasks/$taskId/delete",
-                params: { listId, taskId },
-              })
-            }
-            isDeleting={deleteTaskPending}
-            setCurrentTask={setCurrentTask}
-            isSettingCurrent={setCurrentTaskPending}
-            clearCurrentTask={clearCurrentTask}
-            clearCurrentTaskPending={clearCurrentTaskPending}
-            listId={listId}
-            updateTaskOrder={updateTaskOrder}
-            isReordering={isReordering}
-          />
-        )}
+        <TaskList
+          tasks={tasks}
+          toggleTask={toggleTask}
+          pendingToggleIds={pendingToggleIds}
+          onDelete={(taskId) =>
+            navigate({
+              to: "/lists/$listId/tasks/$taskId/delete",
+              params: { listId, taskId },
+            })
+          }
+          isDeleting={deleteTaskPending}
+          setCurrentTask={setCurrentTask}
+          isSettingCurrent={setCurrentTaskPending}
+          clearCurrentTask={clearCurrentTask}
+          clearCurrentTaskPending={clearCurrentTaskPending}
+          listId={listId}
+          updateTaskOrder={updateTaskOrder}
+          isReordering={isReordering}
+        />
       </div>
 
       <FabButton
