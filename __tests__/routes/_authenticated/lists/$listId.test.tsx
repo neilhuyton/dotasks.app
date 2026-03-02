@@ -141,13 +141,28 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
   it("shows loading state for tasks", async () => {
     server.use(taskGetByListLoading);
 
-    await renderListDetail();
+    await renderListDetail("list-abc-123", { waitForSuccess: false });
 
-    await screen.findByTestId("tasks-loading");
-    expect(
-      screen.queryByText("No tasks in this list yet"),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByText("Finish report")).not.toBeInTheDocument();
+    await waitFor(
+      () => {
+        expect(
+          screen.queryByText("My Important Projects"),
+        ).not.toBeInTheDocument();
+        expect(screen.queryByText("Finish report")).not.toBeInTheDocument();
+        expect(
+          screen.queryByText("Work-related stuff I must finish this month"),
+        ).not.toBeInTheDocument();
+      },
+      { timeout: 2000 },
+    );
+
+    const skeletonRows = screen
+      .getAllByRole("generic", {
+        hidden: true,
+      })
+      .filter((el) => el.classList.contains("animate-pulse"));
+
+    expect(skeletonRows.length).toBeGreaterThan(3);
   });
 
   it("displays the Active Tasks counter with correct count", async () => {
