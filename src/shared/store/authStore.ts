@@ -23,6 +23,7 @@ export interface AuthState {
 const STORAGE_KEYS = {
   userId: "auth:userId",
   refreshToken: "auth:refreshToken",
+  user: "auth:user",
 } as const;
 
 function getInitialState(): Pick<
@@ -41,13 +42,27 @@ function getInitialState(): Pick<
 
   const userId = localStorage.getItem(STORAGE_KEYS.userId);
   const refreshToken = localStorage.getItem(STORAGE_KEYS.refreshToken);
+  const storedUserJson = localStorage.getItem(STORAGE_KEYS.user);
+
+  let user: UserInfo | null = null;
+  if (storedUserJson) {
+    try {
+      user = JSON.parse(storedUserJson) as UserInfo;
+      // Basic validation
+      if (!user.id || !user.email) {
+        user = null;
+      }
+    } catch (err) {
+      console.warn("[authStore] Failed to parse stored user:", err);
+    }
+  }
 
   const hasValidRefresh = !!refreshToken && refreshToken.trim() !== "";
 
   return {
     isLoggedIn: hasValidRefresh,
     userId: userId || null,
-    user: null,               // email not persisted → loaded at login
+    user,
     accessToken: null,
     refreshToken: refreshToken || null,
   };
@@ -58,32 +73,38 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
   login: (userId: string, email: string, accessToken: string, refreshToken: string) => {
     if (!userId?.trim() || !email?.trim() || !accessToken?.trim() || !refreshToken?.trim()) {
+      console.warn("[authStore] Invalid login data - skipping");
       return;
     }
+
+    const user: UserInfo = { id: userId, email };
 
     set({
       isLoggedIn: true,
       userId,
-      user: { id: userId, email },
+      user,
       accessToken,
       refreshToken,
     });
 
     localStorage.setItem(STORAGE_KEYS.userId, userId);
     localStorage.setItem(STORAGE_KEYS.refreshToken, refreshToken);
+    localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(user));
   },
 
   setAccessToken: (accessToken: string) => {
-    if (!accessToken?.trim()) {
-      return;
-    }
+    if (!accessToken?.trim()) return;
     set({ accessToken });
   },
 
   updateUserEmail: (newEmail: string) => {
-    set((state) => ({
-      user: state.user ? { ...state.user, email: newEmail } : null,
-    }));
+    if (!newEmail?.trim()) return;
+    set((state) => {
+      if (!state.user) return state;
+      const updatedUser = { ...state.user, email: newEmail };
+      localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(updatedUser));
+      return { user: updatedUser };
+    });
   },
 
   logout: () => {
@@ -97,14 +118,10 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
     localStorage.removeItem(STORAGE_KEYS.userId);
     localStorage.removeItem(STORAGE_KEYS.refreshToken);
+    localStorage.removeItem(STORAGE_KEYS.user);
 
-    // Prevent showing stale data from previous user
     queryClient.removeQueries();
   },
 }));
-
-// ────────────────────────────────────────────────
-// Optional helpers (mainly useful in tests & utils)
-// ────────────────────────────────────────────────
 
 export const getAuthState = () => useAuthStore.getState();

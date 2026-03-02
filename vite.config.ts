@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => {
         project: "your-project-slug",
         authToken: env.SENTRY_AUTH_TOKEN,
         sourcemaps: { assets: "./dist/**" },
-        debug: true,
+        debug: false,
       }),
     ],
     resolve: {

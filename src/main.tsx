@@ -14,7 +14,7 @@ import { PersistedQueryClientProvider } from "./app/components/PersistedQueryCli
 
 import { ErrorBoundary } from "react-error-boundary";
 
-import "./sentry";
+// import "./sentry";
 
 import "./index.css";
 
