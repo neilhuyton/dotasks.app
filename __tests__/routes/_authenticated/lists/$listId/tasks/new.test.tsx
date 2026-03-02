@@ -38,7 +38,7 @@ suppressActWarnings();
 describe("New Task Page", () => {
   const TEST_LIST_ID = "list-abc-123";
 
-  beforeAll(() => server.listen({ onUnhandledRequest: "warn" })); // Changed to warn to handle Supabase WS
+  beforeAll(() => server.listen({ onUnhandledRequest: "warn" }));
 
   beforeEach(() => {
     server.resetHandlers();
@@ -85,14 +85,16 @@ describe("New Task Page", () => {
         expect(
           screen.getByRole("heading", { name: /New Task/i }),
         ).toBeInTheDocument();
-        expect(screen.getByPlaceholderText("Task title...")).toBeInTheDocument();
+        expect(
+          screen.getByPlaceholderText("Task title..."),
+        ).toBeInTheDocument();
         // expect(screen.getByPlaceholderText("Details...")).toBeInTheDocument();
       },
       { timeout: 3000 },
     );
   }
 
-  async function fillForm(title: string, /*description = ""*/) {
+  async function fillForm(title: string /*description = ""*/) {
     await waitForFormReady();
 
     const titleInput = screen.getByPlaceholderText("Task title...");
@@ -117,7 +119,9 @@ describe("New Task Page", () => {
     // expect(screen.getByPlaceholderText("Details...")).toBeInTheDocument();
 
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Create Task" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Create Task" }),
+    ).toBeInTheDocument();
   });
 
   it("disables Create button when title is empty or whitespace only", async () => {
@@ -131,7 +135,10 @@ describe("New Task Page", () => {
     expect(createBtn).toBeDisabled();
 
     await userEvent.clear(screen.getByPlaceholderText("Task title..."));
-    await userEvent.type(screen.getByPlaceholderText("Task title..."), "Buy milk");
+    await userEvent.type(
+      screen.getByPlaceholderText("Task title..."),
+      "Buy milk",
+    );
     expect(createBtn).not.toBeDisabled();
   });
 
@@ -141,7 +148,7 @@ describe("New Task Page", () => {
     renderNewTaskPage();
     await waitForFormReady();
 
-    await fillForm("Weekend Task", /*"Important stuff to do"*/);
+    await fillForm("Weekend Task" /*"Important stuff to do"*/);
 
     await userEvent.click(screen.getByRole("button", { name: "Create Task" }));
 
@@ -157,7 +164,7 @@ describe("New Task Page", () => {
     const { router } = renderNewTaskPage();
     await waitForFormReady();
 
-    await fillForm("Buy groceries", /*"Milk, eggs, bread, and some fruit"*/);
+    await fillForm("Buy groceries" /*"Milk, eggs, bread, and some fruit"*/);
 
     await userEvent.click(screen.getByRole("button", { name: "Create Task" }));
 
@@ -169,9 +176,7 @@ describe("New Task Page", () => {
     );
 
     expect(getMockTasks().length).toBeGreaterThan(initialCount);
-    expect(
-      getMockTasks().some((t) => t.title === "Buy groceries"),
-    ).toBe(true);
+    expect(getMockTasks().some((t) => t.title === "Buy groceries")).toBe(true);
   });
 
   it("navigates back to list on Cancel button click", async () => {
@@ -192,7 +197,7 @@ describe("New Task Page", () => {
     const { router } = renderNewTaskPage();
     await waitForFormReady();
 
-    await fillForm("Quick task", /*"Remember to test this"*/);
+    await fillForm("Quick task" /*"Remember to test this"*/);
 
     await userEvent.click(screen.getByRole("button", { name: "Create Task" }));
 
@@ -210,15 +215,20 @@ describe("New Task Page", () => {
 
     const initialLength = getMockTasks().length;
 
-    // await userEvent.type(screen.getByPlaceholderText("Details..."), "This should not save");
+    const titleInput = screen.getByPlaceholderText("Task title...");
+    await userEvent.clear(titleInput);
 
     const createBtn = screen.getByRole("button", { name: "Create Task" });
     expect(createBtn).toBeDisabled();
 
-    const form = screen.getByTestId("new-task-form");
-    form.dispatchEvent(new Event("submit", { bubbles: true }));
+    await userEvent.type(titleInput, "{Enter}");
 
-    await new Promise((r) => setTimeout(r, 1000));
+    await waitFor(
+      () => {
+        expect(getMockTasks().length).toBe(initialLength);
+      },
+      { timeout: 1500 },
+    );
 
     expect(getMockTasks().length).toBe(initialLength);
   });
