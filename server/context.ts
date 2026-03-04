@@ -1,7 +1,11 @@
 // server/context.ts
 
 import { PrismaClient } from "@prisma/client";
-import { jwtVerify, createRemoteJWKSet } from "jose";
+import { jwtVerify, createRemoteJWKSet, type JWTVerifyResult } from "jose";
+import fetch from 'node-fetch';  // ← Add this import
+
+// Polyfill global fetch if needed (Netlify Node 18+ has it, but this ensures stability)
+globalThis.fetch = fetch as any;  // Or use it only in JWKS if preferred
 
 let prisma: PrismaClient;
 
@@ -22,64 +26,40 @@ export interface Context {
 }
 
 const jwksUrl = new URL(
-  `${process.env.SUPABASE_URL!}/auth/v1/.well-known/jwks.json`,
+  `${process.env.SUPABASE_URL!}/auth/v1/.well-known/jwks.json`
 );
-console.log("[context init] JWKS URL:", jwksUrl.toString()); // Log once on load
+console.log("[context init] JWKS URL:", jwksUrl.toString());
 
 const JWKS = createRemoteJWKSet(jwksUrl);
 
-export async function createContext({
-  req,
-}: {
-  req: Request;
-}): Promise<Context> {
+export async function createContext({ req }: { req: Request }): Promise<Context> {
   let userId: string | null = null;
   let email: string | null = null;
 
   const authHeader =
     req.headers.get("authorization") ?? req.headers.get("Authorization");
 
-  if (!authHeader) {
-    console.log(
-      "[DEBUG] Authorization missing - forcing test userId for debug",
-    );
-    userId = "835dfe4d-5a7b-4ee7-b5b7-d3c4e03915bd"; // your user sub from token
-    email = "dotasks@nehu.me";
-    return { prisma, userId, email };
-  }
-
-  console.log(
-    "[context] Full headers:",
-    Object.fromEntries(req.headers.entries()),
-  ); // Log ALL headers
+  console.log("[context] Full headers:", Object.fromEntries(req.headers.entries()));
   console.log("[context] Received Authorization header:", authHeader);
 
-  if (
-    typeof authHeader !== "string" ||
-    !authHeader?.toLowerCase().startsWith("bearer ")
-  ) {
-    console.log(
-      "[context] No valid Bearer token found (header missing or invalid format)",
-    );
+  if (typeof authHeader !== "string" || !authHeader.startsWith("Bearer ")) {
+    console.log("[context] No valid Bearer token found → unauthenticated context");
     return { prisma, userId, email };
   }
 
   const token = authHeader.slice(7).trim();
 
-  console.log(
-    "[context] Extracted token (first 20 chars):",
-    token.slice(0, 20) + "...",
-  );
+  console.log("[context] Extracted token (first 20 chars):", token.slice(0, 20) + "...");
 
   try {
-    const verificationResult = await jwtVerify(token, JWKS, {
+    const verificationResult: JWTVerifyResult = await jwtVerify(token, JWKS, {
       issuer: `${process.env.SUPABASE_URL!}/auth/v1`,
       audience: "authenticated",
     });
 
     const payload = verificationResult.payload;
 
-    console.log("[context] JWT payload:", payload); // Log claims
+    console.log("[context] JWT payload:", payload);
 
     if (typeof payload.sub === "string" && payload.sub) {
       userId = payload.sub;
@@ -91,11 +71,11 @@ export async function createContext({
     } else {
       console.log("[context] JWT verified but missing/invalid sub claim");
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error("[context] JWT verification failed:", {
       name: err.name,
       message: err.message,
-      // stack: err.stack, // Uncomment for full trace in logs
+      // stack: err.stack,  // Uncomment for full trace if needed
     });
   }
 
