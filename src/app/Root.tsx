@@ -5,7 +5,7 @@ import { RouterProvider } from "@tanstack/react-router";
 
 import { router } from "@/router";
 import { ThemeProvider } from "./components/ThemeProvider";
-import { RealtimeListeners } from "@/app/components/RealtimeListeners";
+// import { RealtimeListeners } from "@/app/components/RealtimeListeners";
 import { PersistedQueryClientProvider } from "./components/PersistedQueryClientProvider";
 
 import { TRPCProvider } from "@/trpc";
@@ -60,7 +60,7 @@ export function Root() {
               <RouterProvider router={router} />
             </Suspense>
 
-            <RealtimeListeners />
+            {/* <RealtimeListeners /> */}
           </ThemeProvider>
         </TRPCProvider>
       </PersistedQueryClientProvider>

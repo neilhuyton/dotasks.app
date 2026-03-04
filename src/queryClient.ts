@@ -1,3 +1,5 @@
+// src/queryClient.ts
+
 import { QueryClient, QueryCache, MutationCache } from "@tanstack/react-query";
 
 let queryClientInstance: QueryClient | undefined;
