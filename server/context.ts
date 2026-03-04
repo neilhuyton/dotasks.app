@@ -39,6 +39,15 @@ export async function createContext({
   const authHeader =
     req.headers.get("authorization") ?? req.headers.get("Authorization");
 
+  if (!authHeader) {
+    console.log(
+      "[DEBUG] Authorization missing - forcing test userId for debug",
+    );
+    userId = "835dfe4d-5a7b-4ee7-b5b7-d3c4e03915bd"; // your user sub from token
+    email = "dotasks@nehu.me";
+    return { prisma, userId, email };
+  }
+
   console.log(
     "[context] Full headers:",
     Object.fromEntries(req.headers.entries()),
