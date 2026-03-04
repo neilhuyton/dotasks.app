@@ -4,18 +4,15 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/app/components/ui/button";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { trpc } from "@/trpc";
-import { useTRPC } from "@/trpc";
+import { trpc, useTRPC } from "@/trpc";
 import { useBannerStore } from "@/shared/store/bannerStore";
-import { useAuthStore } from "@/shared/store/authStore";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/_authenticated/lists/$listId/delete")({
   loader: async ({ context: { queryClient }, params }) => {
     const { listId } = params;
-    const { accessToken } = useAuthStore.getState();
 
-    if (!accessToken || !listId) return {};
+    if (!listId) return {};
 
     await queryClient.ensureQueryData(
       trpc.list.getOne.queryOptions(
@@ -37,11 +34,12 @@ export const Route = createFileRoute("/_authenticated/lists/$listId/delete")({
 
   errorComponent: ({ error }) => {
     const message = error?.message?.toLowerCase() ?? "";
-    const isNotFound = message.includes("not found");
+    const isNotFoundOrUnauthorized =
+      message.includes("not found") || message.includes("unauthorized");
 
     return (
       <div className="flex min-h-[60vh] items-center justify-center p-6 text-center text-muted-foreground">
-        {isNotFound
+        {isNotFoundOrUnauthorized
           ? "List not found or you don't have access."
           : `Failed to load list: ${error?.message || "Unknown error"}`}
       </div>
@@ -112,7 +110,11 @@ function DeleteListConfirmPage() {
   );
 
   const handleCancel = () => {
-    navigate({ to: "/lists/$listId", params: { listId }, replace: true });
+    navigate({
+      to: "/lists/$listId",
+      params: { listId },
+      replace: true,
+    });
   };
 
   const isPending = deleteMutation.isPending;
@@ -153,12 +155,12 @@ function DeleteListConfirmPage() {
       )}
     >
       <div className="relative flex min-h-full flex-col px-6 pt-20 pb-10 sm:px-8">
-        {/* Close / Back button */}
+        {/* Back / Cancel button */}
         <Button
           variant="outline"
           size="icon"
           className="absolute left-4 top-6 sm:left-6 sm:top-8 z-[10000]"
-          aria-label="Cancel and return to lists"
+          aria-label="Cancel and return to list"
           onClick={handleCancel}
           disabled={isPending}
         >
@@ -183,7 +185,7 @@ function DeleteListConfirmPage() {
                 deleteMutation.mutate({ id: listId });
               }}
               className="space-y-8"
-              data-testid="delete-confirm-form" // ← Added for testing
+              data-testid="delete-confirm-form"
             >
               <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
                 <Button
@@ -191,7 +193,7 @@ function DeleteListConfirmPage() {
                   variant="destructive"
                   disabled={isPending}
                   className="w-full sm:w-44"
-                  data-testid="delete-confirm-button" // ← Added for testing
+                  data-testid="delete-confirm-button"
                 >
                   {isPending && (
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />

@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">73.91% </span>
+                <span class="strong">73.33% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>34/46</span>
+                <span class='fraction'>33/45</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">47.22% </span>
+                <span class="strong">41.66% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>17/36</span>
+                <span class='fraction'>15/36</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">77.27% </span>
+                <span class="strong">76.74% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>34/44</span>
+                <span class='fraction'>33/43</span>
             </div>
         
             
@@ -281,7 +281,15 @@
 <a name='L216'></a><a href='#L216'>216</a>
 <a name='L217'></a><a href='#L217'>217</a>
 <a name='L218'></a><a href='#L218'>218</a>
-<a name='L219'></a><a href='#L219'>219</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L219'></a><a href='#L219'>219</a>
+<a name='L220'></a><a href='#L220'>220</a>
+<a name='L221'></a><a href='#L221'>221</a>
+<a name='L222'></a><a href='#L222'>222</a>
+<a name='L223'></a><a href='#L223'>223</a>
+<a name='L224'></a><a href='#L224'>224</a>
+<a name='L225'></a><a href='#L225'>225</a>
+<a name='L226'></a><a href='#L226'>226</a>
+<a name='L227'></a><a href='#L227'>227</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -291,14 +299,15 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">15x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -320,10 +329,11 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -380,6 +390,8 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -396,6 +408,10 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">6x</span>
 <span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">6x</span>
@@ -505,18 +521,19 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/app/components/ui/button";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { trpc } from "@/trpc";
-import { useTRPC } from "@/trpc";
+import { trpc, useTRPC } from "@/trpc";
 import { useBannerStore } from "@/shared/store/bannerStore";
-import { useAuthStore } from "@/shared/store/authStore";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 &nbsp;
 export const Route = createFileRoute("/_authenticated/lists/$listId/delete")({
   loader: async ({ context: { queryClient }, params }) =&gt; {
     const { listId } = params;
-    const { accessToken } = useAuthStore.getState();
 &nbsp;
-    <span class="missing-if-branch" title="if path not taken" >I</span>if (!accessToken || !listId) <span class="cstat-no" title="statement not covered" >return {};</span>
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (!listId) <span class="cstat-no" title="statement not covered" >return {};</span>
+&nbsp;
+    // No manual token/session check needed.
+    // tRPC client automatically attaches fresh token from supabase.auth.getSession()
+    // If not authenticated → protectedProcedure throws → _authenticated layout redirects
 &nbsp;
     await queryClient.ensureQueryData(
       trpc.list.getOne.queryOptions(
@@ -538,11 +555,12 @@ export const Route = createFileRoute("/_authenticated/lists/$listId/delete")({
 &nbsp;
   errorComponent: <span class="fstat-no" title="function not covered" >({</span> error }) =&gt; {
     const message = <span class="cstat-no" title="statement not covered" >error?.message?.toLowerCase() ?? "";</span>
-    const isNotFound = <span class="cstat-no" title="statement not covered" >message.includes("not found");</span>
+    const isNotFoundOrUnauthorized =
+<span class="cstat-no" title="statement not covered" >      message.includes("not found") || message.includes("unauthorized");</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    return (</span>
       &lt;div className="flex min-h-[60vh] items-center justify-center p-6 text-center text-muted-foreground"&gt;
-        {isNotFound
+        {isNotFoundOrUnauthorized
           ? "List not found or you don't have access."
           : `Failed to load list: ${error?.message || "Unknown error"}`}
       &lt;/div&gt;
@@ -598,6 +616,8 @@ function DeleteListConfirmPage() {
 &nbsp;
       onSettled: () =&gt; {
         queryClient.invalidateQueries({ queryKey: allListsQueryKey });
+        // Optional: also invalidate pinned lists or other derived queries if used
+        // queryClient.invalidateQueries(trpcHook.list.getPinned.queryKey());
       },
 &nbsp;
       onSuccess: <span class="fstat-no" title="function not covered" >() =&gt; {</span>
@@ -613,7 +633,11 @@ function DeleteListConfirmPage() {
   );
 &nbsp;
   const handleCancel = () =&gt; {
-    navigate({ to: "/lists/$listId", params: { listId }, replace: true });
+    navigate({
+      to: "/lists/$listId",
+      params: { listId },
+      replace: true,
+    });
   };
 &nbsp;
   const isPending = deleteMutation.isPending;
@@ -654,12 +678,12 @@ function DeleteListConfirmPage() {
       )}
     &gt;
       &lt;div className="relative flex min-h-full flex-col px-6 pt-20 pb-10 sm:px-8"&gt;
-        {/* Close / Back button */}
+        {/* Back / Cancel button */}
         &lt;Button
           variant="outline"
           size="icon"
           className="absolute left-4 top-6 sm:left-6 sm:top-8 z-[10000]"
-          aria-label="Cancel and return to lists"
+          aria-label="Cancel and return to list"
           onClick={handleCancel}
           disabled={isPending}
         &gt;
@@ -684,7 +708,7 @@ function DeleteListConfirmPage() {
                 deleteMutation.mutate({ id: listId });
               }}
               className="space-y-8"
-              data-testid="delete-confirm-form" // ← Added for testing
+              data-testid="delete-confirm-form"
             &gt;
               &lt;div className="flex flex-col sm:flex-row gap-4 justify-center pt-8"&gt;
                 &lt;Button
@@ -692,7 +716,7 @@ function DeleteListConfirmPage() {
                   variant="destructive"
                   disabled={isPending}
                   className="w-full sm:w-44"
-                  data-testid="delete-confirm-button" // ← Added for testing
+                  data-testid="delete-confirm-button"
                 &gt;
                   {isPending &amp;&amp; (
                     &lt;Loader2 className="mr-2 h-5 w-5 animate-spin" /&gt;
@@ -724,7 +748,7 @@ function DeleteListConfirmPage() {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-02-28T19:51:11.835Z
+                at 2026-03-03T22:02:55.094Z
             </div>
         <script src="../../../../../../prettify.js"></script>
         <script>

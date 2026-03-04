@@ -16,19 +16,12 @@ import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useMutation } from "@tanstack/react-query";
-import { useTRPC } from "@/trpc";
-import { useAuthStore } from "@/shared/store/authStore";
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import type { TRPCClientErrorLike } from "@trpc/client";
-import type { AppRouter } from "server/trpc";
+import { useAuthStore } from "@/shared/store/authStore";
 
 const formSchema = z.object({
-  email: z
-    .email("Please enter a valid email address")
-    .trim()
-    .toLowerCase(),
+  email: z.email("Please enter a valid email address").trim().toLowerCase(),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
@@ -40,11 +33,10 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuthStore();
-
-  const trpc = useTRPC();
+  const { signIn } = useAuthStore();
 
   const [message, setMessage] = useState<string | null>(null);
+  const [isPending, setIsPending] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -52,44 +44,33 @@ function LoginPage() {
     mode: "onChange",
   });
 
-  const mutation = useMutation(
-    trpc.login.mutationOptions({
-      onMutate: () => {
-        setMessage(null);
-      },
+  const onSubmit = async (values: FormValues) => {
+    setMessage(null);
+    setIsPending(true);
 
-      onSuccess: (data) => {
-        setMessage("Login successful!");
+    const { error } = await signIn(values.email, values.password);
 
-        login(
-          data.user.id,
-          data.user.email,
-          data.accessToken,
-          data.refreshToken,
-        );
+    if (error) {
+      let errorMessage = "Invalid email or password";
 
-        form.reset();
+      if (error.message?.includes("Invalid login credentials")) {
+        errorMessage = "Invalid email or password";
+      } else if (error.message?.includes("Email not confirmed")) {
+        errorMessage =
+          "Please verify your email before logging in. Check your inbox/spam folder.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
 
-        navigate({ to: "/lists" });
-      },
+      setMessage(`Login failed: ${errorMessage}`);
+      setIsPending(false);
+      return;
+    }
 
-      onError: (err: TRPCClientErrorLike<AppRouter>) => {
-        let errorMessage =
-          err.message || "Login failed. Please check your credentials.";
-
-        // Special handling for unverified email
-        if (err.message?.toLowerCase().includes("verify your email")) {
-          errorMessage =
-            "Please verify your email before logging in. Check your inbox/spam folder.";
-        }
-
-        setMessage(`Login failed: ${errorMessage}`);
-      },
-    }),
-  );
-
-  const onSubmit = (values: FormValues) => {
-    mutation.mutate(values);
+    setMessage("Login successful!");
+    form.reset();
+    navigate({ to: "/lists" });
+    setIsPending(false);
   };
 
   // Clear message when user types in email or password
@@ -133,7 +114,7 @@ function LoginPage() {
                         id="email"
                         type="email"
                         placeholder="m@example.com"
-                        disabled={mutation.isPending}
+                        disabled={isPending}
                         {...field}
                       />
                     </FormControl>
@@ -162,7 +143,7 @@ function LoginPage() {
                         id="password"
                         type="password"
                         placeholder="Enter your password"
-                        disabled={mutation.isPending}
+                        disabled={isPending}
                         {...field}
                       />
                     </FormControl>
@@ -201,12 +182,10 @@ function LoginPage() {
               <Button
                 type="submit"
                 className="w-full mt-4"
-                disabled={mutation.isPending || !form.formState.isValid}
+                disabled={isPending || !form.formState.isValid}
               >
-                {mutation.isPending && (
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                )}
-                {mutation.isPending ? "Logging in..." : "Login"}
+                {isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+                {isPending ? "Logging in..." : "Login"}
               </Button>
 
               <div className="mt-4 text-center text-sm">

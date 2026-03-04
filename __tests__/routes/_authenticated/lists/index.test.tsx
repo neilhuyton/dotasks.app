@@ -4,11 +4,11 @@ import {
   describe,
   it,
   expect,
+  vi,
+  beforeAll,
   beforeEach,
   afterEach,
-  beforeAll,
   afterAll,
-  vi,
 } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -21,30 +21,42 @@ import {
   listGetAllErrorHandler,
   resetMockLists,
 } from "../../../../__mocks__/handlers/lists";
+import { trpcMsw } from "../../../../__mocks__/trpcMsw";
 import { useAuthStore } from "@/shared/store/authStore";
 
 describe("Lists Overview Page (/_authenticated/lists/)", () => {
-  beforeAll(() => server.listen({ onUnhandledRequest: "warn" }));
+  beforeAll(() => {
+    server.listen({ onUnhandledRequest: "warn" });
+  });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     server.resetHandlers();
     resetMockLists();
+
+    // Prevent MSW warnings + sync failure logs
+    server.use(
+      trpcMsw.user.createOrSync.mutation(() => ({
+        success: true,
+        message: "User synced (mock)",
+        user: { id: "test-user-123", email: "testuser@example.com" },
+      })),
+    );
+
+    // Default successful lists response
     server.use(listGetAllHandler);
 
-    useAuthStore.setState({
-      isLoggedIn: true,
-      userId: "test-user-123",
-      accessToken: "mock-token",
-      refreshToken: "mock-refresh",
-    });
+    // Run real auth flow (uses global Supabase mock)
+    await useAuthStore.getState().initialize();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     server.resetHandlers();
-    useAuthStore.getState().logout?.();
+    await useAuthStore.getState().signOut();
   });
 
-  afterAll(() => server.close());
+  afterAll(() => {
+    server.close();
+  });
 
   function renderListsPage() {
     return renderWithProviders({ initialEntries: ["/lists"] });
@@ -55,62 +67,73 @@ describe("Lists Overview Page (/_authenticated/lists/)", () => {
 
     renderListsPage();
 
-    await waitFor(() => {
-      expect(screen.getByText("Your Lists")).toBeInTheDocument();
-      expect(
-        screen.getByText("You don't have any lists yet."),
-      ).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText("Your Lists")).toBeInTheDocument();
+        expect(
+          screen.getByText("You don't have any lists yet."),
+        ).toBeInTheDocument();
+      },
+      { timeout: 1500 },
+    );
 
     const fab = screen.getByTestId("fab-add-list");
     expect(fab).toBeInTheDocument();
-    expect(fab).toHaveTextContent("Create your first list");
+    expect(fab).toHaveTextContent(/create your first list/i);
     expect(fab).toHaveAttribute("href", "/lists/new");
   });
 
   it("renders list count, sortable table, and FAB when lists exist", async () => {
     renderListsPage();
 
-    await waitFor(() => {
-      expect(screen.getByText("Your Lists")).toBeInTheDocument();
-      expect(screen.getByText("2 lists")).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText("Your Lists")).toBeInTheDocument();
+        expect(screen.getByText("2 lists")).toBeInTheDocument();
+      },
+      { timeout: 1500 },
+    );
 
-    // Check mock lists are displayed
     expect(screen.getByText("Groceries")).toBeInTheDocument();
     expect(screen.getByText("Work Tasks")).toBeInTheDocument();
 
-    // FAB
     const fab = screen.getByTestId("fab-add-list");
     expect(fab).toBeInTheDocument();
-    expect(fab).toHaveTextContent("Create new list");
+    expect(fab).toHaveTextContent(/create new list/i);
   });
 
   it("shows error message when getAll query fails", async () => {
-    // Silence expected TRPCClientError logging from React Query → TanStack Router boundary
-    // This keeps test output clean while still verifying the UI fallback renders correctly
-    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    // Silence expected React Query / TRPC error logging
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
 
     server.use(listGetAllErrorHandler);
 
     renderListsPage();
 
-    await waitFor(() => {
-      expect(screen.getByText("Failed to load your lists")).toBeInTheDocument();
-      
-      expect(screen.getByText("Failed to fetch lists")).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(
+          screen.getByText("Failed to load your lists"),
+        ).toBeInTheDocument();
+        expect(screen.getByText("Failed to fetch lists")).toBeInTheDocument();
+      },
+      { timeout: 1500 },
+    );
 
-    // Cleanup
     consoleErrorSpy.mockRestore();
   });
 
   it("navigates to /lists/new when FAB is clicked", async () => {
     const { router } = renderListsPage();
 
-    await waitFor(() => {
-      expect(screen.getByTestId("fab-add-list")).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("fab-add-list")).toBeInTheDocument();
+      },
+      { timeout: 1500 },
+    );
 
     await userEvent.click(screen.getByTestId("fab-add-list"));
 

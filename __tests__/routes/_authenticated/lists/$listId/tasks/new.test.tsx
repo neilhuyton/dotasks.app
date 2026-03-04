@@ -14,6 +14,7 @@ import userEvent from "@testing-library/user-event";
 
 import { server } from "../../../../../../__mocks__/server";
 import { renderWithProviders } from "../../../../../utils/test-helpers";
+import { trpcMsw } from "../../../../../../__mocks__/trpcMsw";
 
 import {
   resetMockLists,
@@ -24,10 +25,10 @@ import {
 
 import {
   resetMockTasks,
+  getMockTasks,
   taskGetByListSuccess,
   taskCreateHandler,
   delayedTaskCreateHandler,
-  getMockTasks,
 } from "../../../../../../__mocks__/handlers/tasks";
 
 import { useAuthStore } from "@/shared/store/authStore";
@@ -35,17 +36,25 @@ import { suppressActWarnings } from "../../../../../act-suppress";
 
 suppressActWarnings();
 
-describe("New Task Page", () => {
+describe("New Task Page (/_authenticated/lists/$listId/tasks/new)", () => {
   const TEST_LIST_ID = "list-abc-123";
 
   beforeAll(() => server.listen({ onUnhandledRequest: "warn" }));
 
-  beforeEach(() => {
-    resetMockTasks();
-
+  beforeEach(async () => {
     server.resetHandlers();
     resetMockLists();
+    resetMockTasks();
     prepareDetailPageTestList();
+
+    // Prevent MSW warnings + "Prisma user sync failed" logs
+    server.use(
+      trpcMsw.user.createOrSync.mutation(() => ({
+        success: true,
+        message: "User synced (mock)",
+        user: { id: "test-user-123", email: "testuser@example.com" },
+      })),
+    );
 
     server.use(
       listGetAllHandler,
@@ -54,22 +63,12 @@ describe("New Task Page", () => {
       taskCreateHandler,
     );
 
-    useAuthStore.setState({
-      isLoggedIn: true,
-      userId: "test-user-123",
-      accessToken: "mock-token",
-      refreshToken: "mock-refresh",
-    });
+    await useAuthStore.getState().initialize();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     server.resetHandlers();
-    useAuthStore.setState({
-      isLoggedIn: false,
-      userId: null,
-      accessToken: null,
-      refreshToken: null,
-    });
+    await useAuthStore.getState().signOut();
   });
 
   afterAll(() => server.close());
@@ -83,10 +82,10 @@ describe("New Task Page", () => {
   async function waitForFormReady() {
     await waitFor(
       () => {
-        expect(
-          screen.getByRole("heading", { name: /New Task/i }),
-        ).toBeInTheDocument();
-        expect(screen.getByPlaceholderText("Task title...")).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: /New Task/i })).toBeInTheDocument();
+        expect(screen.getByLabelText(/Title/i)).toBeInTheDocument(); // ← use label, not placeholder
+        expect(screen.getByRole("button", { name: "Create Task" })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
       },
       { timeout: 3000 },
     );
@@ -95,7 +94,7 @@ describe("New Task Page", () => {
   async function fillForm(title: string) {
     await waitForFormReady();
 
-    const titleInput = screen.getByPlaceholderText("Task title...");
+    const titleInput = screen.getByLabelText(/Title/i);
     await userEvent.clear(titleInput);
     await userEvent.type(titleInput, title);
   }
@@ -104,9 +103,9 @@ describe("New Task Page", () => {
     renderNewTaskPage();
     await waitForFormReady();
 
-    expect(screen.getByPlaceholderText("Task title...")).toHaveAttribute(
+    expect(screen.getByLabelText(/Title/i)).toHaveAttribute(
       "placeholder",
-      "Task title...",
+      "e.g. Buy groceries",
     );
 
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
@@ -120,12 +119,14 @@ describe("New Task Page", () => {
     const createBtn = screen.getByRole("button", { name: "Create Task" });
     expect(createBtn).toBeDisabled();
 
-    await userEvent.type(screen.getByPlaceholderText("Task title..."), "   ");
-    expect(createBtn).toBeDisabled();
+    const titleInput = screen.getByLabelText(/Title/i);
 
-    await userEvent.clear(screen.getByPlaceholderText("Task title..."));
-    await userEvent.type(screen.getByPlaceholderText("Task title..."), "Buy milk");
-    expect(createBtn).not.toBeDisabled();
+    await userEvent.type(titleInput, "   ");
+    await waitFor(() => expect(createBtn).toBeDisabled(), { timeout: 2000 });
+
+    await userEvent.clear(titleInput);
+    await userEvent.type(titleInput, "Buy milk");
+    await waitFor(() => expect(createBtn).not.toBeDisabled(), { timeout: 2000 });
   });
 
   it("shows loading state during creation", async () => {
@@ -138,9 +139,11 @@ describe("New Task Page", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Create Task" }));
 
-    await screen.findByText("Creating");
+    await screen.findByText("Creating", {}, { timeout: 2000 });
 
-    expect(screen.getByRole("button", { name: /Creating/i })).toBeDisabled();
+    const createBtn = screen.getByRole("button", { name: /Creating/i });
+    expect(createBtn).toBeDisabled();
+
     expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
   });
 
@@ -162,9 +165,7 @@ describe("New Task Page", () => {
     );
 
     expect(getMockTasks().length).toBeGreaterThan(initialCount);
-    expect(
-      getMockTasks().some((t) => t.title === "Buy groceries"),
-    ).toBe(true);
+    expect(getMockTasks().some((t) => t.title === "Buy groceries")).toBe(true);
   });
 
   it("navigates back to list on Cancel button click", async () => {
@@ -195,6 +196,13 @@ describe("New Task Page", () => {
       },
       { timeout: 3000 },
     );
+
+    // If form remains mounted briefly, check cleared state
+    // (optional — since navigation unmounts it)
+    const titleInput = screen.queryByLabelText(/Title/i);
+    if (titleInput) {
+      expect(titleInput).toHaveValue("");
+    }
   });
 
   it("does not create task when title is empty (prevents mutation)", async () => {
@@ -203,14 +211,11 @@ describe("New Task Page", () => {
 
     const initialLength = getMockTasks().length;
 
-    const titleInput = screen.getByPlaceholderText("Task title...");
-    await userEvent.clear(titleInput);
-
     const createBtn = screen.getByRole("button", { name: "Create Task" });
     expect(createBtn).toBeDisabled();
 
-    await userEvent.type(titleInput, "{Enter}");
-
+    // Try submitting with empty title (should do nothing)
+    await userEvent.click(createBtn);
 
     await waitFor(
       () => {

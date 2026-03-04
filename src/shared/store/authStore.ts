@@ -1,127 +1,178 @@
 // src/shared/store/authStore.ts
 
 import { create } from "zustand";
-import { queryClient } from "@/queryClient";
-
-export interface UserInfo {
-  id: string;
-  email: string;
-}
+import { supabase } from "@/lib/supabase";
+import type { Session, User } from "@supabase/supabase-js";
+import { getQueryClient } from "@/queryClient";
+import { trpcClient } from "@/trpc";
 
 export interface AuthState {
-  isLoggedIn: boolean;
-  userId: string | null;
-  user: UserInfo | null;
-  accessToken: string | null;
-  refreshToken: string | null;
-  login: (userId: string, email: string, accessToken: string, refreshToken: string) => void;
-  setAccessToken: (accessToken: string) => void;
+  session: Session | null;
+  user: User | null;
+  loading: boolean;
+  error: Error | null;
+
+  initialize: () => Promise<void>;
+  signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signOut: () => Promise<void>;
   updateUserEmail: (newEmail: string) => void;
-  logout: () => void;
+
+  supabase: typeof supabase;
 }
-
-const STORAGE_KEYS = {
-  userId: "auth:userId",
-  refreshToken: "auth:refreshToken",
-  user: "auth:user",
-} as const;
-
-function getInitialState(): Pick<
-  AuthState,
-  "isLoggedIn" | "userId" | "user" | "accessToken" | "refreshToken"
-> {
-  if (typeof window === "undefined") {
-    return {
-      isLoggedIn: false,
-      userId: null,
-      user: null,
-      accessToken: null,
-      refreshToken: null,
-    };
-  }
-
-  const userId = localStorage.getItem(STORAGE_KEYS.userId);
-  const refreshToken = localStorage.getItem(STORAGE_KEYS.refreshToken);
-  const storedUserJson = localStorage.getItem(STORAGE_KEYS.user);
-
-  let user: UserInfo | null = null;
-  if (storedUserJson) {
-    try {
-      user = JSON.parse(storedUserJson) as UserInfo;
-      // Basic validation
-      if (!user.id || !user.email) {
-        user = null;
-      }
-    } catch (err) {
-      console.warn("[authStore] Failed to parse stored user:", err);
-    }
-  }
-
-  const hasValidRefresh = !!refreshToken && refreshToken.trim() !== "";
-
-  return {
-    isLoggedIn: hasValidRefresh,
-    userId: userId || null,
-    user,
-    accessToken: null,
-    refreshToken: refreshToken || null,
-  };
-}
-
-export const useAuthStore = create<AuthState>()((set) => ({
-  ...getInitialState(),
-
-  login: (userId: string, email: string, accessToken: string, refreshToken: string) => {
-    if (!userId?.trim() || !email?.trim() || !accessToken?.trim() || !refreshToken?.trim()) {
-      console.warn("[authStore] Invalid login data - skipping");
-      return;
-    }
-
-    const user: UserInfo = { id: userId, email };
-
-    set({
-      isLoggedIn: true,
-      userId,
-      user,
-      accessToken,
-      refreshToken,
-    });
-
-    localStorage.setItem(STORAGE_KEYS.userId, userId);
-    localStorage.setItem(STORAGE_KEYS.refreshToken, refreshToken);
-    localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(user));
-  },
-
-  setAccessToken: (accessToken: string) => {
-    if (!accessToken?.trim()) return;
-    set({ accessToken });
-  },
-
-  updateUserEmail: (newEmail: string) => {
-    if (!newEmail?.trim()) return;
-    set((state) => {
-      if (!state.user) return state;
-      const updatedUser = { ...state.user, email: newEmail };
-      localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(updatedUser));
-      return { user: updatedUser };
-    });
-  },
-
-  logout: () => {
-    set({
-      isLoggedIn: false,
-      userId: null,
-      user: null,
-      accessToken: null,
-      refreshToken: null,
-    });
-
-    localStorage.removeItem(STORAGE_KEYS.userId);
-    localStorage.removeItem(STORAGE_KEYS.refreshToken);
-    localStorage.removeItem(STORAGE_KEYS.user);
-
-    queryClient.removeQueries();
-  },
-}));
 
 export const getAuthState = () => useAuthStore.getState();
+
+export const useAuthStore = create<AuthState>()((set) => {
+  const syncUser = async (user: User | null) => {
+    if (!user?.id || !user.email) return;
+    try {
+      await trpcClient.user.createOrSync.mutate({
+        id: user.id,
+        email: user.email,
+      });
+    } catch {
+      // empty catch
+    }
+  };
+
+  const clearCacheOnSignOut = () => {
+    getQueryClient().clear();
+  };
+
+  supabase.auth.onAuthStateChange(async (_event, session) => {
+    const user = session?.user ?? null;
+    set({ session, user, loading: false, error: null });
+    await syncUser(user);
+    if (!session) {
+      clearCacheOnSignOut();
+    }
+  });
+
+  return {
+    session: null,
+    user: null,
+    loading: true,
+    error: null,
+
+    supabase,
+
+    initialize: async () => {
+      set({ loading: true, error: null });
+
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
+
+        const session = data.session;
+        const user = session?.user ?? null;
+
+        set({ session, user, loading: false, error: null });
+        await syncUser(user);
+      } catch (err) {
+        set({
+          loading: false,
+          error:
+            err instanceof Error
+              ? err
+              : new Error("Auth initialization failed"),
+        });
+      }
+    },
+
+    signUp: async (email: string, password: string) => {
+      set({ loading: true, error: null });
+
+      try {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/welcome`,
+          },
+        });
+
+        if (error) throw error;
+
+        const user = data.user ?? null;
+
+        set({
+          session: data.session,
+          user,
+          loading: false,
+          error: null,
+        });
+
+        await syncUser(user);
+
+        return { error: null };
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error("Signup failed");
+        set({ loading: false, error });
+        return { error };
+      }
+    },
+
+    signIn: async (email: string, password: string) => {
+      set({ loading: true, error: null });
+
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) throw error;
+
+        const user = data.user ?? null;
+
+        set({
+          session: data.session,
+          user,
+          loading: false,
+          error: null,
+        });
+
+        await syncUser(user);
+
+        return { error: null };
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error("Login failed");
+        set({ loading: false, error });
+        return { error };
+      }
+    },
+
+    signOut: async () => {
+      set({ loading: true, error: null });
+
+      try {
+        const { error } = await supabase.auth.signOut();
+        if (error) throw error;
+
+        const projectRef = new URL(
+          import.meta.env.VITE_SUPABASE_URL!,
+        ).hostname.split(".")[0];
+        localStorage.removeItem(`sb-${projectRef}-auth-token`);
+
+        set({
+          session: null,
+          user: null,
+          loading: false,
+          error: null,
+        });
+
+        clearCacheOnSignOut();
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error("Sign out failed");
+        set({ loading: false, error });
+      }
+    },
+
+    updateUserEmail: (newEmail: string) => {
+      set((state) => ({
+        user: state.user ? { ...state.user, email: newEmail } : null,
+      }));
+    },
+  };
+});

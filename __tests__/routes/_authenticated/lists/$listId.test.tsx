@@ -4,6 +4,7 @@ import {
   describe,
   it,
   expect,
+  vi,
   beforeAll,
   beforeEach,
   afterEach,
@@ -14,10 +15,12 @@ import userEvent from "@testing-library/user-event";
 
 import { server } from "../../../../__mocks__/server";
 import { renderWithProviders } from "../../../utils/test-helpers";
+import { trpcMsw } from "../../../../__mocks__/trpcMsw";
 
 import {
   listGetOneNotFoundHandler,
   listGetOneDetailPagePreset,
+  resetMockLists,
 } from "../../../../__mocks__/handlers/lists";
 
 import {
@@ -34,32 +37,35 @@ suppressActWarnings();
 
 describe("List Detail Route (/_authenticated/lists/$listId)", () => {
   beforeAll(() => server.listen({ onUnhandledRequest: "warn" }));
-  afterAll(() => server.close());
 
-  beforeEach(() => {
-    useAuthStore.setState({
-      isLoggedIn: true,
-      userId: "test-user-123",
-      accessToken: "mock-token",
-      refreshToken: "mock-refresh",
-    });
-
+  beforeEach(async () => {
     server.resetHandlers();
+    resetMockLists();
     resetMockTasks();
 
+    // Prevent MSW warnings + "Prisma user sync failed" logs
+    server.use(
+      trpcMsw.user.createOrSync.mutation(() => ({
+        success: true,
+        message: "User synced (mock)",
+        user: { id: "test-user-123", email: "testuser@example.com" },
+      })),
+    );
+
+    // Default successful responses
     server.use(listGetOneDetailPagePreset);
     server.use(taskGetByListSuccess);
+
+    // Run real auth initialization (relies on global Supabase mock)
+    await useAuthStore.getState().initialize();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     server.resetHandlers();
-    useAuthStore.setState({
-      isLoggedIn: false,
-      userId: null,
-      accessToken: null,
-      refreshToken: null,
-    });
+    await useAuthStore.getState().signOut();
   });
+
+  afterAll(() => server.close());
 
   async function renderListDetail(
     listId = "list-abc-123",
@@ -94,9 +100,10 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
   });
 
   it("shows 'List not found' message when list does not exist", async () => {
-    // Silence the expected React error-boundary + TRPC error log for this test only
-    const originalConsoleError = console.error;
-    console.error = vi.fn();
+    // Silence expected error-boundary + TRPC logging for this test
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
 
     server.use(listGetOneNotFoundHandler);
 
@@ -108,8 +115,7 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
       { timeout: 3000 },
     );
 
-    // Restore original console.error behavior
-    console.error = originalConsoleError;
+    consoleErrorSpy.mockRestore();
   });
 
   it("renders Add Task FAB with correct navigation target", async () => {
@@ -157,9 +163,7 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
     );
 
     const skeletonRows = screen
-      .getAllByRole("generic", {
-        hidden: true,
-      })
+      .getAllByRole("generic", { hidden: true })
       .filter((el) => el.classList.contains("animate-pulse"));
 
     expect(skeletonRows.length).toBeGreaterThan(3);

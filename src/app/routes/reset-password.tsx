@@ -1,5 +1,3 @@
-// src/app/routes/reset-password.tsx
-
 import { createFileRoute } from "@tanstack/react-router";
 import {
   Form,
@@ -11,16 +9,13 @@ import {
 } from "@/app/components/ui/form";
 import { Input } from "@/app/components/ui/input";
 import { Button } from "@/app/components/ui/button";
-import { Logo } from "@/app/components/Logo";
 import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useMutation } from "@tanstack/react-query";
-import { useTRPC } from "@/trpc";
-import { useBannerStore } from "@/shared/store/bannerStore";
-import type { TRPCClientErrorLike } from "@trpc/client";
-import type { AppRouter } from "server/trpc";
+import { useState } from "react";
+import { useAuthStore } from "@/shared/store/authStore";
+import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
   email: z.string().email("Please enter a valid email").trim().toLowerCase(),
@@ -34,9 +29,10 @@ export const Route = createFileRoute("/reset-password")({
 
 function ResetPasswordPage() {
   const navigate = Route.useNavigate();
-  const { show: showBanner } = useBannerStore();
+  const { supabase } = useAuthStore();
 
-  const trpc = useTRPC();
+  const [message, setMessage] = useState<string | null>(null);
+  const [isPending, setIsPending] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -44,62 +40,39 @@ function ResetPasswordPage() {
     mode: "onChange",
   });
 
-  const mutation = useMutation(
-    trpc.resetPassword.request.mutationOptions({
-      onSuccess: (data) => {
-        const message = data?.message || "Reset link sent! Check your inbox.";
-        showBanner({
-          message,
-          variant: "success",
-          duration: 5500,
-        });
+  const onSubmit = async (values: FormData) => {
+    setMessage(null);
+    setIsPending(true);
 
-        form.reset();
-      },
+    const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
+      redirectTo: `${window.location.origin}/update-password`,
+    });
 
-      onError: (err: TRPCClientErrorLike<AppRouter>) => {
-        let msg = "Could not send reset link. Please try again.";
-        if (err?.data?.code === "NOT_FOUND") {
-          msg = "Email not found.";
-        } else if (err.message?.toLowerCase().includes("too many")) {
-          msg = "Too many requests. Try again later.";
-        } else if (err.message) {
-          msg = err.message;
-        }
-        showBanner({ message: msg, variant: "error", duration: 5000 });
-      },
-    }),
-  );
+    if (error) {
+      setMessage(`Error: ${error.message}`);
+    } else {
+      setMessage(
+        "Password reset link sent! Check your email (including spam/junk).",
+      );
+      form.reset();
+    }
 
-  function onSubmit(values: FormData) {
-    mutation.mutate({ email: values.email });
-  }
+    setIsPending(false);
+  };
 
   return (
     <div className="min-h-dvh flex flex-col items-center p-1 sm:p-2 lg:p-3">
-      <div className="pt-14">
-        <Logo />
-      </div>
-
-      <div className="w-full max-w-md bg-background rounded-lg p-4 flex flex-col items-center mt-16 sm:mt-20">
-        <h1
-          className="text-2xl font-bold text-center mb-4"
-          role="heading"
-          aria-level={1}
-        >
+      <div className="w-full max-w-md bg-background rounded-lg p-6 mt-20">
+        <h1 className="text-2xl font-bold text-center mb-4">
           Reset your password
         </h1>
 
-        <p className="text-muted-foreground text-center mb-6">
+        <p className="text-muted-foreground text-center mb-8">
           Enter your email to receive a password reset link
         </p>
 
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="w-full space-y-6"
-            data-testid="reset-password-form"
-          >
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
               name="email"
@@ -110,7 +83,7 @@ function ResetPasswordPage() {
                     <Input
                       placeholder="name@example.com"
                       type="email"
-                      disabled={mutation.isPending}
+                      disabled={isPending}
                       {...field}
                     />
                   </FormControl>
@@ -119,22 +92,29 @@ function ResetPasswordPage() {
               )}
             />
 
+            {message && (
+              <p
+                className={cn(
+                  "text-sm text-center",
+                  message.includes("Error")
+                    ? "text-destructive"
+                    : "text-green-600",
+                )}
+              >
+                {message}
+              </p>
+            )}
+
             <Button
               type="submit"
               className="w-full"
-              disabled={
-                mutation.isPending ||
-                !form.formState.isDirty ||
-                !form.formState.isValid
-              }
+              disabled={isPending || !form.formState.isValid}
             >
-              {mutation.isPending && (
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              )}
-              {mutation.isPending ? "Sending…" : "Send Reset Link"}
+              {isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+              {isPending ? "Sending…" : "Send Reset Link"}
             </Button>
 
-            <div className="text-center text-sm">
+            <div className="text-center text-sm mt-4">
               <button
                 type="button"
                 className="text-primary hover:underline"

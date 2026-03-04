@@ -32,23 +32,28 @@ suppressActWarnings();
 describe("Create New List Page (/_authenticated/lists/new)", () => {
   beforeAll(() => server.listen({ onUnhandledRequest: "warn" }));
 
-  beforeEach(() => {
+  beforeEach(async () => {
     server.resetHandlers();
     resetMockLists();
+
+    // Prevent MSW warnings + "Prisma user sync failed" logs
+    server.use(
+      trpcMsw.user.createOrSync.mutation(() => ({
+        success: true,
+        message: "User synced (mock)",
+        user: { id: "test-user-123", email: "testuser@example.com" },
+      })),
+    );
+
     server.use(listGetAllHandler);
     server.use(listCreateHandler);
 
-    useAuthStore.setState({
-      isLoggedIn: true,
-      userId: "test-user-123",
-      accessToken: "mock-token",
-      refreshToken: "mock-refresh",
-    });
+    await useAuthStore.getState().initialize();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     server.resetHandlers();
-    useAuthStore.getState().logout?.();
+    await useAuthStore.getState().signOut();
   });
 
   afterAll(() => server.close());
@@ -60,9 +65,7 @@ describe("Create New List Page (/_authenticated/lists/new)", () => {
   async function waitForFormReady() {
     await waitFor(
       () => {
-        expect(
-          screen.getByRole("heading", { name: /Create New List/i }),
-        ).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: /Create New List/i })).toBeInTheDocument();
         expect(screen.getByLabelText(/List name/i)).toBeInTheDocument();
         expect(screen.getByTestId("create-button")).toBeInTheDocument();
         expect(screen.getByTestId("cancel-button")).toBeInTheDocument();
@@ -71,18 +74,12 @@ describe("Create New List Page (/_authenticated/lists/new)", () => {
     );
   }
 
-  async function fillForm(title: string, /*description = ""*/) {
+  async function fillForm(title: string) {
     await waitForFormReady();
 
     const titleInput = screen.getByLabelText(/List name/i);
     await userEvent.clear(titleInput);
     await userEvent.type(titleInput, title);
-
-    // if (description) {
-    //   const descInput = screen.getByLabelText(/Description/i);
-    //   await userEvent.clear(descInput);
-    //   await userEvent.type(descInput, description);
-    // }
   }
 
   it("renders title, inputs and buttons", async () => {
@@ -93,9 +90,6 @@ describe("Create New List Page (/_authenticated/lists/new)", () => {
       "placeholder",
       "Work, Groceries, Ideas...",
     );
-    // expect(
-    //   screen.getByLabelText(/Description \(optional\)/i),
-    // ).toBeInTheDocument();
 
     expect(screen.getByTestId("cancel-button")).toBeInTheDocument();
     expect(screen.getByTestId("create-button")).toBeInTheDocument();
@@ -111,11 +105,11 @@ describe("Create New List Page (/_authenticated/lists/new)", () => {
     const titleInput = screen.getByLabelText(/List name/i);
 
     await userEvent.type(titleInput, "   ");
-    expect(createBtn).toBeDisabled();
+    await waitFor(() => expect(createBtn).toBeDisabled(), { timeout: 2000 });
 
     await userEvent.clear(titleInput);
     await userEvent.type(titleInput, "My List");
-    expect(createBtn).not.toBeDisabled();
+    await waitFor(() => expect(createBtn).not.toBeDisabled(), { timeout: 2000 });
   });
 
   it("shows loading state during creation", async () => {
@@ -129,7 +123,6 @@ describe("Create New List Page (/_authenticated/lists/new)", () => {
     const form = screen.getByTestId("create-list-form");
     fireEvent.submit(form);
 
-    // Wait for the loading text to appear (gives time for the 800ms delay)
     await waitFor(
       () => {
         expect(screen.getByText("Creating...")).toBeInTheDocument();
@@ -144,7 +137,6 @@ describe("Create New List Page (/_authenticated/lists/new)", () => {
 
     expect(screen.getByTestId("cancel-button")).toBeDisabled();
 
-    // Form still visible during loading
     expect(router.state.location.pathname).toBe("/lists/new");
   });
 
@@ -153,7 +145,7 @@ describe("Create New List Page (/_authenticated/lists/new)", () => {
     const { router } = renderNewListPage();
     await waitForFormReady();
 
-    await fillForm("Travel Bucket List", /*"Places I want to visit"*/);
+    await fillForm("Travel Bucket List");
 
     const form = screen.getByTestId("create-list-form");
     fireEvent.submit(form);

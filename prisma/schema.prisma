@@ -5,57 +5,36 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  directUrl  = env("DIRECT_URL")  
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  // shadowDatabaseUrl = env("SHADOW_DATABASE_URL")   // uncomment later when you add a shadow db
 }
 
 model User {
-  id                          String              @id @default(uuid())
-  email                       String              @unique
-  password                    String
-  verificationToken           String?
-  isEmailVerified             Boolean             @default(false)
-  resetPasswordToken          String?
-  resetPasswordTokenExpiresAt DateTime?
-  createdAt                   DateTime            @default(now())
-  updatedAt                   DateTime            @updatedAt
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  refreshTokens               RefreshToken[]      
-  
-  todoLists                   TodoList[]
+  todoLists TodoList[]
 
   @@index([createdAt])
-  @@map("user") 
-}
-
-model RefreshToken {
-  id           String    @id @default(uuid())
-  hashedToken  String    @unique
-  userId       String
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt    DateTime  @default(now())
-  lastUsedAt   DateTime? @updatedAt
-  expiresAt    DateTime?           // optional – e.g. 90 days
-
-  @@index([userId])
-  @@index([createdAt])
-  @@map("refresh_token")
+  @@map("user")
 }
 
 model TodoList {
-  id          String    @id @default(uuid())
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
   title       String
-  description String?   
-  color       String?   // e.g. "#ef4444" – for nice UI coloring
-  icon        String?   // optional emoji or icon name
+  description String?
+  color       String?     // e.g. "#ef4444"
+  icon        String?     // emoji or icon name
   isArchived  Boolean   @default(false)
-  order       Int       @default(0) 
-  
+  order       Int       @default(0)
   isPinned    Boolean   @default(false)
 
-  userId      String
+  userId      String    @db.Uuid
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   tasks       Task[]
@@ -70,22 +49,22 @@ model TodoList {
 }
 
 model Task {
-  id          String    @id @default(uuid())
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
   title       String
   description String?
   isCompleted Boolean   @default(false)
   dueDate     DateTime?
-  priority    Int?      
-  order       Int       @default(0)   
+  priority    Int?
+  order       Int       @default(0)
 
-  listId      String
+  listId      String    @db.Uuid
   list        TodoList  @relation(fields: [listId], references: [id], onDelete: Cascade)
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   isCurrent   Boolean   @default(false)
-
   isPinned    Boolean   @default(false)
 
   @@index([listId])

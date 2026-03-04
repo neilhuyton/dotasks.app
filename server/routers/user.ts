@@ -1,6 +1,6 @@
 // server/routers/user.ts
 
-import { protectedProcedure, router } from "../trpc-base";
+import { protectedProcedure, publicProcedure, router } from "../trpc-base";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { sendEmailChangeNotification } from "../email";
@@ -95,6 +95,54 @@ export const userRouter = router({
       return {
         message: "Email updated successfully",
         email: updatedUser.email,
+      };
+    }),
+
+  createOrSync: publicProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        email: z.string().email().trim().toLowerCase(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { id, email } = input;
+
+      // Check if already exists (idempotent)
+      let user = await ctx.prisma.user.findUnique({
+        where: { id },
+        select: { id: true, email: true },
+      });
+
+      if (user) {
+        // Optional: sync email if Supabase changed it (rare during initial signup)
+        if (user.email !== email) {
+          user = await ctx.prisma.user.update({
+            where: { id },
+            data: { email },
+            select: { id: true, email: true },
+          });
+        }
+        return {
+          success: true,
+          message: "User already synced",
+          user,
+        };
+      }
+
+      // Create the missing user row
+      user = await ctx.prisma.user.create({
+        data: {
+          id, // Must match Supabase auth.users.id
+          email,
+        },
+        select: { id: true, email: true },
+      });
+
+      return {
+        success: true,
+        message: "User created in database",
+        user,
       };
     }),
 });

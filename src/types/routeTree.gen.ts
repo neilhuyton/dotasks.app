@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './../app/routes/__root'
 import { Route as VerifyEmailRouteImport } from './../app/routes/verify-email'
+import { Route as UpdatePasswordRouteImport } from './../app/routes/update-password'
 import { Route as ResetPasswordRouteImport } from './../app/routes/reset-password'
 import { Route as ResendVerificationRouteImport } from './../app/routes/resend-verification'
 import { Route as RegisterRouteImport } from './../app/routes/register'
@@ -31,6 +32,11 @@ import { Route as AuthenticatedListsListIdTasksTaskIdDeleteRouteImport } from '.
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
   path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UpdatePasswordRoute = UpdatePasswordRouteImport.update({
+  id: '/update-password',
+  path: '/update-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -132,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/resend-verification': typeof ResendVerificationRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/update-password': typeof UpdatePasswordRoute
   '/verify-email': typeof VerifyEmailRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/lists/$listId': typeof AuthenticatedListsListIdRouteWithChildren
@@ -151,6 +158,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/resend-verification': typeof ResendVerificationRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/update-password': typeof UpdatePasswordRoute
   '/verify-email': typeof VerifyEmailRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/lists/$listId': typeof AuthenticatedListsListIdRouteWithChildren
@@ -172,6 +180,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/resend-verification': typeof ResendVerificationRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/update-password': typeof UpdatePasswordRoute
   '/verify-email': typeof VerifyEmailRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/lists/$listId': typeof AuthenticatedListsListIdRouteWithChildren
@@ -193,6 +202,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/resend-verification'
     | '/reset-password'
+    | '/update-password'
     | '/verify-email'
     | '/profile'
     | '/lists/$listId'
@@ -212,6 +222,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/resend-verification'
     | '/reset-password'
+    | '/update-password'
     | '/verify-email'
     | '/profile'
     | '/lists/$listId'
@@ -232,6 +243,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/resend-verification'
     | '/reset-password'
+    | '/update-password'
     | '/verify-email'
     | '/_authenticated/profile'
     | '/_authenticated/lists/$listId'
@@ -253,6 +265,7 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   ResendVerificationRoute: typeof ResendVerificationRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  UpdatePasswordRoute: typeof UpdatePasswordRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
 }
 
@@ -263,6 +276,13 @@ declare module '@tanstack/react-router' {
       path: '/verify-email'
       fullPath: '/verify-email'
       preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/update-password': {
+      id: '/update-password'
+      path: '/update-password'
+      fullPath: '/update-password'
+      preLoaderRoute: typeof UpdatePasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -440,6 +460,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   ResendVerificationRoute: ResendVerificationRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  UpdatePasswordRoute: UpdatePasswordRoute,
   VerifyEmailRoute: VerifyEmailRoute,
 }
 export const routeTree = rootRouteImport

@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">74.13% </span>
+                <span class="strong">73.68% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>43/58</span>
+                <span class='fraction'>42/57</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">49.05% </span>
+                <span class="strong">45.28% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>26/53</span>
+                <span class='fraction'>24/53</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">75% </span>
+                <span class="strong">74.54% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>42/56</span>
+                <span class='fraction'>41/55</span>
             </div>
         
             
@@ -383,10 +383,7 @@
 <a name='L318'></a><a href='#L318'>318</a>
 <a name='L319'></a><a href='#L319'>319</a>
 <a name='L320'></a><a href='#L320'>320</a>
-<a name='L321'></a><a href='#L321'>321</a>
-<a name='L322'></a><a href='#L322'>322</a>
-<a name='L323'></a><a href='#L323'>323</a>
-<a name='L324'></a><a href='#L324'>324</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L321'></a><a href='#L321'>321</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -403,21 +400,19 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">15x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">15x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -439,6 +434,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -599,8 +595,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">22x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -718,10 +712,8 @@ import * as z from "zod";
 import { trpc } from "@/trpc";
 import { useTRPC } from "@/trpc";
 import { useBannerStore } from "@/shared/store/bannerStore";
-import { useAuthStore } from "@/shared/store/authStore";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
-// import { Textarea } from "@/app/components/ui/textarea";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
@@ -738,10 +730,10 @@ type EditListFormData = z.infer&lt;typeof editListSchema&gt;;
 export const Route = createFileRoute("/_authenticated/lists/$listId/edit")({
   loader: async ({ context: { queryClient }, params }) =&gt; {
     const { listId } = params;
-    const { accessToken } = useAuthStore.getState();
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (!listId) <span class="cstat-no" title="statement not covered" >return {};</span>
 &nbsp;
-    <span class="missing-if-branch" title="if path not taken" >I</span>if (!accessToken || !listId) <span class="cstat-no" title="statement not covered" >return {};</span>
-&nbsp;
+    // No need to manually check token — tRPC client already handles auth
+    // If user is not authenticated → protectedProcedure will throw → error boundary / redirect
     await queryClient.ensureQueryData(
       trpc.list.getOne.queryOptions(
         { id: listId },
@@ -762,7 +754,8 @@ export const Route = createFileRoute("/_authenticated/lists/$listId/edit")({
 &nbsp;
   errorComponent: <span class="fstat-no" title="function not covered" >({</span> error }) =&gt; {
     const message = <span class="cstat-no" title="statement not covered" >error?.message?.toLowerCase() ?? "";</span>
-    const isNotFound = <span class="cstat-no" title="statement not covered" >message.includes("not found");</span>
+    const isNotFound =
+<span class="cstat-no" title="statement not covered" >      message.includes("not found") || message.includes("unauthorized");</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >    return (</span>
       &lt;div className="flex min-h-[60vh] items-center justify-center p-6 text-center text-muted-foreground"&gt;
@@ -885,7 +878,7 @@ function EditListPage() {
 &nbsp;
   const handleSubmit = form.handleSubmit((data) =&gt; {
     updateMutation.mutate({
-      id: listId,
+      id: listId!,
       title: data.title,
       description: data.description || <span class="branch-1 cbranch-no" title="branch not covered" >undefined,</span>
     });
@@ -976,11 +969,9 @@ function EditListPage() {
                   )}
                 &lt;/div&gt;
 &nbsp;
+                {/* Uncomment if you decide to bring description back */}
                 {/* &lt;div className="space-y-2"&gt;
-                  &lt;label
-                    htmlFor="description"
-                    className="text-sm font-medium block"
-                  &gt;
+                  &lt;label htmlFor="description" className="text-sm font-medium block"&gt;
                     Description (optional)
                   &lt;/label&gt;
                   &lt;Textarea
@@ -1039,7 +1030,7 @@ function EditListPage() {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-02-28T19:51:11.835Z
+                at 2026-03-03T22:02:55.094Z
             </div>
         <script src="../../../../../../prettify.js"></script>
         <script>

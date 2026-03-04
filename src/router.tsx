@@ -2,18 +2,18 @@
 
 import { createRouter } from "@tanstack/react-router";
 
-import { queryClient } from "@/queryClient";
+import { getQueryClient } from "@/queryClient";
 import { routeTree } from "./types/routeTree.gen";
 
 export interface RouterContext {
-  queryClient: typeof queryClient;
+  queryClient: ReturnType<typeof getQueryClient>;
 }
 
 export const router = createRouter({
   routeTree,
   defaultPreload: "intent",
   context: {
-    queryClient,
+    queryClient: getQueryClient(),
   } satisfies RouterContext,
 });
 

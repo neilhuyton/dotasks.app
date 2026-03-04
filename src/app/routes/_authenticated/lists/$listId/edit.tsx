@@ -7,10 +7,8 @@ import * as z from "zod";
 import { trpc } from "@/trpc";
 import { useTRPC } from "@/trpc";
 import { useBannerStore } from "@/shared/store/bannerStore";
-import { useAuthStore } from "@/shared/store/authStore";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
-// import { Textarea } from "@/app/components/ui/textarea";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
@@ -27,9 +25,7 @@ type EditListFormData = z.infer<typeof editListSchema>;
 export const Route = createFileRoute("/_authenticated/lists/$listId/edit")({
   loader: async ({ context: { queryClient }, params }) => {
     const { listId } = params;
-    const { accessToken } = useAuthStore.getState();
-
-    if (!accessToken || !listId) return {};
+    if (!listId) return {};
 
     await queryClient.ensureQueryData(
       trpc.list.getOne.queryOptions(
@@ -51,7 +47,8 @@ export const Route = createFileRoute("/_authenticated/lists/$listId/edit")({
 
   errorComponent: ({ error }) => {
     const message = error?.message?.toLowerCase() ?? "";
-    const isNotFound = message.includes("not found");
+    const isNotFound =
+      message.includes("not found") || message.includes("unauthorized");
 
     return (
       <div className="flex min-h-[60vh] items-center justify-center p-6 text-center text-muted-foreground">
@@ -174,7 +171,7 @@ function EditListPage() {
 
   const handleSubmit = form.handleSubmit((data) => {
     updateMutation.mutate({
-      id: listId,
+      id: listId!,
       title: data.title,
       description: data.description || undefined,
     });
@@ -264,28 +261,6 @@ function EditListPage() {
                     </p>
                   )}
                 </div>
-
-                {/* <div className="space-y-2">
-                  <label
-                    htmlFor="description"
-                    className="text-sm font-medium block"
-                  >
-                    Description (optional)
-                  </label>
-                  <Textarea
-                    id="description"
-                    {...form.register("description")}
-                    placeholder="Any notes about this list..."
-                    disabled={isPending}
-                    rows={6}
-                    autoComplete="off"
-                  />
-                  {form.formState.errors.description && (
-                    <p className="text-sm text-destructive">
-                      {form.formState.errors.description.message}
-                    </p>
-                  )}
-                </div> */}
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 pt-8 justify-center">

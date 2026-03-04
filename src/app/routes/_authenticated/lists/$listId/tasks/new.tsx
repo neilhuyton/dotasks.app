@@ -4,13 +4,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { type QueryClient } from "@tanstack/react-query";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
-// import { Textarea } from "@/app/components/ui/textarea";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { trpc, useTRPC } from "@/trpc";
 import { useBannerStore } from "@/shared/store/bannerStore";
-import { useAuthStore } from "@/shared/store/authStore";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import type { inferRouterOutputs } from "@trpc/server";
@@ -52,8 +50,7 @@ export const Route = createFileRoute("/_authenticated/lists/$listId/tasks/new")(
     }) => {
       const { listId } = params;
 
-      const { accessToken } = useAuthStore.getState();
-      if (!accessToken || !listId) return {};
+      if (!listId) return {};
 
       await queryClient.ensureQueryData(
         trpc.list.getOne.queryOptions(
@@ -77,13 +74,19 @@ export const Route = createFileRoute("/_authenticated/lists/$listId/tasks/new")(
     pendingMs: 0,
     pendingMinMs: 300,
 
-    errorComponent: ({ error }) => (
-      <div className="flex min-h-[60vh] items-center justify-center p-6 text-center text-muted-foreground">
-        {error?.message?.toLowerCase().includes("not found")
-          ? "List not found or you don't have access."
-          : `Failed to load: ${error?.message || "Unknown error"}`}
-      </div>
-    ),
+    // errorComponent: ({ error }) => {
+    //   const message = error?.message?.toLowerCase() ?? "";
+    //   const isNotFound =
+    //     message.includes("not found") || message.includes("unauthorized");
+
+    //   return (
+    //     <div className="flex min-h-[60vh] items-center justify-center p-6 text-center text-muted-foreground">
+    //       {isNotFound
+    //         ? "List not found or you don't have access."
+    //         : `Failed to load: ${error?.message || "Unknown error"}`}
+    //     </div>
+    //   );
+    // },
 
     component: NewTaskPage,
   },
@@ -91,49 +94,62 @@ export const Route = createFileRoute("/_authenticated/lists/$listId/tasks/new")(
 
 function NewTaskPage() {
   const { listId } = Route.useParams();
-
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
   const { show: showBanner } = useBannerStore();
-  const trpc = useTRPC();
+  const trpcHook = useTRPC();
 
   const [title, setTitle] = useState("");
   // const [description, setDescription] = useState("");
 
-  const tasksQueryKey = trpc.task.getByList.queryKey({ listId });
+  const tasksQueryKey = trpcHook.task.getByList.queryKey({ listId });
 
   const mutation = useMutation(
-    trpc.task.create.mutationOptions({
+    trpcHook.task.create.mutationOptions({
       onMutate: async (input) => {
         await queryClient.cancelQueries({ queryKey: tasksQueryKey });
+
         const prev = queryClient.getQueryData<Tasks>(tasksQueryKey) ?? [];
         const optimistic = createOptimisticTask(input, prev.length);
-        queryClient.setQueryData(tasksQueryKey, [...prev, optimistic]);
+
+        queryClient.setQueryData<Tasks>(tasksQueryKey, [...prev, optimistic]);
+
         return { prev };
       },
 
       onError: (_, __, ctx) => {
-        if (ctx?.prev) queryClient.setQueryData(tasksQueryKey, ctx.prev);
+        if (ctx?.prev) {
+          queryClient.setQueryData(tasksQueryKey, ctx.prev);
+        }
         showBanner({
-          message: "Failed to create task.",
+          message: "Failed to create task. Please try again.",
           variant: "error",
           duration: 4000,
         });
       },
 
-      onSettled: () =>
-        queryClient.invalidateQueries({ queryKey: tasksQueryKey }),
+      onSettled: () => {
+        queryClient.invalidateQueries({ queryKey: tasksQueryKey });
+        // Optional: also refresh the list if it shows task counts
+        // queryClient.invalidateQueries(trpcHook.list.getOne.queryKey({ id: listId! }));
+      },
 
       onSuccess: (newTask) => {
         queryClient.setQueryData<Tasks>(tasksQueryKey, (old = []) =>
           old.map((t) => (t.id.startsWith("temp-") ? { ...t, ...newTask } : t)),
         );
+
         showBanner({
-          message: "Task created.",
+          message: "Task created successfully.",
           variant: "success",
           duration: 3000,
         });
-        navigate({ to: "/lists/$listId", params: { listId }, replace: true });
+
+        navigate({
+          to: "/lists/$listId",
+          params: { listId },
+          replace: true,
+        });
       },
     }),
   );
@@ -151,7 +167,11 @@ function NewTaskPage() {
   };
 
   const handleCancel = () => {
-    navigate({ to: "/lists/$listId", params: { listId }, replace: true });
+    navigate({
+      to: "/lists/$listId",
+      params: { listId },
+      replace: true,
+    });
   };
 
   const isPending = mutation.isPending;
@@ -160,7 +180,9 @@ function NewTaskPage() {
     <div
       className={cn(
         "fixed inset-0 z-[9999] isolate pointer-events-auto",
-        "h-dvh w-dvw",
+        "h-dvh w-dvw max-h-none max-w-none",
+        "m-0 p-0 left-0 top-0 right-0 bottom-0 translate-x-0 translate-y-0",
+        "rounded-none border-0 shadow-none",
         "bg-background overscroll-none touch-none",
       )}
     >
@@ -168,7 +190,8 @@ function NewTaskPage() {
         <Button
           variant="outline"
           size="icon"
-          className="absolute left-4 top-6 z-[10000]"
+          className="absolute left-4 top-6 sm:left-6 sm:top-8 z-[10000]"
+          aria-label="Cancel and return to list"
           onClick={handleCancel}
           disabled={isPending}
         >
@@ -195,25 +218,23 @@ function NewTaskPage() {
                     id="title"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Task title..."
+                    placeholder="e.g. Buy groceries"
                     autoFocus
                     required
                     disabled={isPending}
                   />
                 </div>
 
+                {/* Uncomment when description field is needed */}
                 {/* <div className="space-y-2">
-                  <label
-                    htmlFor="description"
-                    className="text-sm font-medium block"
-                  >
+                  <label htmlFor="description" className="text-sm font-medium block">
                     Description (optional)
                   </label>
                   <Textarea
                     id="description"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Details..."
+                    placeholder="Any additional details..."
                     rows={5}
                     disabled={isPending}
                   />
@@ -235,6 +256,7 @@ function NewTaskPage() {
                     "Create Task"
                   )}
                 </Button>
+
                 <Button
                   type="button"
                   variant="outline"

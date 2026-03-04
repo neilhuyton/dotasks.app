@@ -1,41 +1,18 @@
-// // src/app/routes/_authenticated/profile.tsx
-
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTRPC } from "@/trpc";
 import { useBannerStore } from "@/shared/store/bannerStore";
 import { useAuthStore } from "@/shared/store/authStore";
-import { Button } from "@/app/components/ui/button";
-import { Input } from "@/app/components/ui/input";
-import { Label } from "@/app/components/ui/label";
-import { Loader2, ArrowLeft, Mail, Lock, LogOut } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/app/components/ui/alert-dialog";
 import { InstallPWA } from "@/app/components/InstallPWA";
-
-const emailChangeSchema = z.object({
-  email: z.string().email("Invalid email address").trim().toLowerCase(),
-});
-
-const resetRequestSchema = z.object({
-  email: z.string().email("Invalid email address").trim().toLowerCase(),
-});
-
-type EmailChangeData = z.infer<typeof emailChangeSchema>;
-type ResetRequestData = z.infer<typeof resetRequestSchema>;
+import { useEffect } from "react";
+import { ArrowLeft } from "lucide-react";
+import ProfileHeader from "@/app/components/ProfileHeader";
+import CurrentEmailSection from "@/app/components/CurrentEmailSection";
+import EmailChangeForm from "@/app/components/EmailChangeForm";
+import PasswordResetForm from "@/app/components/PasswordResetForm";
+import LogoutSection from "@/app/components/LogoutSection";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   component: ProfilePage,
@@ -46,92 +23,34 @@ function ProfilePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { show: showBanner } = useBannerStore();
-  const { logout, user, updateUserEmail } = useAuthStore();
-
+  const { user, updateUserEmail } = useAuthStore();
   const trpc = useTRPC();
 
-  const userQueryKey = trpc.user.getCurrent.queryKey();
-
   const currentEmail = user?.email ?? "";
+  const hasUser = !!user;
 
-  const updateEmailMutation = useMutation(
-    trpc.user.updateEmail.mutationOptions({
-      onMutate: async () => {
-        await queryClient.cancelQueries({ queryKey: userQueryKey });
-        // No longer optimistic update of query cache since we don't fetch user here
+  useEffect(() => {
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === "USER_UPDATED" && session?.user?.email) {
+          const newEmail = session.user.email;
+          if (newEmail !== currentEmail) {
+            updateUserEmail(newEmail);
+            showBanner({
+              message: `Your email has been updated to ${newEmail}`,
+              variant: "success",
+              duration: 5000,
+            });
+            queryClient.invalidateQueries({
+              queryKey: trpc.user.getCurrent.queryKey(),
+            });
+          }
+        }
       },
+    );
 
-      onError: () => {
-        showBanner({
-          message: "Failed to update email. Please try again.",
-          variant: "error",
-          duration: 4000,
-        });
-      },
-
-      onSuccess: (result, input) => {
-        updateUserEmail(input.email);
-
-        showBanner({
-          message: result.message || "Email updated successfully.",
-          variant: "success",
-          duration: 3000,
-        });
-        emailForm.reset();
-      },
-    }),
-  );
-
-  const requestResetMutation = useMutation(
-    trpc.resetPassword.request.mutationOptions({
-      onSuccess: (result) => {
-        showBanner({
-          message: result.message,
-          variant: "success",
-          duration: 5000,
-        });
-        resetForm.reset();
-      },
-
-      onError: () => {
-        showBanner({
-          message: "Failed to send reset link. Please try again.",
-          variant: "error",
-          duration: 4000,
-        });
-      },
-    }),
-  );
-
-  const emailForm = useForm<EmailChangeData>({
-    resolver: zodResolver(emailChangeSchema),
-    defaultValues: { email: "" },
-    mode: "onChange",
-  });
-
-  const resetForm = useForm<ResetRequestData>({
-    resolver: zodResolver(resetRequestSchema),
-    defaultValues: { email: "" },
-    mode: "onChange",
-  });
-
-  const handleEmailSubmit = (data: EmailChangeData) => {
-    updateEmailMutation.mutate({ email: data.email });
-  };
-
-  const handleResetSubmit = (data: ResetRequestData) => {
-    requestResetMutation.mutate({ email: data.email });
-  };
-
-  const handleLogoutConfirm = () => {
-    logout();
-    navigate({ to: "/login", replace: true });
-    showBanner({
-      message: "Logged out successfully.",
-      variant: "success",
-      duration: 3000,
-    });
-  };
+    return () => listener.subscription.unsubscribe();
+  }, [currentEmail, updateUserEmail, showBanner, queryClient, trpc]);
 
   const handleClose = () => {
     try {
@@ -140,15 +59,10 @@ function ProfilePage() {
         return;
       }
     } catch {
-      // empty catch
+      // treat error as no history → fallback
     }
     navigate({ to: "/lists", replace: true });
   };
-
-  const isAnyPending =
-    updateEmailMutation.isPending || requestResetMutation.isPending;
-
-  const hasUserData = !!user;
 
   return (
     <div
@@ -161,190 +75,36 @@ function ProfilePage() {
       )}
     >
       <div className="relative flex min-h-full flex-col overflow-y-auto px-6 pb-20 pt-20 sm:px-8">
-        <Button
-          variant="outline"
-          size="icon"
+        <button
+          type="button"
+          onClick={handleClose}
           className="absolute left-4 top-6 sm:left-6 sm:top-8 z-[10000]"
           aria-label="Close profile"
-          onClick={handleClose}
-          disabled={isAnyPending}
           data-testid="close-profile"
         >
           <ArrowLeft className="h-5 w-5" />
-        </Button>
+        </button>
 
         <div className="flex flex-1 flex-col items-center justify-center">
           <div className="w-full max-w-2xl space-y-10">
-            <div className="text-center space-y-3">
-              <h1
-                className="text-3xl sm:text-4xl font-bold tracking-tight"
-                data-testid="profile-heading"
-              >
-                Profile
-              </h1>
-              <InstallPWA />
-            </div>
+            <ProfileHeader />
 
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <Label className="text-sm font-medium block">
-                  Current Email
-                </Label>
-                {hasUserData ? (
-                  <div
-                    className="p-2 bg-muted/50 rounded-lg border text-base font-medium break-all"
-                    data-testid="current-email"
-                  >
-                    {currentEmail}
-                  </div>
-                ) : (
-                  <div className="text-muted-foreground text-sm">
-                    Loading profile information...
-                  </div>
-                )}
-              </div>
-
-              <form
-                onSubmit={emailForm.handleSubmit(handleEmailSubmit)}
-                className="space-y-2"
-                data-testid="email-form"
-              >
-                <div className="space-y-3">
-                  <Label
-                    htmlFor="new-email"
-                    className="text-sm font-medium block"
-                  >
-                    New Email
-                  </Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
-                    <Input
-                      id="new-email"
-                      type="email"
-                      placeholder="your.new@email.com"
-                      className="pl-10"
-                      disabled={isAnyPending || !hasUserData}
-                      {...emailForm.register("email")}
-                      data-testid="email-input"
-                    />
-                  </div>
-                  {emailForm.formState.errors.email && (
-                    <p className="text-sm text-destructive">
-                      {emailForm.formState.errors.email.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex justify-center">
-                  <Button
-                    type="submit"
-                    variant="outline"
-                    disabled={
-                      isAnyPending ||
-                      !emailForm.formState.isDirty ||
-                      !hasUserData
-                    }
-                    className="w-full sm:w-auto px-6"
-                    data-testid="email-submit"
-                  >
-                    {updateEmailMutation.isPending && (
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    )}
-                    {updateEmailMutation.isPending
-                      ? "Updating..."
-                      : "Update Email"}
-                  </Button>
-                </div>
-              </form>
-
-              <form
-                onSubmit={resetForm.handleSubmit(handleResetSubmit)}
-                className="space-y-2 pt-8 border-t"
-                data-testid="password-form"
-              >
-                <div className="space-y-3">
-                  <Label
-                    htmlFor="reset-email"
-                    className="text-sm font-medium block"
-                  >
-                    Email for Reset Link
-                  </Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
-                    <Input
-                      id="reset-email"
-                      type="email"
-                      placeholder="your@email.com"
-                      className="pl-10"
-                      disabled={isAnyPending}
-                      {...resetForm.register("email")}
-                      data-testid="password-input"
-                    />
-                  </div>
-                  {resetForm.formState.errors.email && (
-                    <p className="text-sm text-destructive">
-                      {resetForm.formState.errors.email.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex justify-center">
-                  <Button
-                    type="submit"
-                    variant="outline"
-                    disabled={isAnyPending || !resetForm.formState.isDirty}
-                    className="w-full sm:w-auto px-6"
-                    data-testid="reset-submit"
-                  >
-                    {requestResetMutation.isPending && (
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    )}
-                    {requestResetMutation.isPending
-                      ? "Sending..."
-                      : "Send Reset Link"}
-                  </Button>
-                </div>
-              </form>
-
-              <div className="pt-12 border-t flex justify-center">
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="destructive"
-                      className="w-full sm:w-auto px-6 gap-2"
-                      disabled={isAnyPending}
-                      data-testid="logout-button"
-                    >
-                      <LogOut className="h-5 w-5" />
-                      Logout
-                    </Button>
-                  </AlertDialogTrigger>
-
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        Are you sure you want to log out?
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        You will be signed out of your account.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleLogoutConfirm}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      >
-                        Logout
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
+            <div className="space-y-10">
+              <CurrentEmailSection
+                currentEmail={currentEmail}
+                hasUser={hasUser}
+              />
+              <EmailChangeForm currentEmail={currentEmail} hasUser={hasUser} />
+              <PasswordResetForm />
+              <LogoutSection />
             </div>
           </div>
         </div>
+
+        <InstallPWA />
       </div>
     </div>
   );
 }
+
+export default ProfilePage;

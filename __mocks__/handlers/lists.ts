@@ -1,4 +1,5 @@
 // __mocks__/handlers/lists.ts
+
 import { TRPCError } from "@trpc/server";
 import { trpcMsw } from "../trpcMsw";
 
@@ -159,8 +160,8 @@ function updateListInMock(id: string, updates: ListUpdateInput): MockList {
   const updated: MockList = {
     ...mockLists[index],
     ...updates,
-    userId: mockLists[index].userId, // immutable
-    createdAt: mockLists[index].createdAt, // immutable
+    userId: mockLists[index].userId,
+    createdAt: mockLists[index].createdAt,
     updatedAt: now,
     isArchived: updates.isArchived ?? mockLists[index].isArchived,
     order: updates.order ?? mockLists[index].order,
@@ -366,27 +367,22 @@ export const listDeleteHandler = trpcMsw.list.delete.mutation(() => {
 // ──────────────────────────────────────────────
 
 export const listHandlers = [
-  // getAll
   listGetAllHandler,
   listGetAllEmptyHandler,
   listGetAllErrorHandler,
   listGetAllDelayedHandler,
 
-  // getOne
   listGetOneDetailPagePreset,
   listGetOneLoadingHandler,
   listGetOneNotFoundHandler,
 
-  // create
   listCreateHandler,
   listCreateDelayedHandler,
 
-  // update
   listUpdateHandler,
   listUpdateDelayedHandler,
   listUpdateFailingHandler,
   listUpdateNotFoundHandler,
 
-  // delete
   listDeleteHandler,
 ] as const;
