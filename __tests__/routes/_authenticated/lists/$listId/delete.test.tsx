@@ -4,59 +4,54 @@ import {
   describe,
   it,
   expect,
+  vi,
   beforeAll,
   beforeEach,
   afterEach,
   afterAll,
-  vi,
 } from "vitest";
 import { screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { http, HttpResponse } from "msw";
 
 import { server } from "../../../../../__mocks__/server";
 import { renderWithProviders } from "../../../../utils/test-helpers";
+import { trpcMsw } from "../../../../../__mocks__/trpcMsw";
 
 import {
   resetMockLists,
   prepareDetailPageTestList,
-  listGetAllHandler,
   listGetOneDetailPagePreset,
-  getMockLists,
+  listGetAllHandler,
   listDeleteHandler,
+  getMockLists,
 } from "../../../../../__mocks__/handlers/lists";
 
-import { trpcMsw } from "../../../../../__mocks__/trpcMsw";
-import { TRPCError } from "@trpc/server";
 import { useAuthStore } from "@/shared/store/authStore";
+import { suppressActWarnings } from "../../../../act-suppress";
+import { TRPCError } from "@trpc/server";
+
+suppressActWarnings();
 
 describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)", () => {
   const TEST_LIST_ID = "list-abc-123";
   const LIST_TITLE = "My Important Projects";
 
   beforeAll(() => {
-    server.listen({ onUnhandledRequest: "bypass" }); // ← Silences all unmatched warnings (including Supabase)
-
-    server.use(
-      http.get("https://*.supabase.co/realtime/v1/websocket", () => {
-        return new HttpResponse(null, { status: 400 });
-      }),
-    );
+    server.listen({ onUnhandledRequest: "warn" });
   });
 
-  afterAll(() => server.close());
-
-  beforeEach(() => {
-    useAuthStore.setState({
-      isLoggedIn: true,
-      userId: "test-user-123",
-      accessToken: "mock-token",
-      refreshToken: "mock-refresh",
-    });
-
+  beforeEach(async () => {
     server.resetHandlers();
     resetMockLists();
     prepareDetailPageTestList();
+
+    server.use(
+      trpcMsw.user.createOrSync.mutation(() => ({
+        success: true,
+        message: "User synced (mock)",
+        user: { id: "test-user-123", email: "testuser@example.com" },
+      })),
+    );
 
     server.use(
       listGetOneDetailPagePreset,
@@ -64,17 +59,18 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
       listDeleteHandler,
       trpcMsw.task.getByList.query(() => []),
     );
+
+    await useAuthStore.getState().initialize();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     server.resetHandlers();
-    useAuthStore.setState({
-      isLoggedIn: false,
-      userId: null,
-      accessToken: null,
-      refreshToken: null,
-    });
+    await useAuthStore.getState().signOut();
     vi.restoreAllMocks();
+  });
+
+  afterAll(() => {
+    server.close();
   });
 
   async function renderDeletePage(
@@ -107,10 +103,13 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
     expect(screen.getByText(/This action cannot be undone/i)).toBeInTheDocument();
 
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Cancel and return to lists/i })).toBeInTheDocument();
+
+    expect(
+      screen.getByRole("button", { name: /Cancel and return to list/i }),
+    ).toBeInTheDocument();
+
     expect(screen.getByTestId("delete-confirm-button")).toBeInTheDocument();
   });
-
 
   it("rolls back optimistic delete when mutation fails", async () => {
     server.use(
@@ -129,10 +128,13 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
     const form = screen.getByTestId("delete-confirm-form");
     fireEvent.submit(form);
 
-    await waitFor(() => {
-      expect(getMockLists()).toHaveLength(initialCount);
-      expect(getMockLists().some((l) => l.id === TEST_LIST_ID)).toBe(true);
-    }, { timeout: 8000 });
+    await waitFor(
+      () => {
+        expect(getMockLists()).toHaveLength(initialCount);
+        expect(getMockLists().some((l) => l.id === TEST_LIST_ID)).toBe(true);
+      },
+      { timeout: 8000 },
+    );
 
     expect(screen.getByTestId("delete-confirm-button")).toBeInTheDocument();
   });
@@ -146,7 +148,7 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
 
     expect(navigateSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        to: "/lists/$listId",
+        to: "/lists/$listId",           // ← this is correct (route pattern)
         params: { listId: TEST_LIST_ID },
         replace: true,
       }),
@@ -158,11 +160,13 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
 
     const navigateSpy = vi.spyOn(router, "navigate");
 
-    await userEvent.click(screen.getByRole("button", { name: /Cancel and return to lists/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /Cancel and return to list/i }),
+    );
 
     expect(navigateSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        to: "/lists/$listId",
+        to: "/lists/$listId",           // ← this is correct (route pattern)
         params: { listId: TEST_LIST_ID },
         replace: true,
       }),

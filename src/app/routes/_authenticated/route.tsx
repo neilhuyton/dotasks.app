@@ -9,10 +9,21 @@ import { ActionBanner } from "@/app/components/ActionBanner";
 import { GlobalFetchingIndicator } from "@/app/components/GlobalIsFetchingIndicator";
 
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: () => {
-    const { isLoggedIn } = useAuthStore.getState();
-    if (!isLoggedIn) {
-      throw redirect({ to: "/login", replace: true });
+  beforeLoad: ({ location }) => {
+    const { user, loading } = useAuthStore.getState();
+
+    if (loading) {
+      return;
+    }
+
+    if (!user) {
+      throw redirect({
+        to: "/login",
+        replace: true,
+        search: {
+          redirect: location.href,
+        },
+      });
     }
   },
 

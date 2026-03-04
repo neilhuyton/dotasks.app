@@ -6,10 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { trpc, useTRPC } from "@/trpc";
 import { useBannerStore } from "@/shared/store/bannerStore";
-import { useAuthStore } from "@/shared/store/authStore";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
-// import { Textarea } from "@/app/components/ui/textarea";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
@@ -27,9 +25,10 @@ export const Route = createFileRoute(
 )({
   loader: async ({ context: { queryClient }, params }) => {
     const { listId, taskId } = params;
-    const { accessToken } = useAuthStore.getState();
 
-    if (!accessToken || !listId || !taskId) return {};
+    if (!listId || !taskId) {
+      return {};
+    }
 
     await queryClient.ensureQueryData(
       trpc.task.getByList.queryOptions(
@@ -49,13 +48,19 @@ export const Route = createFileRoute(
   pendingMs: 0,
   pendingMinMs: 300,
 
-  errorComponent: ({ error }) => (
-    <div className="flex min-h-[60vh] items-center justify-center p-6 text-center text-muted-foreground">
-      {error?.message?.toLowerCase().includes("not found")
-        ? "Task or list not found."
-        : `Failed to load: ${error?.message || "Unknown error"}`}
-    </div>
-  ),
+  errorComponent: ({ error }) => {
+    const message = error?.message?.toLowerCase() ?? "";
+    const isNotFound =
+      message.includes("not found") || message.includes("unauthorized");
+
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center p-6 text-center text-muted-foreground">
+        {isNotFound
+          ? "Task or list not found or you don't have access."
+          : `Failed to load: ${error?.message || "Unknown error"}`}
+      </div>
+    );
+  },
 
   component: EditTaskPage,
 });
@@ -65,13 +70,13 @@ function EditTaskPage() {
   const navigate = Route.useNavigate();
   const { show: showBanner } = useBannerStore();
   const queryClient = useQueryClient();
-  const trpc = useTRPC();
+  const trpcHook = useTRPC();
 
   const queryInput = { listId: listId ?? "" };
-  const queryKey = trpc.task.getByList.queryKey(queryInput);
+  const queryKey = trpcHook.task.getByList.queryKey(queryInput);
 
   const { data: tasks = [], isPending: isTasksPending } = useQuery(
-    trpc.task.getByList.queryOptions(queryInput, {
+    trpcHook.task.getByList.queryOptions(queryInput, {
       staleTime: 5 * 60 * 1000,
       enabled: !!listId,
     }),
@@ -108,7 +113,7 @@ function EditTaskPage() {
   }, [task, form]);
 
   const updateMutation = useMutation(
-    trpc.task.update.mutationOptions({
+    trpcHook.task.update.mutationOptions({
       onMutate: async (variables) => {
         await queryClient.cancelQueries({ queryKey });
 
@@ -164,8 +169,9 @@ function EditTaskPage() {
   );
 
   const handleSubmit = form.handleSubmit((data) => {
+    if (!taskId) return;
     updateMutation.mutate({
-      id: taskId ?? "",
+      id: taskId,
       title: data.title,
       description: data.description || undefined,
     });
@@ -260,11 +266,9 @@ function EditTaskPage() {
                   )}
                 </div>
 
+                {/* Uncomment if/when you want to support task descriptions */}
                 {/* <div className="space-y-2">
-                  <label
-                    htmlFor="description"
-                    className="text-sm font-medium block"
-                  >
+                  <label htmlFor="description" className="text-sm font-medium block">
                     Description (optional)
                   </label>
                   <Textarea

@@ -14,18 +14,18 @@ import userEvent from "@testing-library/user-event";
 
 import { server } from "../../../../../__mocks__/server";
 import { renderWithProviders } from "../../../../utils/test-helpers";
+import { trpcMsw } from "../../../../../__mocks__/trpcMsw";
 
 import {
   resetMockLists,
   prepareDetailPageTestList,
-  listGetAllHandler,
   listGetOneDetailPagePreset,
-  getMockLists,
+  listGetAllHandler,
   listUpdateHandler,
   listUpdateDelayedHandler,
+  getMockLists,
 } from "../../../../../__mocks__/handlers/lists";
 
-import { trpcMsw } from "../../../../../__mocks__/trpcMsw";
 import { TRPCError } from "@trpc/server";
 import { useAuthStore } from "@/shared/store/authStore";
 import { suppressActWarnings } from "../../../../act-suppress";
@@ -40,36 +40,39 @@ describe("Edit List Page (/_authenticated/lists/$listId/edit)", () => {
     server.listen({ onUnhandledRequest: "warn" });
   });
 
-  afterAll(() => server.close());
-
-  beforeEach(() => {
-    useAuthStore.setState({
-      isLoggedIn: true,
-      userId: "test-user-123",
-      accessToken: "mock-token",
-      refreshToken: "mock-refresh",
-    });
-
+  beforeEach(async () => {
     server.resetHandlers();
     resetMockLists();
     prepareDetailPageTestList();
 
+    // Prevent MSW warnings + "Prisma user sync failed" logs
+    server.use(
+      trpcMsw.user.createOrSync.mutation(() => ({
+        success: true,
+        message: "User synced (mock)",
+        user: { id: "test-user-123", email: "testuser@example.com" },
+      })),
+    );
+
+    // Default successful handlers
     server.use(
       listGetOneDetailPagePreset,
       listGetAllHandler,
       listUpdateHandler,
       trpcMsw.task.getByList.query(() => []),
     );
+
+    // Run real auth initialization (uses global Supabase mock)
+    await useAuthStore.getState().initialize();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     server.resetHandlers();
-    useAuthStore.setState({
-      isLoggedIn: false,
-      userId: null,
-      accessToken: null,
-      refreshToken: null,
-    });
+    await useAuthStore.getState().signOut();
+  });
+
+  afterAll(() => {
+    server.close();
   });
 
   async function renderEditListPage(
@@ -90,14 +93,10 @@ describe("Edit List Page (/_authenticated/lists/$listId/edit)", () => {
     return result;
   }
 
-  async function fillForm(title: string, /*description = ""*/) {
+  async function fillForm(title: string) {
     const titleInput = await screen.findByLabelText(/List name/i);
     await userEvent.clear(titleInput);
     await userEvent.type(titleInput, title);
-
-    // const descInput = screen.getByLabelText(/Description/i);
-    // await userEvent.clear(descInput);
-    // if (description) await userEvent.type(descInput, description);
   }
 
   function getSaveButton() {
@@ -115,10 +114,6 @@ describe("Edit List Page (/_authenticated/lists/$listId/edit)", () => {
       "placeholder",
       "Work, Groceries, Ideas...",
     );
-
-    // expect(
-    //   screen.getByLabelText(/Description \(optional\)/i),
-    // ).toBeInTheDocument();
 
     expect(
       screen.getByRole("button", { name: /Cancel and return to list/i }),

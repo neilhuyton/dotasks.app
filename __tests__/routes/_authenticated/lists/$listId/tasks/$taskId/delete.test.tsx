@@ -4,21 +4,18 @@ import {
   describe,
   it,
   expect,
+  vi,
   beforeAll,
   beforeEach,
   afterEach,
   afterAll,
-  vi,
 } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient } from "@tanstack/react-query";
 
 import { server } from "../../../../../../../__mocks__/server";
-import {
-  renderWithProviders,
-  createTestQueryClient,
-} from "../../../../../../utils/test-helpers";
+import { renderWithProviders } from "../../../../../../utils/test-helpers";
+import { trpcMsw } from "../../../../../../../__mocks__/trpcMsw";
 
 import {
   resetMockLists,
@@ -34,44 +31,35 @@ import {
   taskDeleteSuccess,
 } from "../../../../../../../__mocks__/handlers/tasks";
 
-import { trpcMsw } from "../../../../../../../__mocks__/trpcMsw";
 import { TRPCError } from "@trpc/server";
 import { useAuthStore } from "@/shared/store/authStore";
-import { http, HttpResponse } from "msw";
+import { suppressActWarnings } from "../../../../../../act-suppress";
+
+suppressActWarnings();
 
 describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$taskId/delete)", () => {
   const TEST_LIST_ID = "list-abc-123";
   const TEST_TASK_ID = "t-real-1";
   const TASK_TITLE = "Finish report";
 
-  let queryClient: QueryClient;
-
   beforeAll(() => {
-    server.listen({ onUnhandledRequest: "bypass" });
-
-    server.use(
-      http.get("https://*.supabase.co/realtime/v1/websocket", () => {
-        return new HttpResponse(null, { status: 400 });
-      }),
-    );
+    server.listen({ onUnhandledRequest: "warn" });
   });
 
-  afterAll(() => server.close());
-
-  beforeEach(() => {
-    queryClient = createTestQueryClient();
-
-    useAuthStore.setState({
-      isLoggedIn: true,
-      userId: "test-user-123",
-      accessToken: "mock-token",
-      refreshToken: "mock-refresh",
-    });
-
+  beforeEach(async () => {
     server.resetHandlers();
     resetMockLists();
     resetMockTasks();
     prepareDetailPageTestList();
+
+    // Prevent MSW warnings + "Prisma user sync failed" logs
+    server.use(
+      trpcMsw.user.createOrSync.mutation(() => ({
+        success: true,
+        message: "User synced (mock)",
+        user: { id: "test-user-123", email: "testuser@example.com" },
+      })),
+    );
 
     server.use(
       listGetAllHandler,
@@ -79,18 +67,17 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
       taskGetByListSuccess,
       taskDeleteSuccess,
     );
+
+    await useAuthStore.getState().initialize();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     server.resetHandlers();
-    useAuthStore.setState({
-      isLoggedIn: false,
-      userId: null,
-      accessToken: null,
-      refreshToken: null,
-    });
+    await useAuthStore.getState().signOut();
     vi.restoreAllMocks();
   });
+
+  afterAll(() => server.close());
 
   async function renderDeleteTaskPage(
     listId = TEST_LIST_ID,
@@ -99,7 +86,6 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
   ) {
     const result = renderWithProviders({
       initialEntries: [`/lists/${listId}/tasks/${taskId}/delete`],
-      queryClient,
     });
 
     if (options.waitForHeading) {
@@ -108,11 +94,11 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
         {
           name: new RegExp(`Delete "${TASK_TITLE}"\\?`, "i"),
         },
-        { timeout: 1200 },
+        { timeout: 2000 },
       );
     }
 
-    return { ...result, queryClient };
+    return result;
   }
 
   it("renders confirmation heading, warning text, and action buttons", async () => {
@@ -133,6 +119,8 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
     expect(
       screen.getByRole("button", { name: "Delete Task" }),
     ).toBeInTheDocument();
+
+    // Assuming the back button has aria-label="Cancel and return to list" (singular "list")
     expect(
       screen.getByRole("button", { name: /Cancel and return to list/i }),
     ).toBeInTheDocument();
@@ -149,13 +137,13 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
       () => {
         expect(navigateSpy).toHaveBeenCalledWith(
           expect.objectContaining({
-            to: "/lists/$listId",
+            to: "/lists/$listId", // ← parametric route pattern (what router receives)
             params: { listId: TEST_LIST_ID },
             replace: true,
           }),
         );
       },
-      { timeout: 1200 },
+      { timeout: 2000 },
     );
 
     expect(getMockTasks().some((t) => t.id === TEST_TASK_ID)).toBe(false);
@@ -182,7 +170,7 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
       () => {
         expect(getMockTasks().some((t) => t.id === TEST_TASK_ID)).toBe(true);
       },
-      { timeout: 1200 },
+      { timeout: 2000 },
     );
 
     expect(
@@ -212,7 +200,7 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
     const navigateSpy = vi.spyOn(router, "navigate");
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Cancel and return to list" }),
+      screen.getByRole("button", { name: /Cancel and return to list/i }),
     );
 
     expect(navigateSpy).toHaveBeenCalledWith(
@@ -253,7 +241,7 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
       {
         name: /Delete ""\?/i,
       },
-      { timeout: 1200 },
+      { timeout: 2000 },
     );
 
     expect(

@@ -1,22 +1,19 @@
-// src/app/routes/_authenticated/lists/$listId.tsx
-
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { Outlet, createFileRoute } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
-
 import { useListTasks } from "@/hooks/useListTasks";
 import { trpc } from "@/trpc";
-import { Outlet } from "@tanstack/react-router";
 import { FabButton } from "@/app/components/FabButton";
-import { useAuthStore } from "@/shared/store/authStore";
+import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import TaskList from "@/features/tasks/components/TaskList";
 
 export const Route = createFileRoute("/_authenticated/lists/$listId")({
   loader: async ({ context: { queryClient }, params }) => {
     const { listId } = params;
-    const { accessToken } = useAuthStore.getState();
 
-    if (!accessToken || !listId) return {};
+    if (!listId) {
+      return {};
+    }
 
     await queryClient.ensureQueryData(
       trpc.list.getOne.queryOptions(
@@ -51,21 +48,22 @@ export const Route = createFileRoute("/_authenticated/lists/$listId")({
 
   errorComponent: ({ error }) => {
     const message = error?.message?.toLowerCase() ?? "";
-    const isNotFound = message.includes("not found");
+    const isNotFound =
+      message.includes("not found") || message.includes("unauthorized");
 
     return (
       <div className="flex min-h-[60vh] items-center justify-center p-6 text-center text-muted-foreground">
         {isNotFound
           ? "List not found or you don't have access."
-          : `Failed to load list: ${error?.message || "Unknown error"}`}
+          : `Failed to load list: ${error?.message || "Something went wrong"}`}
       </div>
     );
   },
 
-  component: ListDetail,
+  component: ListDetailPage,
 });
 
-function ListDetail() {
+function ListDetailPage() {
   const { listId } = Route.useParams();
   const navigate = Route.useNavigate();
 
@@ -100,7 +98,7 @@ function ListDetail() {
   if (!listId) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center text-muted-foreground">
-        No list ID provided in URL
+        No list ID provided in the URL
       </div>
     );
   }
@@ -128,7 +126,7 @@ function ListDetail() {
   if (isListError || !list) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center text-muted-foreground">
-        List not found or you don't have access.
+        List not found or you don't have access to it.
       </div>
     );
   }

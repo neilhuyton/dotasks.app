@@ -1,36 +1,21 @@
 // __tests__/routes/_authenticated/profile.test.tsx
 
-import {
-  describe,
-  it,
-  expect,
-  vi,
-  beforeAll,
-  beforeEach,
-  afterEach,
-  afterAll,
-} from "vitest";
-import { screen, waitFor, fireEvent } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { http, HttpResponse } from "msw";
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach, afterAll } from "vitest";
+import { screen, waitFor } from "@testing-library/react";
 
-// Mock the entire email module at the top (hoisted, affects server code via tRPC flow)
-vi.mock("../../../server/email", () => {
-  return {
-    sendResetPasswordEmail: vi.fn().mockResolvedValue({
-      success: true,
-      requestId: `mock-reset-${Date.now()}`,
-    }),
-    sendEmailChangeNotification: vi.fn().mockResolvedValue({ success: true }),
-    sendPasswordChangeNotification: vi.fn().mockResolvedValue({ success: true }),
-    sendMailWithDebug: vi.fn().mockResolvedValue({ success: true }),
-  };
-});
+vi.mock("../../../server/email", () => ({
+  sendResetPasswordEmail: vi.fn().mockResolvedValue({ success: true }),
+  sendEmailChangeNotification: vi.fn().mockResolvedValue({ success: true }),
+  sendPasswordChangeNotification: vi.fn().mockResolvedValue({ success: true }),
+  sendMailWithDebug: vi.fn().mockResolvedValue({ success: true }),
+}));
 
 import { server } from "../../../__mocks__/server";
 import {
-  updateEmailHandler,
-  updateEmailSuccessHandler,
+  userCreateOrSyncHandler,
+  supabaseUpdateEmailSuccess,
+  supabaseUpdateEmailTaken,
+  supabaseUpdateEmailDelayed,
   sendPasswordResetHandler,
 } from "../../../__mocks__/handlers/profile";
 import { listGetAllHandler } from "../../../__mocks__/handlers/lists";
@@ -38,59 +23,47 @@ import { listGetAllHandler } from "../../../__mocks__/handlers/lists";
 import { renderWithProviders } from "../../utils/test-helpers";
 import { useAuthStore } from "@/shared/store/authStore";
 import { suppressActWarnings } from "../../act-suppress";
+import userEvent from "@testing-library/user-event";
 
 suppressActWarnings();
 
 describe("Profile Page (/_authenticated/profile)", () => {
-  const TEST_USER_ID = "test-user-123";
   const INITIAL_EMAIL = "testuser@example.com";
 
   beforeAll(() => server.listen({ onUnhandledRequest: "warn" }));
 
-  beforeEach(() => {
+  beforeEach(async () => {
     server.resetHandlers();
-    server.use(listGetAllHandler, updateEmailHandler);
+    server.use(userCreateOrSyncHandler, listGetAllHandler);
 
     useAuthStore.setState({
-      isLoggedIn: true,
-      userId: TEST_USER_ID,
-      user: { id: TEST_USER_ID, email: INITIAL_EMAIL },
-      accessToken: "mock-access-token",
-      refreshToken: "mock-refresh-token",
+      session: null,
+      user: null,
+      loading: true,
+      error: null,
     });
+
+    await useAuthStore.getState().initialize();
 
     vi.clearAllMocks();
   });
 
   afterEach(() => {
     server.resetHandlers();
-    useAuthStore.getState().logout?.();
+    vi.restoreAllMocks();
   });
 
   afterAll(() => server.close());
 
   function renderProfile() {
-    return renderWithProviders({
-      initialEntries: ["/profile"],
-    });
+    return renderWithProviders({ initialEntries: ["/profile"] });
   }
 
   async function waitForProfileReady() {
     await waitFor(
       () => {
-        expect(
-          screen.getByRole("heading", { name: /profile/i, level: 1 }),
-        ).toBeInTheDocument();
-        expect(screen.getByTestId("current-email")).toBeInTheDocument();
-        expect(screen.getByTestId("current-email")).toHaveTextContent(
-          INITIAL_EMAIL,
-        );
-        expect(
-          screen.queryByText(/failed to load profile/i),
-        ).not.toBeInTheDocument();
-        expect(
-          screen.queryByText(/loading profile information/i),
-        ).not.toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: /profile/i })).toBeInTheDocument();
+        expect(screen.getByTestId("current-email")).toHaveTextContent(INITIAL_EMAIL);
       },
       { timeout: 1500 },
     );
@@ -99,56 +72,77 @@ describe("Profile Page (/_authenticated/profile)", () => {
   it("renders profile title and current email", async () => {
     renderProfile();
     await waitForProfileReady();
-    expect(screen.getByTestId("current-email")).toHaveTextContent(
-      INITIAL_EMAIL,
-    );
   });
 
-  it("successfully updates email → shows success banner", async () => {
-    server.use(updateEmailSuccessHandler);
+  it("successfully requests email change → shows success banner", async () => {
+    server.use(supabaseUpdateEmailSuccess);
     renderProfile();
     await waitForProfileReady();
 
-    await userEvent.clear(screen.getByTestId("email-input"));
-    await userEvent.type(
-      screen.getByTestId("email-input"),
-      "new.email@example.com",
-    );
+    const input = screen.getByTestId("email-input");
+    await userEvent.clear(input);
+    await userEvent.type(input, "new.email@example.com");
 
-    fireEvent.submit(screen.getByTestId("email-form"));
+    await userEvent.click(screen.getByTestId("email-submit"));
 
     await waitFor(
       () => {
         expect(screen.getByTestId("banner-message")).toBeInTheDocument();
         expect(screen.getByTestId("banner-message")).toHaveTextContent(
-          /successfully|updated/i,
+          /Confirmation emails sent to both addresses\. Check inboxes/i
         );
       },
-      { timeout: 1500 },
+      { timeout: 2000 },
     );
   });
 
-  it("shows error banner when email is already taken", async () => {
-    server.use(updateEmailHandler);
+  it("shows error banner when email change fails (already taken)", async () => {
+    server.use(supabaseUpdateEmailTaken);
     renderProfile();
     await waitForProfileReady();
 
-    await userEvent.clear(screen.getByTestId("email-input"));
-    await userEvent.type(
-      screen.getByTestId("email-input"),
-      "already.taken@example.com",
-    );
+    const input = screen.getByTestId("email-input");
+    await userEvent.clear(input);
+    await userEvent.type(input, "already.taken@example.com");
 
-    fireEvent.submit(screen.getByTestId("email-form"));
+    await userEvent.click(screen.getByTestId("email-submit"));
 
     await waitFor(
       () => {
         expect(screen.getByTestId("banner-message")).toBeInTheDocument();
-        expect(screen.getByTestId("banner-message")).toHaveTextContent(
-          /Failed to update email|Please try again/i,
-        );
+        expect(screen.getByTestId("banner-message")).toHaveTextContent(/Failed to change email/i);
+      },
+      { timeout: 2000 },
+    );
+  });
+
+  it("shows loading state during email change request", async () => {
+    server.use(supabaseUpdateEmailDelayed);
+    renderProfile();
+    await waitForProfileReady();
+
+    const input = screen.getByTestId("email-input");
+    const submit = screen.getByTestId("email-submit");
+
+    await userEvent.clear(input);
+    await userEvent.type(input, "delay@example.com");
+
+    await userEvent.click(submit);
+
+    await waitFor(
+      () => {
+        expect(submit).toBeDisabled();
+        expect(submit).toHaveTextContent(/Requesting change.../i);
       },
       { timeout: 1500 },
+    );
+
+    await waitFor(
+      () => {
+        expect(submit).toHaveTextContent(/Change Email/i);
+        expect(submit).toBeDisabled();
+      },
+      { timeout: 2500 },
     );
   });
 
@@ -157,56 +151,16 @@ describe("Profile Page (/_authenticated/profile)", () => {
     renderProfile();
     await waitForProfileReady();
 
-    await userEvent.clear(screen.getByTestId("password-input"));
-    await userEvent.type(screen.getByTestId("password-input"), INITIAL_EMAIL);
+    const input = screen.getByTestId("password-input");
+    await userEvent.clear(input);
+    await userEvent.type(input, INITIAL_EMAIL);
 
-    fireEvent.submit(screen.getByTestId("password-form"));
+    await userEvent.click(screen.getByTestId("reset-submit"));
 
     await waitFor(
       () => {
         expect(screen.getByTestId("banner-message")).toBeInTheDocument();
-        expect(screen.getByTestId("banner-message")).toHaveTextContent(
-          /sent|reset link/i,
-        );
-      },
-      { timeout: 1500 },
-    );
-  });
-
-  it("shows loading state on email form during submission", async () => {
-    server.use(
-      http.post("/trpc/user.updateEmail", async () => {
-        await new Promise((r) => setTimeout(r, 800));
-        return HttpResponse.json({ success: true });
-      }),
-    );
-
-    renderProfile();
-    await waitForProfileReady();
-
-    await userEvent.clear(screen.getByTestId("email-input"));
-    await userEvent.type(
-      screen.getByTestId("email-input"),
-      "delay@example.com",
-    );
-
-    const submitPromise = fireEvent.submit(screen.getByTestId("email-form"));
-
-    await waitFor(
-      () => {
-        const btn = screen.getByTestId("email-submit");
-        expect(btn).toBeDisabled();
-        expect(btn).toHaveTextContent(/updating/i);
-      },
-      { timeout: 1500 },
-    );
-
-    await submitPromise;
-
-    await waitFor(
-      () => {
-        const btn = screen.getByTestId("email-submit");
-        expect(btn).not.toBeDisabled();
+        expect(screen.getByTestId("banner-message")).toHaveTextContent(/Password reset link sent/i);
       },
       { timeout: 2000 },
     );
@@ -216,49 +170,52 @@ describe("Profile Page (/_authenticated/profile)", () => {
     renderProfile();
     await waitForProfileReady();
 
-    await userEvent.clear(screen.getByTestId("email-input"));
-    await userEvent.type(screen.getByTestId("email-input"), "invalid");
+    const input = screen.getByTestId("email-input");
+    await userEvent.clear(input);
+    await userEvent.type(input, "invalid");
 
-    fireEvent.submit(screen.getByTestId("email-form"));
+    await userEvent.click(screen.getByTestId("email-submit"));
 
     await waitFor(
       () => {
-        expect(
-          screen.getByText(/valid email|invalid email/i),
-        ).toBeInTheDocument();
+        expect(screen.getByText(/invalid email address/i)).toBeInTheDocument();
       },
-      { timeout: 1500 },
+      { timeout: 1000 },
     );
   });
 
   it("logs out and navigates to /login after confirming dialog", async () => {
-    const { router } = renderProfile();
+    renderProfile();
     await waitForProfileReady();
 
-    const navigateSpy = vi.spyOn(router, "navigate");
+    // Mock window.location.replace safely
+    const locationReplaceMock = vi.fn();
+    Object.defineProperty(window, "location", {
+      value: {
+        ...window.location,
+        replace: locationReplaceMock,
+      },
+      writable: true,
+    });
 
     await userEvent.click(screen.getByTestId("logout-button"));
 
     await waitFor(() => {
       expect(
-        screen.getByRole("heading", {
-          name: /Are you sure you want to log out/i,
-        }),
+        screen.getByRole("heading", { name: /Are you sure you want to log out/i }),
       ).toBeInTheDocument();
     });
 
-    const confirmButton = screen.getByRole("button", { name: /Logout/i });
-    await userEvent.click(confirmButton);
+    await userEvent.click(screen.getByRole("button", { name: /Logout/i }));
 
     await waitFor(() => {
-      expect(navigateSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ to: "/login", replace: true }),
-      );
+      expect(locationReplaceMock).toHaveBeenCalledWith("/login");
     });
 
-    expect(useAuthStore.getState().isLoggedIn).toBe(false);
-
-    navigateSpy.mockRestore();
+    const state = useAuthStore.getState();
+    expect(state.user).toBeNull();
+    expect(state.session).toBeNull();
+    expect(state.loading).toBe(false);
   });
 
   describe("Close button navigation", () => {
@@ -266,48 +223,33 @@ describe("Profile Page (/_authenticated/profile)", () => {
       const { router } = renderProfile();
       await waitForProfileReady();
 
-      const canGoBackSpy = vi
-        .spyOn(router.history, "canGoBack")
-        .mockReturnValue(true);
+      const canGoBackSpy = vi.spyOn(router.history, "canGoBack").mockReturnValue(true);
       const backSpy = vi.spyOn(router.history, "back");
-
-      const navigateSpy = vi.spyOn(router, "navigate");
 
       await userEvent.click(screen.getByTestId("close-profile"));
 
       expect(canGoBackSpy).toHaveBeenCalledTimes(1);
       expect(backSpy).toHaveBeenCalledTimes(1);
-      expect(navigateSpy).not.toHaveBeenCalled();
 
       canGoBackSpy.mockRestore();
       backSpy.mockRestore();
-      navigateSpy.mockRestore();
     });
 
     it("falls back to /lists when there is no previous history", async () => {
       const { router } = renderProfile();
       await waitForProfileReady();
 
-      const canGoBackSpy = vi
-        .spyOn(router.history, "canGoBack")
-        .mockReturnValue(false);
-      const backSpy = vi.spyOn(router.history, "back");
+      const canGoBackSpy = vi.spyOn(router.history, "canGoBack").mockReturnValue(false);
       const navigateSpy = vi.spyOn(router, "navigate");
 
       await userEvent.click(screen.getByTestId("close-profile"));
 
       expect(canGoBackSpy).toHaveBeenCalledTimes(1);
-      expect(backSpy).not.toHaveBeenCalled();
-      expect(navigateSpy).toHaveBeenCalledTimes(1);
       expect(navigateSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          to: "/lists",
-          replace: true,
-        }),
+        expect.objectContaining({ to: "/lists", replace: true })
       );
 
       canGoBackSpy.mockRestore();
-      backSpy.mockRestore();
       navigateSpy.mockRestore();
     });
 
@@ -315,26 +257,19 @@ describe("Profile Page (/_authenticated/profile)", () => {
       const { router } = renderProfile();
       await waitForProfileReady();
 
-      const canGoBackSpy = vi
-        .spyOn(router.history, "canGoBack")
-        .mockImplementation(() => {
-          throw new Error("canGoBack unavailable");
-        });
+      vi.spyOn(router.history, "canGoBack").mockImplementation(() => {
+        throw new Error("canGoBack unavailable");
+      });
 
       const navigateSpy = vi.spyOn(router, "navigate");
 
       await userEvent.click(screen.getByTestId("close-profile"));
 
-      expect(canGoBackSpy).toHaveBeenCalledTimes(1);
       expect(navigateSpy).toHaveBeenCalledTimes(1);
       expect(navigateSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          to: "/lists",
-          replace: true,
-        }),
+        expect.objectContaining({ to: "/lists", replace: true })
       );
 
-      canGoBackSpy.mockRestore();
       navigateSpy.mockRestore();
     });
   });

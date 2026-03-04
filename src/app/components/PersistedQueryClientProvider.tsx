@@ -3,7 +3,7 @@
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import type { PropsWithChildren } from "react";
 
-import { queryClient } from "@/queryClient";
+import { getQueryClient } from "@/queryClient"; // ← Changed to the getter function
 import { createIDBPersister } from "@/lib/queryPersister";
 
 const persister = createIDBPersister();
@@ -11,12 +11,12 @@ const persister = createIDBPersister();
 export function PersistedQueryClientProvider({ children }: PropsWithChildren) {
   return (
     <PersistQueryClientProvider
-      client={queryClient}
+      client={getQueryClient()}
       persistOptions={{
         persister,
       }}
       onSuccess={() => {
-        queryClient.resumePausedMutations();
+        getQueryClient().resumePausedMutations();
       }}
     >
       {children}

@@ -9,10 +9,10 @@ import {
 } from "@tanstack/react-query";
 import { useTRPC } from "@/trpc";
 import { useBannerStore } from "@/shared/store/bannerStore";
-import { useSupabaseTaskRealtime } from "../shared/hooks/useSupabaseTaskRealtime";
 
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/../server/trpc";
+import { useTaskRealtime } from "@/shared/hooks/useTaskRealtime";
 
 type RouterOutput = inferRouterOutputs<AppRouter>;
 export type Task = RouterOutput["task"]["getByList"][number];
@@ -39,7 +39,7 @@ export function useListTasks(listId: string | null | undefined) {
     placeholderData: keepPreviousData,
   });
 
-  useSupabaseTaskRealtime({ listId });
+  useTaskRealtime({ listId });
 
   const [pendingReorder, setPendingReorder] = useState<Task[] | null>(null);
   const [pendingToggleIds, setPendingToggleIds] = useState<Set<string>>(new Set());

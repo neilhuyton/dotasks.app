@@ -10,14 +10,13 @@ import { trpc } from "@/trpc";
 
 export const Route = createFileRoute("/_authenticated/lists/")({
   loader: async ({ context: { queryClient } }) => {
-    const { accessToken } = useAuthStore.getState();
-    if (!accessToken) return {};
+    const { user } = useAuthStore.getState();
 
-    await queryClient.ensureQueryData(
-      trpc.list.getAll.queryOptions(undefined, {
-        staleTime: 30_000,
-      }),
-    );
+    if (!user) {
+      return {};
+    }
+
+    await queryClient.ensureQueryData(trpc.list.getAll.queryOptions(undefined));
 
     return {};
   },

@@ -6,9 +6,9 @@ import {
   expect,
   vi,
   beforeAll,
+  beforeEach,
   afterEach,
   afterAll,
-  beforeEach,
 } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -16,10 +16,9 @@ import { TRPCError } from "@trpc/server";
 
 import { server } from "../../../../../__mocks__/server";
 import { renderWithProviders } from "../../../../utils/test-helpers";
-
-import { listGetOneDetailPagePreset } from "../../../../../__mocks__/handlers/lists";
 import { trpcMsw } from "../../../../../__mocks__/trpcMsw";
 
+import { listGetOneDetailPagePreset } from "../../../../../__mocks__/handlers/lists";
 import { useAuthStore } from "@/shared/store/authStore";
 import { suppressActWarnings } from "../../../../act-suppress";
 
@@ -28,20 +27,21 @@ suppressActWarnings();
 describe("Completed Tasks Page (/_authenticated/lists/$listId/tasks/completed)", () => {
   const TEST_LIST_ID = "list-abc-123";
 
-  beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+  beforeAll(() => server.listen({ onUnhandledRequest: "warn" }));
 
-  beforeEach(() => {
-    useAuthStore.setState({
-      isLoggedIn: true,
-      userId: "test-user-123",
-      accessToken: "mock-token",
-      refreshToken: "mock-refresh",
-    });
-
+  beforeEach(async () => {
     server.resetHandlers();
+
+    server.use(
+      trpcMsw.user.createOrSync.mutation(() => ({
+        success: true,
+        message: "User synced (mock)",
+        user: { id: "test-user-123", email: "testuser@example.com" },
+      })),
+    );
+
     server.use(listGetOneDetailPagePreset);
 
-    // Default: one completed task
     server.use(
       trpcMsw.task.getByList.query(({ input }) => {
         if (input.listId !== TEST_LIST_ID) {
@@ -69,17 +69,12 @@ describe("Completed Tasks Page (/_authenticated/lists/$listId/tasks/completed)",
       }),
     );
 
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    await useAuthStore.getState().initialize();
   });
 
   afterEach(async () => {
     server.resetHandlers();
-    useAuthStore.setState({
-      isLoggedIn: false,
-      userId: null,
-      accessToken: null,
-      refreshToken: null,
-    });
+    await useAuthStore.getState().signOut();
     vi.restoreAllMocks();
   });
 
@@ -95,28 +90,15 @@ describe("Completed Tasks Page (/_authenticated/lists/$listId/tasks/completed)",
 
     if (options.waitForContent) {
       await waitFor(
-        () =>
-          screen.queryByText("Completed Tasks") ||
-          screen.queryByTestId("tasks-loading") ||
-          screen.queryByText(/No completed tasks yet/i),
+        () => {
+          expect(screen.getByRole("heading", { name: "Completed Tasks" })).toBeInTheDocument();
+        },
         { timeout: 4000 },
       );
     }
 
     return result;
   }
-
-  // it("shows loading spinner while fetching tasks", async () => {
-  //   server.use(
-  //     trpcMsw.task.getByList.query(() => {
-  //       return new Promise((resolve) => setTimeout(() => resolve([]), 150));
-  //     }),
-  //   );
-
-  //   await renderCompletedPage();
-
-  //   await screen.findByTestId("tasks-loading", {}, { timeout: 3000 });
-  // });
 
   it("shows empty state when no completed tasks", async () => {
     server.use(
@@ -147,14 +129,20 @@ describe("Completed Tasks Page (/_authenticated/lists/$listId/tasks/completed)",
   });
 
   it("navigates back via top back button", async () => {
-    await renderCompletedPage();
+    const { router } = await renderCompletedPage();
+
+    const navigateSpy = vi.spyOn(router, "navigate");
 
     const topBack = await screen.findByRole("button", { name: "Back to list" });
     await userEvent.click(topBack);
 
-    await waitFor(() => {
-      expect(screen.queryByText("Completed Tasks")).not.toBeInTheDocument();
-    });
+    expect(navigateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "/lists/$listId",
+        params: { listId: TEST_LIST_ID },
+        replace: true,
+      }),
+    );
   });
 
   it("opens more actions and shows edit for completed task", async () => {

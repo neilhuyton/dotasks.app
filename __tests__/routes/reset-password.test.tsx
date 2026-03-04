@@ -18,10 +18,11 @@ import { server } from "../../__mocks__/server";
 import {
   resetPasswordRequestHandler,
   delayedResetPasswordRequestHandler,
-  resetPasswordRequestRateLimitedHandler,
 } from "../../__mocks__/handlers/resetPasswordRequest";
 
 import { renderWithProviders } from "../utils/test-helpers";
+import { useAuthStore } from "@/shared/store/authStore";
+import { AuthError } from "@supabase/supabase-js";
 
 describe("Reset Password Page (/reset-password)", () => {
   beforeAll(() => server.listen({ onUnhandledRequest: "warn" }));
@@ -30,12 +31,10 @@ describe("Reset Password Page (/reset-password)", () => {
   beforeEach(() => {
     server.resetHandlers();
     server.use(resetPasswordRequestHandler);
-    vi.clearAllMocks(); // Consistency with other tests
+    vi.clearAllMocks();
   });
 
-  afterEach(() => {
-    server.resetHandlers();
-  });
+  afterEach(() => server.resetHandlers());
 
   it("renders the form and main elements", async () => {
     renderWithProviders({ initialEntries: ["/reset-password"] });
@@ -79,7 +78,7 @@ describe("Reset Password Page (/reset-password)", () => {
     expect(error).toHaveClass("text-destructive");
   });
 
-  it("submits valid email → resets form", async () => {
+  it("submits valid email → shows success message and resets form", async () => {
     renderWithProviders({ initialEntries: ["/reset-password"] });
 
     const emailInput = await screen.findByLabelText(/^email$/i);
@@ -88,10 +87,17 @@ describe("Reset Password Page (/reset-password)", () => {
     const submitBtn = screen.getByRole("button", { name: /send reset link/i });
     await waitFor(() => expect(submitBtn).toBeEnabled(), { timeout: 2000 });
 
-    const form = screen.getByTestId("reset-password-form");
-    fireEvent.submit(form);
+    await userEvent.click(submitBtn);
 
-    await waitFor(() => expect(emailInput).toHaveValue(""), { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(emailInput).toHaveValue("");
+        expect(
+          screen.getByText(/password reset link sent/i),
+        ).toBeInTheDocument();
+      },
+      { timeout: 5000 },
+    );
   });
 
   it("shows loading state during submission", async () => {
@@ -105,8 +111,7 @@ describe("Reset Password Page (/reset-password)", () => {
     const submitBtn = screen.getByRole("button", { name: /send reset link/i });
     await waitFor(() => expect(submitBtn).toBeEnabled(), { timeout: 2000 });
 
-    const form = screen.getByTestId("reset-password-form");
-    fireEvent.submit(form);
+    await userEvent.click(submitBtn);
 
     await waitFor(
       () => {
@@ -115,6 +120,11 @@ describe("Reset Password Page (/reset-password)", () => {
         expect(submitBtn.querySelector("svg.animate-spin")).toBeInTheDocument();
       },
       { timeout: 6000 },
+    );
+
+    await waitFor(
+      () => expect(submitBtn).toHaveTextContent(/send reset link/i),
+      { timeout: 8000 },
     );
   });
 
@@ -133,31 +143,33 @@ describe("Reset Password Page (/reset-password)", () => {
   });
 
   it("handles rate limit error without crashing", async () => {
-    server.use(resetPasswordRequestRateLimitedHandler);
+    vi.spyOn(
+      useAuthStore.getState().supabase.auth,
+      "resetPasswordForEmail",
+    ).mockImplementationOnce(async () => {
+      await new Promise((r) => setTimeout(r, 300));
+      return {
+        data: null,
+        error: new AuthError("Rate limit exceeded", 429),
+      };
+    });
 
     renderWithProviders({ initialEntries: ["/reset-password"] });
 
     const emailInput = await screen.findByLabelText(/^email$/i);
     await userEvent.type(emailInput, "spam@example.com");
 
+    const submitBtn = screen.getByRole("button", { name: /send reset link/i });
+    await waitFor(() => expect(submitBtn).toBeEnabled(), { timeout: 2000 });
+
+    await userEvent.click(submitBtn);
+
     await waitFor(
       () => {
-        expect(
-          screen.getByRole("button", { name: /send reset link/i }),
-        ).toBeEnabled();
+        expect(submitBtn).toBeEnabled();
+        expect(screen.getByText(/error/i)).toBeInTheDocument(); // adjust if your message is more specific
+        expect(screen.queryByText(/sending…/i)).not.toBeInTheDocument();
       },
-      { timeout: 2000 },
-    );
-
-    const form = screen.getByTestId("reset-password-form");
-    fireEvent.submit(form);
-
-    // No reset expected on error, so just check button re-enables
-    await waitFor(
-      () =>
-        expect(
-          screen.getByRole("button", { name: /send reset link/i }),
-        ).toBeEnabled(),
       { timeout: 5000 },
     );
   });
