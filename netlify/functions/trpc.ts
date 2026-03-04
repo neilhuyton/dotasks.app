@@ -1,6 +1,4 @@
-// netlify/functions/trpc.ts
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
-import type { IncomingMessage } from 'http';
 import { appRouter } from '../../server/trpc';
 import { createContext } from '../../server/context';
 import { TRPCError } from '@trpc/server';
@@ -9,11 +7,6 @@ import { getHTTPStatusCodeFromError } from '@trpc/server/http';
 const ALLOWED_ORIGIN = process.env.VITE_APP_URL || 'http://localhost:8888';
 
 export default async function handler(req: Request): Promise<Response> {
-  const url = new URL(req.url);
-
-  // Remove or comment out if requests arrive at /trpc directly
-  const pathname = url.pathname.replace(/^\/.netlify\/functions\/trpc/, '/trpc');
-
   const origin = req.headers.get('origin');
   const isAllowed = origin && (origin.includes('localhost') || origin === ALLOWED_ORIGIN);
   const corsHeaders: Record<string, string> = {
@@ -23,26 +16,22 @@ export default async function handler(req: Request): Promise<Response> {
     'Access-Control-Allow-Credentials': 'true',
   };
 
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
-  // Safe adapter: shape-match only what's likely used (headers most common)
-  // Extend { method: req.method, url: req.url, ... } if your createContext reads them
-  const adaptedReq = {
-    headers: Object.fromEntries(req.headers) as IncomingMessage['headers'],
-  } as IncomingMessage;
-
   try {
     const response = await fetchRequestHandler({
       endpoint: '/trpc',
-      req,
+      req,                           // ← pass the real Request object (critical fix)
       router: appRouter,
-      createContext: () => createContext({ req: adaptedReq }),
+      createContext: ({ req }) => createContext({ req }),  // now receives real Request
       batching: { enabled: true },
       allowMethodOverride: true,
     });
 
+    // Add CORS headers to the response
     const headers = new Headers(response.headers);
     Object.entries(corsHeaders).forEach(([key, value]) => headers.set(key, value));
 
@@ -62,6 +51,7 @@ export default async function handler(req: Request): Promise<Response> {
 
     const statusCode = getHTTPStatusCodeFromError(error);
 
+    // Format error in the shape tRPC client expects
     const body = JSON.stringify([{
       error: {
         message: error.message,
@@ -70,7 +60,7 @@ export default async function handler(req: Request): Promise<Response> {
           code: error.code,
           httpStatus: statusCode,
           stack: error.stack,
-          path: pathname.split('/trpc/')[1]?.split('?')[0] || '',
+          path: new URL(req.url).pathname.split('/trpc/')[1]?.split('?')[0] || '',
         },
       },
     }]);
