@@ -1,7 +1,7 @@
 // server/trpc-base.ts
 
 import { initTRPC, TRPCError } from "@trpc/server";
-import type { Context } from "./context";
+import type { Context } from "./context"; // ← make sure this points to the file above
 
 const t = initTRPC.context<Context>().create();
 
@@ -37,7 +37,7 @@ const rlsClaimsMiddleware = t.middleware(async ({ ctx, next }) => {
 
 // Protected procedures now use both middlewares
 export const protectedProcedure = t.procedure
-  .use(rlsClaimsMiddleware)  // ← this is the key line that makes prod work
+  .use(rlsClaimsMiddleware)
   .use(({ ctx, next }) => {
     if (!ctx.userId) {
       throw new TRPCError({ code: "UNAUTHORIZED" });
@@ -49,5 +49,6 @@ export const protectedProcedure = t.procedure
       },
     });
   });
+
 
 export const createCallerFactory = t.createCallerFactory;
