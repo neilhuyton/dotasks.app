@@ -32,7 +32,7 @@ export const useAuthStore = create<AuthState>()((set) => {
         email: user.email,
       });
     } catch {
-      // empty catch
+      // empty
     }
   };
 
@@ -40,10 +40,19 @@ export const useAuthStore = create<AuthState>()((set) => {
     getQueryClient().clear();
   };
 
-  supabase.auth.onAuthStateChange(async (_event, session) => {
+  supabase.auth.onAuthStateChange(async (event, session) => {
     const user = session?.user ?? null;
+
     set({ session, user, loading: false, error: null });
+
+    // Force refetch after refresh or sign-in to unstick queries
+    if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") {
+      console.log(`[AuthStore] ${event} → invalidating queries`);
+      getQueryClient().invalidateQueries();
+    }
+
     await syncUser(user);
+
     if (!session) {
       clearCacheOnSignOut();
     }
