@@ -19,8 +19,6 @@ export interface AuthState {
   supabase: typeof supabase;
 }
 
-export const getAuthState = () => useAuthStore.getState();
-
 export const useAuthStore = create<AuthState>()((set) => {
   const syncUser = async (user: User | null) => {
     if (!user?.id || !user.email) return;
@@ -30,7 +28,7 @@ export const useAuthStore = create<AuthState>()((set) => {
         email: user.email,
       });
     } catch {
-      //
+      // empty
     }
   };
 
@@ -65,29 +63,18 @@ export const useAuthStore = create<AuthState>()((set) => {
 
     initialize: async () => {
       set({ loading: true, error: null });
-
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
-
-        const user = session?.user ?? null;
-
-        set({ session, user, loading: false, error: null });
-        await syncUser(user);
+        await supabase.auth.getSession();
       } catch (err) {
         set({
           loading: false,
-          error:
-            err instanceof Error
-              ? err
-              : new Error("Auth initialization failed"),
+          error: err instanceof Error ? err : new Error("Auth init failed"),
         });
       }
     },
 
     signUp: async (email: string, password: string) => {
       set({ loading: true, error: null });
-
       try {
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -96,7 +83,6 @@ export const useAuthStore = create<AuthState>()((set) => {
             emailRedirectTo: `${window.location.origin}/welcome`,
           },
         });
-
         if (error) throw error;
 
         const user = data.user ?? null;
@@ -109,7 +95,6 @@ export const useAuthStore = create<AuthState>()((set) => {
         });
 
         await syncUser(user);
-
         return { error: null };
       } catch (err) {
         const error = err instanceof Error ? err : new Error("Signup failed");
@@ -120,13 +105,11 @@ export const useAuthStore = create<AuthState>()((set) => {
 
     signIn: async (email: string, password: string) => {
       set({ loading: true, error: null });
-
       try {
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
-
         if (error) throw error;
 
         const user = data.user ?? null;
@@ -139,7 +122,6 @@ export const useAuthStore = create<AuthState>()((set) => {
         });
 
         await syncUser(user);
-
         return { error: null };
       } catch (err) {
         const error = err instanceof Error ? err : new Error("Login failed");
@@ -150,7 +132,6 @@ export const useAuthStore = create<AuthState>()((set) => {
 
     signOut: async () => {
       set({ loading: true, error: null });
-
       try {
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
@@ -160,13 +141,7 @@ export const useAuthStore = create<AuthState>()((set) => {
         ).hostname.split(".")[0];
         localStorage.removeItem(`sb-${projectRef}-auth-token`);
 
-        set({
-          session: null,
-          user: null,
-          loading: false,
-          error: null,
-        });
-
+        set({ session: null, user: null, loading: false, error: null });
         clearCacheOnSignOut();
       } catch (err) {
         const error = err instanceof Error ? err : new Error("Sign out failed");

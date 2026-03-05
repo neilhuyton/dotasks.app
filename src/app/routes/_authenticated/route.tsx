@@ -1,3 +1,5 @@
+// src/app/routes/_authenticated/route.tsx
+
 import { createFileRoute, redirect, Outlet } from "@tanstack/react-router";
 import { useAuthStore } from "@/shared/store/authStore";
 import ProfileIcon from "@/app/components/ProfileIcon";
