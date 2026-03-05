@@ -1,16 +1,17 @@
+// src/app/Root.tsx
+
 import { useEffect } from "react";
 import { RouterProvider } from "@tanstack/react-router";
 
 import { router } from "@/router";
 import { ThemeProvider } from "./components/ThemeProvider";
-import { RealtimeListeners } from "@/app/components/RealtimeListeners";
-import { PersistedQueryClientProvider } from "./components/PersistedQueryClientProvider";
 
 import { TRPCProvider } from "@/trpc";
 import { trpcClient } from "@/trpc";
 import { getQueryClient } from "@/queryClient";
 import { ErrorBoundary } from "react-error-boundary";
 import { useAuthStore } from "@/shared/store/authStore";
+import { QueryClientProvider } from "@tanstack/react-query";
 
 export function Root() {
   const initialize = useAuthStore((s) => s.initialize);
@@ -38,7 +39,7 @@ export function Root() {
         </div>
       }
     >
-      <PersistedQueryClientProvider>
+      <QueryClientProvider client={getQueryClient()}>
         <TRPCProvider trpcClient={trpcClient} queryClient={getQueryClient()}>
           <ThemeProvider
             defaultTheme="dark"
@@ -46,10 +47,9 @@ export function Root() {
             enableSystem={true}
           >
             <RouterProvider router={router} />
-            <RealtimeListeners />
           </ThemeProvider>
         </TRPCProvider>
-      </PersistedQueryClientProvider>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }
