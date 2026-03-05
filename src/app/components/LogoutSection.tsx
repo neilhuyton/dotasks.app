@@ -3,7 +3,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/shared/store/authStore";
 import { supabase } from "@/lib/supabase";
-import { useBannerStore } from "@/shared/store/bannerStore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,7 +19,6 @@ import { LogOut } from "lucide-react";
 
 export default function LogoutSection() {
   const queryClient = useQueryClient();
-  const { show: showBanner } = useBannerStore();
 
   const handleLogout = async () => {
     try {
@@ -41,11 +39,7 @@ export default function LogoutSection() {
 
       window.location.replace("/login");
     } catch {
-      showBanner({
-        message: "Logout failed – please try again",
-        variant: "error",
-        duration: 4000,
-      });
+      //
     }
   };
 

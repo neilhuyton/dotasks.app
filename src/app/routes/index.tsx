@@ -14,7 +14,7 @@ function HomePage() {
       {/* Header / Hero */}
       <header className="px-6 pt-16 pb-12 text-center sm:pt-24 sm:pb-20">
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-6">
-          Do Tasks
+          Supa Base
         </h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
           Simple, focused task management. Get things done without the noise.

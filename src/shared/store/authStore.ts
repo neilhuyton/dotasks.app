@@ -1,3 +1,5 @@
+// src/shared/store/authStore.ts
+
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
 import type { Session, User } from "@supabase/supabase-js";
@@ -19,8 +21,6 @@ export interface AuthState {
   supabase: typeof supabase;
 }
 
-export const getAuthState = () => useAuthStore.getState();
-
 export const useAuthStore = create<AuthState>()((set) => {
   const syncUser = async (user: User | null) => {
     if (!user?.id || !user.email) return;
@@ -30,7 +30,7 @@ export const useAuthStore = create<AuthState>()((set) => {
         email: user.email,
       });
     } catch {
-      //
+      // silently ignore user sync failures — don't block auth
     }
   };
 
@@ -45,7 +45,7 @@ export const useAuthStore = create<AuthState>()((set) => {
 
     if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") {
       getQueryClient().invalidateQueries();
-      supabase.realtime.setAuth(session?.access_token ?? null); // force Realtime token sync
+      supabase.realtime.setAuth(session?.access_token ?? null);
     }
 
     await syncUser(user);
@@ -65,30 +65,19 @@ export const useAuthStore = create<AuthState>()((set) => {
 
     initialize: async () => {
       set({ loading: true, error: null });
-
       try {
-        const { data, error } = await supabase.auth.getSession();
-        if (error) throw error;
-
-        const session = data.session;
-        const user = session?.user ?? null;
-
-        set({ session, user, loading: false, error: null });
-        await syncUser(user);
+        await supabase.auth.getSession(); // triggers onAuthStateChange → INITIAL_SESSION
       } catch (err) {
+        // storage read or network failure during initial session fetch
         set({
           loading: false,
-          error:
-            err instanceof Error
-              ? err
-              : new Error("Auth initialization failed"),
+          error: err instanceof Error ? err : new Error("Failed to initialize auth"),
         });
       }
     },
 
     signUp: async (email: string, password: string) => {
       set({ loading: true, error: null });
-
       try {
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -97,7 +86,6 @@ export const useAuthStore = create<AuthState>()((set) => {
             emailRedirectTo: `${window.location.origin}/welcome`,
           },
         });
-
         if (error) throw error;
 
         const user = data.user ?? null;
@@ -110,7 +98,6 @@ export const useAuthStore = create<AuthState>()((set) => {
         });
 
         await syncUser(user);
-
         return { error: null };
       } catch (err) {
         const error = err instanceof Error ? err : new Error("Signup failed");
@@ -121,13 +108,11 @@ export const useAuthStore = create<AuthState>()((set) => {
 
     signIn: async (email: string, password: string) => {
       set({ loading: true, error: null });
-
       try {
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
-
         if (error) throw error;
 
         const user = data.user ?? null;
@@ -140,10 +125,9 @@ export const useAuthStore = create<AuthState>()((set) => {
         });
 
         await syncUser(user);
-
         return { error: null };
       } catch (err) {
-        const error = err instanceof Error ? err : new Error("Login failed");
+        const error = err instanceof Error ? err : new Error("Sign in failed");
         set({ loading: false, error });
         return { error };
       }
@@ -151,14 +135,11 @@ export const useAuthStore = create<AuthState>()((set) => {
 
     signOut: async () => {
       set({ loading: true, error: null });
-
       try {
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
 
-        const projectRef = new URL(
-          import.meta.env.VITE_SUPABASE_URL!,
-        ).hostname.split(".")[0];
+        const projectRef = new URL(import.meta.env.VITE_SUPABASE_URL!).hostname.split(".")[0];
         localStorage.removeItem(`sb-${projectRef}-auth-token`);
 
         set({

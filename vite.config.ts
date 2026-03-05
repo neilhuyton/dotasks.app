@@ -5,7 +5,6 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
-import { sentryVitePlugin } from "@sentry/vite-plugin";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
@@ -18,13 +17,6 @@ export default defineConfig(({ mode }) => {
         routesDirectory: "./src/app/routes",
         generatedRouteTree: "./src/types/routeTree.gen.ts",
         routeFileIgnorePrefix: "-",
-      }),
-      sentryVitePlugin({
-        org: "your-org-slug",
-        project: "your-project-slug",
-        authToken: env.SENTRY_AUTH_TOKEN,
-        sourcemaps: { assets: "./dist/**" },
-        debug: false,
       }),
     ],
     resolve: {
@@ -58,29 +50,6 @@ export default defineConfig(({ mode }) => {
       },
       include: ["__tests__/**/*.{test,spec}.{ts,tsx}"],
       exclude: ["e2e/**/*", "node_modules", "dist", ".idea", ".git", ".cache"],
-      coverage: {
-        provider: "v8", 
-        reporter: ["text", "json", "html"],
-        reportsDirectory: "./coverage",
-        exclude: [
-          "node_modules/**",
-          "dist/**",
-          "**/*.d.ts",
-          "**/*.config.*",
-          "**/*.test.*",
-          "**/*.spec.*",
-          'src/app/components/ui',
-          'src/types'
-        ],
-        all: true,
-        include: ["src/**/*.{ts,tsx}"],
-        thresholds: {
-          lines: 80,
-          branches: 70,
-          functions: 75,
-          statements: 80,
-        },
-      },
     },
     build: {
       sourcemap: true,

@@ -9,59 +9,14 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './../app/routes/__root'
-import { Route as VerifyEmailRouteImport } from './../app/routes/verify-email'
-import { Route as UpdatePasswordRouteImport } from './../app/routes/update-password'
-import { Route as ResetPasswordRouteImport } from './../app/routes/reset-password'
-import { Route as ResendVerificationRouteImport } from './../app/routes/resend-verification'
-import { Route as RegisterRouteImport } from './../app/routes/register'
 import { Route as LoginRouteImport } from './../app/routes/login'
-import { Route as ConfirmResetPasswordRouteImport } from './../app/routes/confirm-reset-password'
 import { Route as AuthenticatedRouteRouteImport } from './../app/routes/_authenticated/route'
 import { Route as IndexRouteImport } from './../app/routes/index'
 import { Route as AuthenticatedProfileRouteImport } from './../app/routes/_authenticated/profile'
-import { Route as AuthenticatedListsIndexRouteImport } from './../app/routes/_authenticated/lists/index'
-import { Route as AuthenticatedListsNewRouteImport } from './../app/routes/_authenticated/lists/new'
-import { Route as AuthenticatedListsListIdRouteImport } from './../app/routes/_authenticated/lists/$listId'
-import { Route as AuthenticatedListsListIdEditRouteImport } from './../app/routes/_authenticated/lists/$listId/edit'
-import { Route as AuthenticatedListsListIdDeleteRouteImport } from './../app/routes/_authenticated/lists/$listId/delete'
-import { Route as AuthenticatedListsListIdTasksNewRouteImport } from './../app/routes/_authenticated/lists/$listId/tasks/new'
-import { Route as AuthenticatedListsListIdTasksCompletedRouteImport } from './../app/routes/_authenticated/lists/$listId/tasks/completed'
-import { Route as AuthenticatedListsListIdTasksTaskIdEditRouteImport } from './../app/routes/_authenticated/lists/$listId/tasks/$taskId/edit'
-import { Route as AuthenticatedListsListIdTasksTaskIdDeleteRouteImport } from './../app/routes/_authenticated/lists/$listId/tasks/$taskId/delete'
 
-const VerifyEmailRoute = VerifyEmailRouteImport.update({
-  id: '/verify-email',
-  path: '/verify-email',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const UpdatePasswordRoute = UpdatePasswordRouteImport.update({
-  id: '/update-password',
-  path: '/update-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResendVerificationRoute = ResendVerificationRouteImport.update({
-  id: '/resend-verification',
-  path: '/resend-verification',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RegisterRoute = RegisterRouteImport.update({
-  id: '/register',
-  path: '/register',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ConfirmResetPasswordRoute = ConfirmResetPasswordRouteImport.update({
-  id: '/confirm-reset-password',
-  path: '/confirm-reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
@@ -78,246 +33,50 @@ const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedListsIndexRoute = AuthenticatedListsIndexRouteImport.update({
-  id: '/lists/',
-  path: '/lists/',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedListsNewRoute = AuthenticatedListsNewRouteImport.update({
-  id: '/lists/new',
-  path: '/lists/new',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedListsListIdRoute =
-  AuthenticatedListsListIdRouteImport.update({
-    id: '/lists/$listId',
-    path: '/lists/$listId',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedListsListIdEditRoute =
-  AuthenticatedListsListIdEditRouteImport.update({
-    id: '/edit',
-    path: '/edit',
-    getParentRoute: () => AuthenticatedListsListIdRoute,
-  } as any)
-const AuthenticatedListsListIdDeleteRoute =
-  AuthenticatedListsListIdDeleteRouteImport.update({
-    id: '/delete',
-    path: '/delete',
-    getParentRoute: () => AuthenticatedListsListIdRoute,
-  } as any)
-const AuthenticatedListsListIdTasksNewRoute =
-  AuthenticatedListsListIdTasksNewRouteImport.update({
-    id: '/tasks/new',
-    path: '/tasks/new',
-    getParentRoute: () => AuthenticatedListsListIdRoute,
-  } as any)
-const AuthenticatedListsListIdTasksCompletedRoute =
-  AuthenticatedListsListIdTasksCompletedRouteImport.update({
-    id: '/tasks/completed',
-    path: '/tasks/completed',
-    getParentRoute: () => AuthenticatedListsListIdRoute,
-  } as any)
-const AuthenticatedListsListIdTasksTaskIdEditRoute =
-  AuthenticatedListsListIdTasksTaskIdEditRouteImport.update({
-    id: '/tasks/$taskId/edit',
-    path: '/tasks/$taskId/edit',
-    getParentRoute: () => AuthenticatedListsListIdRoute,
-  } as any)
-const AuthenticatedListsListIdTasksTaskIdDeleteRoute =
-  AuthenticatedListsListIdTasksTaskIdDeleteRouteImport.update({
-    id: '/tasks/$taskId/delete',
-    path: '/tasks/$taskId/delete',
-    getParentRoute: () => AuthenticatedListsListIdRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/confirm-reset-password': typeof ConfirmResetPasswordRoute
   '/login': typeof LoginRoute
-  '/register': typeof RegisterRoute
-  '/resend-verification': typeof ResendVerificationRoute
-  '/reset-password': typeof ResetPasswordRoute
-  '/update-password': typeof UpdatePasswordRoute
-  '/verify-email': typeof VerifyEmailRoute
   '/profile': typeof AuthenticatedProfileRoute
-  '/lists/$listId': typeof AuthenticatedListsListIdRouteWithChildren
-  '/lists/new': typeof AuthenticatedListsNewRoute
-  '/lists/': typeof AuthenticatedListsIndexRoute
-  '/lists/$listId/delete': typeof AuthenticatedListsListIdDeleteRoute
-  '/lists/$listId/edit': typeof AuthenticatedListsListIdEditRoute
-  '/lists/$listId/tasks/completed': typeof AuthenticatedListsListIdTasksCompletedRoute
-  '/lists/$listId/tasks/new': typeof AuthenticatedListsListIdTasksNewRoute
-  '/lists/$listId/tasks/$taskId/delete': typeof AuthenticatedListsListIdTasksTaskIdDeleteRoute
-  '/lists/$listId/tasks/$taskId/edit': typeof AuthenticatedListsListIdTasksTaskIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/confirm-reset-password': typeof ConfirmResetPasswordRoute
   '/login': typeof LoginRoute
-  '/register': typeof RegisterRoute
-  '/resend-verification': typeof ResendVerificationRoute
-  '/reset-password': typeof ResetPasswordRoute
-  '/update-password': typeof UpdatePasswordRoute
-  '/verify-email': typeof VerifyEmailRoute
   '/profile': typeof AuthenticatedProfileRoute
-  '/lists/$listId': typeof AuthenticatedListsListIdRouteWithChildren
-  '/lists/new': typeof AuthenticatedListsNewRoute
-  '/lists': typeof AuthenticatedListsIndexRoute
-  '/lists/$listId/delete': typeof AuthenticatedListsListIdDeleteRoute
-  '/lists/$listId/edit': typeof AuthenticatedListsListIdEditRoute
-  '/lists/$listId/tasks/completed': typeof AuthenticatedListsListIdTasksCompletedRoute
-  '/lists/$listId/tasks/new': typeof AuthenticatedListsListIdTasksNewRoute
-  '/lists/$listId/tasks/$taskId/delete': typeof AuthenticatedListsListIdTasksTaskIdDeleteRoute
-  '/lists/$listId/tasks/$taskId/edit': typeof AuthenticatedListsListIdTasksTaskIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
-  '/confirm-reset-password': typeof ConfirmResetPasswordRoute
   '/login': typeof LoginRoute
-  '/register': typeof RegisterRoute
-  '/resend-verification': typeof ResendVerificationRoute
-  '/reset-password': typeof ResetPasswordRoute
-  '/update-password': typeof UpdatePasswordRoute
-  '/verify-email': typeof VerifyEmailRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
-  '/_authenticated/lists/$listId': typeof AuthenticatedListsListIdRouteWithChildren
-  '/_authenticated/lists/new': typeof AuthenticatedListsNewRoute
-  '/_authenticated/lists/': typeof AuthenticatedListsIndexRoute
-  '/_authenticated/lists/$listId/delete': typeof AuthenticatedListsListIdDeleteRoute
-  '/_authenticated/lists/$listId/edit': typeof AuthenticatedListsListIdEditRoute
-  '/_authenticated/lists/$listId/tasks/completed': typeof AuthenticatedListsListIdTasksCompletedRoute
-  '/_authenticated/lists/$listId/tasks/new': typeof AuthenticatedListsListIdTasksNewRoute
-  '/_authenticated/lists/$listId/tasks/$taskId/delete': typeof AuthenticatedListsListIdTasksTaskIdDeleteRoute
-  '/_authenticated/lists/$listId/tasks/$taskId/edit': typeof AuthenticatedListsListIdTasksTaskIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/confirm-reset-password'
-    | '/login'
-    | '/register'
-    | '/resend-verification'
-    | '/reset-password'
-    | '/update-password'
-    | '/verify-email'
-    | '/profile'
-    | '/lists/$listId'
-    | '/lists/new'
-    | '/lists/'
-    | '/lists/$listId/delete'
-    | '/lists/$listId/edit'
-    | '/lists/$listId/tasks/completed'
-    | '/lists/$listId/tasks/new'
-    | '/lists/$listId/tasks/$taskId/delete'
-    | '/lists/$listId/tasks/$taskId/edit'
+  fullPaths: '/' | '/login' | '/profile'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/confirm-reset-password'
-    | '/login'
-    | '/register'
-    | '/resend-verification'
-    | '/reset-password'
-    | '/update-password'
-    | '/verify-email'
-    | '/profile'
-    | '/lists/$listId'
-    | '/lists/new'
-    | '/lists'
-    | '/lists/$listId/delete'
-    | '/lists/$listId/edit'
-    | '/lists/$listId/tasks/completed'
-    | '/lists/$listId/tasks/new'
-    | '/lists/$listId/tasks/$taskId/delete'
-    | '/lists/$listId/tasks/$taskId/edit'
+  to: '/' | '/login' | '/profile'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
-    | '/confirm-reset-password'
     | '/login'
-    | '/register'
-    | '/resend-verification'
-    | '/reset-password'
-    | '/update-password'
-    | '/verify-email'
     | '/_authenticated/profile'
-    | '/_authenticated/lists/$listId'
-    | '/_authenticated/lists/new'
-    | '/_authenticated/lists/'
-    | '/_authenticated/lists/$listId/delete'
-    | '/_authenticated/lists/$listId/edit'
-    | '/_authenticated/lists/$listId/tasks/completed'
-    | '/_authenticated/lists/$listId/tasks/new'
-    | '/_authenticated/lists/$listId/tasks/$taskId/delete'
-    | '/_authenticated/lists/$listId/tasks/$taskId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
-  ConfirmResetPasswordRoute: typeof ConfirmResetPasswordRoute
   LoginRoute: typeof LoginRoute
-  RegisterRoute: typeof RegisterRoute
-  ResendVerificationRoute: typeof ResendVerificationRoute
-  ResetPasswordRoute: typeof ResetPasswordRoute
-  UpdatePasswordRoute: typeof UpdatePasswordRoute
-  VerifyEmailRoute: typeof VerifyEmailRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/verify-email': {
-      id: '/verify-email'
-      path: '/verify-email'
-      fullPath: '/verify-email'
-      preLoaderRoute: typeof VerifyEmailRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/update-password': {
-      id: '/update-password'
-      path: '/update-password'
-      fullPath: '/update-password'
-      preLoaderRoute: typeof UpdatePasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/resend-verification': {
-      id: '/resend-verification'
-      path: '/resend-verification'
-      fullPath: '/resend-verification'
-      preLoaderRoute: typeof ResendVerificationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/register': {
-      id: '/register'
-      path: '/register'
-      fullPath: '/register'
-      preLoaderRoute: typeof RegisterRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/confirm-reset-password': {
-      id: '/confirm-reset-password'
-      path: '/confirm-reset-password'
-      fullPath: '/confirm-reset-password'
-      preLoaderRoute: typeof ConfirmResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -341,112 +100,15 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/lists/': {
-      id: '/_authenticated/lists/'
-      path: '/lists'
-      fullPath: '/lists/'
-      preLoaderRoute: typeof AuthenticatedListsIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/lists/new': {
-      id: '/_authenticated/lists/new'
-      path: '/lists/new'
-      fullPath: '/lists/new'
-      preLoaderRoute: typeof AuthenticatedListsNewRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/lists/$listId': {
-      id: '/_authenticated/lists/$listId'
-      path: '/lists/$listId'
-      fullPath: '/lists/$listId'
-      preLoaderRoute: typeof AuthenticatedListsListIdRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/lists/$listId/edit': {
-      id: '/_authenticated/lists/$listId/edit'
-      path: '/edit'
-      fullPath: '/lists/$listId/edit'
-      preLoaderRoute: typeof AuthenticatedListsListIdEditRouteImport
-      parentRoute: typeof AuthenticatedListsListIdRoute
-    }
-    '/_authenticated/lists/$listId/delete': {
-      id: '/_authenticated/lists/$listId/delete'
-      path: '/delete'
-      fullPath: '/lists/$listId/delete'
-      preLoaderRoute: typeof AuthenticatedListsListIdDeleteRouteImport
-      parentRoute: typeof AuthenticatedListsListIdRoute
-    }
-    '/_authenticated/lists/$listId/tasks/new': {
-      id: '/_authenticated/lists/$listId/tasks/new'
-      path: '/tasks/new'
-      fullPath: '/lists/$listId/tasks/new'
-      preLoaderRoute: typeof AuthenticatedListsListIdTasksNewRouteImport
-      parentRoute: typeof AuthenticatedListsListIdRoute
-    }
-    '/_authenticated/lists/$listId/tasks/completed': {
-      id: '/_authenticated/lists/$listId/tasks/completed'
-      path: '/tasks/completed'
-      fullPath: '/lists/$listId/tasks/completed'
-      preLoaderRoute: typeof AuthenticatedListsListIdTasksCompletedRouteImport
-      parentRoute: typeof AuthenticatedListsListIdRoute
-    }
-    '/_authenticated/lists/$listId/tasks/$taskId/edit': {
-      id: '/_authenticated/lists/$listId/tasks/$taskId/edit'
-      path: '/tasks/$taskId/edit'
-      fullPath: '/lists/$listId/tasks/$taskId/edit'
-      preLoaderRoute: typeof AuthenticatedListsListIdTasksTaskIdEditRouteImport
-      parentRoute: typeof AuthenticatedListsListIdRoute
-    }
-    '/_authenticated/lists/$listId/tasks/$taskId/delete': {
-      id: '/_authenticated/lists/$listId/tasks/$taskId/delete'
-      path: '/tasks/$taskId/delete'
-      fullPath: '/lists/$listId/tasks/$taskId/delete'
-      preLoaderRoute: typeof AuthenticatedListsListIdTasksTaskIdDeleteRouteImport
-      parentRoute: typeof AuthenticatedListsListIdRoute
-    }
   }
 }
-
-interface AuthenticatedListsListIdRouteChildren {
-  AuthenticatedListsListIdDeleteRoute: typeof AuthenticatedListsListIdDeleteRoute
-  AuthenticatedListsListIdEditRoute: typeof AuthenticatedListsListIdEditRoute
-  AuthenticatedListsListIdTasksCompletedRoute: typeof AuthenticatedListsListIdTasksCompletedRoute
-  AuthenticatedListsListIdTasksNewRoute: typeof AuthenticatedListsListIdTasksNewRoute
-  AuthenticatedListsListIdTasksTaskIdDeleteRoute: typeof AuthenticatedListsListIdTasksTaskIdDeleteRoute
-  AuthenticatedListsListIdTasksTaskIdEditRoute: typeof AuthenticatedListsListIdTasksTaskIdEditRoute
-}
-
-const AuthenticatedListsListIdRouteChildren: AuthenticatedListsListIdRouteChildren =
-  {
-    AuthenticatedListsListIdDeleteRoute: AuthenticatedListsListIdDeleteRoute,
-    AuthenticatedListsListIdEditRoute: AuthenticatedListsListIdEditRoute,
-    AuthenticatedListsListIdTasksCompletedRoute:
-      AuthenticatedListsListIdTasksCompletedRoute,
-    AuthenticatedListsListIdTasksNewRoute:
-      AuthenticatedListsListIdTasksNewRoute,
-    AuthenticatedListsListIdTasksTaskIdDeleteRoute:
-      AuthenticatedListsListIdTasksTaskIdDeleteRoute,
-    AuthenticatedListsListIdTasksTaskIdEditRoute:
-      AuthenticatedListsListIdTasksTaskIdEditRoute,
-  }
-
-const AuthenticatedListsListIdRouteWithChildren =
-  AuthenticatedListsListIdRoute._addFileChildren(
-    AuthenticatedListsListIdRouteChildren,
-  )
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
-  AuthenticatedListsListIdRoute: typeof AuthenticatedListsListIdRouteWithChildren
-  AuthenticatedListsNewRoute: typeof AuthenticatedListsNewRoute
-  AuthenticatedListsIndexRoute: typeof AuthenticatedListsIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
-  AuthenticatedListsListIdRoute: AuthenticatedListsListIdRouteWithChildren,
-  AuthenticatedListsNewRoute: AuthenticatedListsNewRoute,
-  AuthenticatedListsIndexRoute: AuthenticatedListsIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -455,13 +117,7 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
-  ConfirmResetPasswordRoute: ConfirmResetPasswordRoute,
   LoginRoute: LoginRoute,
-  RegisterRoute: RegisterRoute,
-  ResendVerificationRoute: ResendVerificationRoute,
-  ResetPasswordRoute: ResetPasswordRoute,
-  UpdatePasswordRoute: UpdatePasswordRoute,
-  VerifyEmailRoute: VerifyEmailRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

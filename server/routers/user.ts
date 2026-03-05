@@ -3,8 +3,6 @@
 import { protectedProcedure, publicProcedure, router } from "../trpc-base";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { sendEmailChangeNotification } from "../email";
-
 export const userRouter = router({
   getCurrent: protectedProcedure.query(async ({ ctx }) => {
     const user = await ctx.prisma.user.findUnique({
@@ -77,20 +75,6 @@ export const userRouter = router({
         data: { email },
         select: { email: true },
       });
-
-      if (oldEmail !== email) {
-        try {
-          await sendEmailChangeNotification(oldEmail, email);
-        } catch (err) {
-          console.error("Failed to send email change notification:", {
-            userId,
-            oldEmail,
-            newEmail: email,
-            error: err instanceof Error ? err.message : String(err),
-          });
-          // Do NOT throw — the email is non-critical
-        }
-      }
 
       return {
         message: "Email updated successfully",
