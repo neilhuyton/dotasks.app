@@ -1,6 +1,6 @@
 // src/trpc.ts
 
-import { createTRPCClient, httpBatchLink, httpLink } from "@trpc/client";
+import { createTRPCClient, httpLink } from "@trpc/client";
 import {
   createTRPCContext,
   createTRPCOptionsProxy,
@@ -16,27 +16,16 @@ export function createTrpcClient() {
 
   return createTRPCClient<AppRouter>({
     links: [
-      isTest
-        ? httpLink({
-            url: `${baseUrl}/trpc`,
-            async headers() {
-              const {
-                data: { session },
-              } = await supabase.auth.getSession();
-              const token = session?.access_token;
-              return token ? { Authorization: `Bearer ${token}` } : {};
-            },
-          })
-        : httpBatchLink({
-            url: `${baseUrl}/trpc`,
-            async headers() {
-              const {
-                data: { session },
-              } = await supabase.auth.getSession();
-              const token = session?.access_token;
-              return token ? { Authorization: `Bearer ${token}` } : {};
-            },
-          }),
+      httpLink({
+        url: `${baseUrl}/trpc`,
+        async headers() {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          const token = session?.access_token;
+          return token ? { Authorization: `Bearer ${token}` } : {};
+        },
+      }),
     ],
   });
 }
