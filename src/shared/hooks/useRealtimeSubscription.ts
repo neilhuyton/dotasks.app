@@ -83,18 +83,26 @@ export function useRealtimeSubscription<T extends TableRow = TableRow>({
       RETRY.MAX_DELAY_MS,
     );
 
-  const subscribe = useCallback(() => {
+  const subscribe = useCallback(async () => {
     if (!enabled || isUnsubscribing || channelRef.current) return;
 
-    const accessToken = useAuthStore.getState().session?.access_token;
+    // Refresh session to ensure fresh token (fixes prod timing/propagation issues)
+    const { data: { session }, error: refreshErr } = await supabase.auth.refreshSession();
+    let accessToken = session?.access_token;
+
+    if (refreshErr || !accessToken) {
+      console.warn("[Realtime] Refresh failed or no token:", refreshErr?.message || "No session");
+      // Fallback to current store token as last resort
+      accessToken = useAuthStore.getState().session?.access_token;
+    }
 
     if (!accessToken) {
-      console.warn("[Realtime] No access_token available for channel:", channelName);
+      console.warn("[Realtime] Still no access_token for", channelName);
       return;
     }
 
     supabase.realtime.setAuth(accessToken);
-    console.log("[Realtime] Subscribing to", channelName, "- token set from store");
+    console.log("[Realtime] Subscribing to", channelName, "- refreshed token set");
 
     const changesFilter: RealtimePostgresChangesFilter<PostgresChangesEvent> = {
       event,
