@@ -31,6 +31,9 @@ const RETRY = {
   BACKOFF_FACTOR: 1.8,
 } as const;
 
+// Guard for browser-only features (prevents test crashes)
+const isBrowser = typeof window !== "undefined" && typeof document !== "undefined";
+
 export function useRealtimeSubscription<T extends TableRow = TableRow>({
   channelName,
   table,
@@ -86,23 +89,30 @@ export function useRealtimeSubscription<T extends TableRow = TableRow>({
   const subscribe = useCallback(async () => {
     if (!enabled || isUnsubscribing || channelRef.current) return;
 
-    // Refresh session to ensure fresh token (fixes prod timing/propagation issues)
-    const { data: { session }, error: refreshErr } = await supabase.auth.refreshSession();
-    let accessToken = session?.access_token;
+    let accessToken = useAuthStore.getState().session?.access_token;
 
-    if (refreshErr || !accessToken) {
-      console.warn("[Realtime] Refresh failed or no token:", refreshErr?.message || "No session");
-      // Fallback to current store token as last resort
-      accessToken = useAuthStore.getState().session?.access_token;
+    // Attempt refresh only in browser (skip in tests/Node)
+    if (isBrowser) {
+      try {
+        const { data: { session }, error } = await supabase.auth.refreshSession();
+        if (!error && session?.access_token) {
+          accessToken = session.access_token;
+          console.log("[Realtime] Token refreshed for", channelName);
+        } else if (error) {
+          console.warn("[Realtime] Refresh failed:", error.message);
+        }
+      } catch (err) {
+        console.warn("[Realtime] Refresh error (using store token):", err);
+      }
     }
 
     if (!accessToken) {
-      console.warn("[Realtime] Still no access_token for", channelName);
+      console.warn("[Realtime] No access_token for", channelName);
       return;
     }
 
     supabase.realtime.setAuth(accessToken);
-    console.log("[Realtime] Subscribing to", channelName, "- refreshed token set");
+    console.log("[Realtime] Subscribing to", channelName, "- token set");
 
     const changesFilter: RealtimePostgresChangesFilter<PostgresChangesEvent> = {
       event,
