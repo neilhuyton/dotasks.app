@@ -12,7 +12,11 @@ if (!supabaseInstance) {
       persistSession: true,
       detectSessionInUrl: true,
       storage: localStorage,
+<<<<<<< HEAD
       flowType: 'pkce'
+=======
+      flowType: 'pkce',
+>>>>>>> main
     }
   })
 }

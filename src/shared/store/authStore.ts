@@ -29,9 +29,7 @@ export const useAuthStore = create<AuthState>()((set) => {
         id: user.id,
         email: user.email,
       });
-    } catch {
-      // empty
-    }
+    } catch {}
   };
 
   const clearCacheOnSignOut = () => {
