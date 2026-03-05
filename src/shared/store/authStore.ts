@@ -1,5 +1,3 @@
-// src/shared/store/authStore.ts
-
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
 import type { Session, User } from "@supabase/supabase-js";
@@ -31,9 +29,7 @@ export const useAuthStore = create<AuthState>()((set) => {
         id: user.id,
         email: user.email,
       });
-    } catch {
-      // empty
-    }
+    } catch {}
   };
 
   const clearCacheOnSignOut = () => {
@@ -45,9 +41,7 @@ export const useAuthStore = create<AuthState>()((set) => {
 
     set({ session, user, loading: false, error: null });
 
-    // Force refetch after refresh or sign-in to unstick queries
     if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") {
-      console.log(`[AuthStore] ${event} → invalidating queries`);
       getQueryClient().invalidateQueries();
     }
 
