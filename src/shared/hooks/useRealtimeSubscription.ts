@@ -31,9 +31,6 @@ const RETRY = {
   BACKOFF_FACTOR: 1.8,
 } as const;
 
-// Simple check to avoid Node/test env issues
-const isBrowser = typeof window !== "undefined" && typeof document !== "undefined";
-
 export function useRealtimeSubscription<T extends TableRow = TableRow>({
   channelName,
   table,
@@ -86,33 +83,18 @@ export function useRealtimeSubscription<T extends TableRow = TableRow>({
       RETRY.MAX_DELAY_MS,
     );
 
-  const subscribe = useCallback(async () => {
+  const subscribe = useCallback(() => {
     if (!enabled || isUnsubscribing || channelRef.current) return;
 
-    let accessToken = useAuthStore.getState().session?.access_token;
-
-    // Only attempt refresh in browser environments (skip in tests/Node)
-    if (isBrowser) {
-      try {
-        const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
-        if (refreshError) {
-          console.warn("[Realtime] Token refresh failed:", refreshError.message);
-        } else if (session?.access_token) {
-          accessToken = session.access_token;
-          console.log("[Realtime] Token refreshed successfully");
-        }
-      } catch (err) {
-        console.warn("[Realtime] RefreshSession error (skipping):", err);
-      }
-    }
+    const accessToken = useAuthStore.getState().session?.access_token;
 
     if (!accessToken) {
-      console.warn("[Realtime] No access_token available for", channelName);
+      console.warn("[Realtime] No access_token available for channel:", channelName);
       return;
     }
 
     supabase.realtime.setAuth(accessToken);
-    console.log("[Realtime] Subscribing to", channelName, "- token set");
+    console.log("[Realtime] Subscribing to", channelName, "- token set from store");
 
     const changesFilter: RealtimePostgresChangesFilter<PostgresChangesEvent> = {
       event,
