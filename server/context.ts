@@ -1,7 +1,8 @@
 // server/context.ts
 
 import { PrismaClient } from "@prisma/client";
-import { jwtVerify, createRemoteJWKSet, type JWTVerifyResult } from "jose";
+import { createServerClient } from "@supabase/ssr";
+import type { IncomingMessage } from "http";
 
 let prisma: PrismaClient;
 
@@ -21,65 +22,49 @@ export interface Context {
   email: string | null;
 }
 
-// Remote JWKS set – fetches public keys dynamically from your Supabase project
-const jwksUrl = new URL(
-  `${process.env.SUPABASE_URL!}/auth/v1/.well-known/jwks.json`,
-);
-const JWKS = createRemoteJWKSet(jwksUrl);
-
 export async function createContext({
   req,
 }: {
-  req: Request;
+  req: IncomingMessage;
 }): Promise<Context> {
   let userId: string | null = null;
   let email: string | null = null;
 
-  const authHeader =
-    req.headers.get("authorization") ?? req.headers.get("Authorization");
-
-  console.log("[context] Received Authorization header:", authHeader);
+  const authHeader = req.headers.authorization;
 
   if (typeof authHeader !== "string" || !authHeader.startsWith("Bearer ")) {
-    console.log(
-      "[context] No valid Bearer token found → unauthenticated context",
-    );
     return { prisma, userId, email };
   }
 
   const token = authHeader.slice(7).trim();
 
   try {
-    const verificationResult: JWTVerifyResult = await jwtVerify(token, JWKS, {
-      issuer: `${process.env.SUPABASE_URL!}/auth/v1`,
-      audience: "authenticated",
-    });
+    const supabase = createServerClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return [];
+          },
+          setAll() {
+            // No-op: we never set cookies in this context
+          },
+        },
+      },
+    );
 
-    const payload = verificationResult.payload;
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser(token);
 
-    if (typeof payload.sub === "string" && payload.sub) {
-      userId = payload.sub;
-      email = typeof payload.email === "string" ? payload.email : null;
-      console.log("[context] JWT verified successfully → user:", {
-        userId,
-        email,
-      });
-    } else {
-      console.log("[context] JWT verified but missing/invalid sub claim");
+    if (!error && user) {
+      userId = user.id;
+      email = user.email ?? null;
     }
-  } catch (err) {
-    if (err instanceof Error) {
-      console.error("[context] JWT verification failed:", {
-        name: err.name,
-        message: err.message,
-        // stack: err.stack,  // Uncomment only for deeper debugging
-      });
-    } else {
-      console.error(
-        "[context] JWT verification failed (non-Error thrown):",
-        err,
-      );
-    }
+  } catch {
+    // Silently fail → unauthenticated context
   }
 
   return { prisma, userId, email };
