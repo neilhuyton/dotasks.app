@@ -1,5 +1,3 @@
-// src/shared/store/authStore.ts
-
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
 import type { Session, User } from "@supabase/supabase-js";
@@ -32,7 +30,7 @@ export const useAuthStore = create<AuthState>()((set) => {
         email: user.email,
       });
     } catch {
-      // empty catch
+      //
     }
   };
 
@@ -40,10 +38,18 @@ export const useAuthStore = create<AuthState>()((set) => {
     getQueryClient().clear();
   };
 
-  supabase.auth.onAuthStateChange(async (_event, session) => {
+  supabase.auth.onAuthStateChange(async (event, session) => {
     const user = session?.user ?? null;
+
     set({ session, user, loading: false, error: null });
+
+    if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") {
+      getQueryClient().invalidateQueries();
+      supabase.realtime.setAuth(session?.access_token ?? null); // force Realtime token sync
+    }
+
     await syncUser(user);
+
     if (!session) {
       clearCacheOnSignOut();
     }

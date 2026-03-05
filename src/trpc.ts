@@ -1,6 +1,7 @@
-// src/trpc.ts
-
 import { createTRPCClient, httpLink } from "@trpc/client";
+import type { TRPCLink } from "@trpc/client";
+import { TRPCClientError } from "@trpc/client";
+import { observable } from "@trpc/server/observable";
 import {
   createTRPCContext,
   createTRPCOptionsProxy,
@@ -10,19 +11,73 @@ import type { AppRouter } from "../server/trpc";
 import { supabase } from "@/lib/supabase";
 import { getQueryClient } from "@/queryClient";
 
+const refreshOn401Link = (): TRPCLink<AppRouter> => {
+  return () =>
+    ({ op, next }) =>
+      observable((observer) => {
+        const subscription = next(op).subscribe({
+          next(result) {
+            observer.next(result);
+          },
+          error(err) {
+            if (
+              err instanceof TRPCClientError &&
+              (err.data?.code === "UNAUTHORIZED" ||
+                err.message?.includes("UNAUTHORIZED") ||
+                err.data?.httpStatus === 401)
+            ) {
+              supabase.auth
+                .refreshSession()
+                .then(({ data, error: refreshError }) => {
+                  if (refreshError || !data.session) {
+                    observer.error(err);
+                    return;
+                  }
+
+                  const retrySub = next(op).subscribe({
+                    next: (res) => observer.next(res),
+                    error: (e) => observer.error(e),
+                    complete: () => observer.complete(),
+                  });
+
+                  return () => retrySub.unsubscribe();
+                })
+                .catch(() => {
+                  observer.error(err);
+                });
+            } else {
+              observer.error(err);
+            }
+          },
+          complete() {
+            observer.complete();
+          },
+        });
+
+        return () => subscription.unsubscribe();
+      });
+};
+
 export function createTrpcClient() {
   const isTest = import.meta.env.MODE === "test";
   const baseUrl = isTest ? "http://localhost:8888" : "";
 
   return createTRPCClient<AppRouter>({
     links: [
+      refreshOn401Link(),
+
       httpLink({
         url: `${baseUrl}/trpc`,
+
         async headers() {
-          const {
-            data: { session },
-          } = await supabase.auth.getSession();
+          const { data: { session }, error } = await supabase.auth.getSession();
+
+          if (error) {
+            return {};
+          }
+
           const token = session?.access_token;
+
           return token ? { Authorization: `Bearer ${token}` } : {};
         },
       }),
