@@ -70,15 +70,19 @@ export function createTrpcClient() {
         url: `${baseUrl}/trpc`,
 
         async headers() {
-          const { data: { session }, error } = await supabase.auth.getSession();
+          const sessionPromise = supabase.auth.getSession();
 
-          if (error) {
+          const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("getSession timeout")), 5000)
+          );
+
+          try {
+            const result = await Promise.race([sessionPromise, timeoutPromise]);
+            const token = result.data?.session?.access_token;
+            return token ? { Authorization: `Bearer ${token}` } : {};
+          } catch {
             return {};
           }
-
-          const token = session?.access_token;
-
-          return token ? { Authorization: `Bearer ${token}` } : {};
         },
       }),
     ],

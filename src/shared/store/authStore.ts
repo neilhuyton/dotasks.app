@@ -30,7 +30,7 @@ export const useAuthStore = create<AuthState>()((set) => {
         email: user.email,
       });
     } catch {
-      //
+      // empty
     }
   };
 
@@ -45,7 +45,7 @@ export const useAuthStore = create<AuthState>()((set) => {
 
     if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") {
       getQueryClient().invalidateQueries();
-      supabase.realtime.setAuth(session?.access_token ?? null); // force Realtime token sync
+      supabase.realtime.setAuth(session?.access_token ?? null);
     }
 
     await syncUser(user);
@@ -66,11 +66,15 @@ export const useAuthStore = create<AuthState>()((set) => {
     initialize: async () => {
       set({ loading: true, error: null });
 
-      try {
-        const { data, error } = await supabase.auth.getSession();
-        if (error) throw error;
+      const sessionPromise = supabase.auth.getSession();
 
-        const session = data.session;
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("getSession timeout")), 5000)
+      );
+
+      try {
+        const result = await Promise.race([sessionPromise, timeoutPromise]);
+        const session = result.data.session;
         const user = session?.user ?? null;
 
         set({ session, user, loading: false, error: null });
