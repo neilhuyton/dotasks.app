@@ -1,3 +1,5 @@
+// src/shared/hooks/useRealtimeSubscription.ts
+
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/shared/store/authStore";
@@ -30,9 +32,6 @@ const RETRY = {
   MAX_DELAY_MS: 30000,
   BACKOFF_FACTOR: 1.8,
 } as const;
-
-// Guard for browser-only features (prevents test crashes)
-const isBrowser = typeof window !== "undefined" && typeof document !== "undefined";
 
 export function useRealtimeSubscription<T extends TableRow = TableRow>({
   channelName,
@@ -69,6 +68,7 @@ export function useRealtimeSubscription<T extends TableRow = TableRow>({
 
     const removeResult = supabase.removeChannel(channel);
 
+    // Defensive: handle both Promise and non-Promise results (common in tests / older versions)
     if (removeResult && typeof removeResult.then === "function") {
       removeResult.finally(() => {
         retryCountRef.current = 0;
@@ -86,33 +86,13 @@ export function useRealtimeSubscription<T extends TableRow = TableRow>({
       RETRY.MAX_DELAY_MS,
     );
 
-  const subscribe = useCallback(async () => {
+  const subscribe = useCallback(() => {
     if (!enabled || isUnsubscribing || channelRef.current) return;
 
-    let accessToken = useAuthStore.getState().session?.access_token;
-
-    // Attempt refresh only in browser (skip in tests/Node)
-    if (isBrowser) {
-      try {
-        const { data: { session }, error } = await supabase.auth.refreshSession();
-        if (!error && session?.access_token) {
-          accessToken = session.access_token;
-          console.log("[Realtime] Token refreshed for", channelName);
-        } else if (error) {
-          console.warn("[Realtime] Refresh failed:", error.message);
-        }
-      } catch (err) {
-        console.warn("[Realtime] Refresh error (using store token):", err);
-      }
-    }
-
-    if (!accessToken) {
-      console.warn("[Realtime] No access_token for", channelName);
-      return;
-    }
+    const accessToken = useAuthStore.getState().session?.access_token;
+    if (!accessToken) return;
 
     supabase.realtime.setAuth(accessToken);
-    console.log("[Realtime] Subscribing to", channelName, "- token set");
 
     const changesFilter: RealtimePostgresChangesFilter<PostgresChangesEvent> = {
       event,
@@ -123,13 +103,10 @@ export function useRealtimeSubscription<T extends TableRow = TableRow>({
 
     channelRef.current = supabase
       .channel(channelName)
-      .on<T>("postgres_changes", changesFilter, (payload) => {
-        console.log("[Realtime] PAYLOAD received on", channelName, payload);
-        onPayloadRef.current(payload);
-      })
-      .subscribe((status, err) => {
-        console.log(`[Realtime ${channelName}] status:`, status, err ? err.message : "");
-
+      .on<T>("postgres_changes", changesFilter, (payload) =>
+        onPayloadRef.current(payload),
+      )
+      .subscribe((status) => {
         if (status === "SUBSCRIBED") {
           retryCountRef.current = 0;
         }
