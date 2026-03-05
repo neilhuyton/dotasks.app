@@ -26,7 +26,7 @@ export default async function handler(req: Request): Promise<Response> {
   try {
     const response = await fetchRequestHandler({
       endpoint: '/trpc',
-      req,                           // ← pass the real Request object (critical fix)
+      req,                       
       router: appRouter,
       createContext: ({ req }) => createContext({ req }),  // now receives real Request
       batching: { enabled: true },
