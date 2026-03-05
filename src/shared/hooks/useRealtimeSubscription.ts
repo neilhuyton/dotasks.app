@@ -68,7 +68,6 @@ export function useRealtimeSubscription<T extends TableRow = TableRow>({
 
     const removeResult = supabase.removeChannel(channel);
 
-    // Defensive: handle both Promise and non-Promise results (common in tests / older versions)
     if (removeResult && typeof removeResult.then === "function") {
       removeResult.finally(() => {
         retryCountRef.current = 0;
@@ -86,13 +85,30 @@ export function useRealtimeSubscription<T extends TableRow = TableRow>({
       RETRY.MAX_DELAY_MS,
     );
 
-  const subscribe = useCallback(() => {
+  const subscribe = useCallback(async () => {
     if (!enabled || isUnsubscribing || channelRef.current) return;
 
-    const accessToken = useAuthStore.getState().session?.access_token;
-    if (!accessToken) return;
+    // Force refresh token in case of expiration / race in prod
+    const {
+      data: { session },
+      error: refreshError,
+    } = await supabase.auth.refreshSession();
+    if (refreshError || !session?.access_token) {
+      console.warn(
+        "[Realtime] Token refresh failed or no token:",
+        refreshError?.message,
+      );
+      return;
+    }
 
+    const accessToken = session.access_token;
     supabase.realtime.setAuth(accessToken);
+
+    console.log(
+      "[Realtime] Subscribing to",
+      channelName,
+      "- token refreshed & set",
+    );
 
     const changesFilter: RealtimePostgresChangesFilter<PostgresChangesEvent> = {
       event,
@@ -103,10 +119,17 @@ export function useRealtimeSubscription<T extends TableRow = TableRow>({
 
     channelRef.current = supabase
       .channel(channelName)
-      .on<T>("postgres_changes", changesFilter, (payload) =>
-        onPayloadRef.current(payload),
-      )
-      .subscribe((status) => {
+      .on<T>("postgres_changes", changesFilter, (payload) => {
+        console.log("[Realtime] PAYLOAD received on", channelName, payload);
+        onPayloadRef.current(payload);
+      })
+      .subscribe((status, err) => {
+        console.log(
+          `[Realtime ${channelName}] status:`,
+          status,
+          err ? err.message : "",
+        );
+
         if (status === "SUBSCRIBED") {
           retryCountRef.current = 0;
         }
