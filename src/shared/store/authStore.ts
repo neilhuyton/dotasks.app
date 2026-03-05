@@ -30,7 +30,7 @@ export const useAuthStore = create<AuthState>()((set) => {
         email: user.email,
       });
     } catch {
-      // empty
+      //
     }
   };
 
@@ -66,15 +66,10 @@ export const useAuthStore = create<AuthState>()((set) => {
     initialize: async () => {
       set({ loading: true, error: null });
 
-      const sessionPromise = supabase.auth.getSession();
-
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("getSession timeout")), 5000)
-      );
-
       try {
-        const result = await Promise.race([sessionPromise, timeoutPromise]);
-        const session = result.data.session;
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+
         const user = session?.user ?? null;
 
         set({ session, user, loading: false, error: null });

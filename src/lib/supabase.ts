@@ -12,7 +12,7 @@ if (!supabaseInstance) {
       persistSession: true,
       detectSessionInUrl: true,
       storage: localStorage,
-      flowType: 'pkce',
+      flowType: 'pkce'
     }
   })
 }
