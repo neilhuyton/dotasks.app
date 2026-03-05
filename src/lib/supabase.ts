@@ -1,16 +1,22 @@
 // src/lib/supabase.ts
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL!;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY!;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL!
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY!
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    storage: localStorage,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
-  realtime: { params: { eventsPerSecond: 0 } },
-});
+let supabaseInstance: ReturnType<typeof createClient> | null = null
+
+if (!supabaseInstance) {
+  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      storage: localStorage, // or your custom storage
+      flowType: 'pkce' // recommended for SPA
+    }
+  })
+}
+
+export const supabase = supabaseInstance
