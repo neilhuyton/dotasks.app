@@ -13,10 +13,22 @@ if (!supabaseInstance) {
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: true,
-      storage: localStorage, // or your custom storage
-      flowType: 'pkce' // recommended for SPA
+      storage: localStorage,
+      flowType: 'pkce',
+      // Debug + prevent infinite lock waits (2025+ versions support this)
+      debug: true // enables internal gotrue-js logs for lock/session
     }
   })
 }
 
 export const supabase = supabaseInstance
+
+// Helper to manually check locks (run in console after hang)
+export async function debugLocks() {
+  if ('locks' in navigator) {
+    const held = await navigator.locks.query()
+    console.log('Current Web Locks:', held)
+    return held
+  }
+  console.warn('navigator.locks not supported')
+}
