@@ -45,6 +45,7 @@ export const useAuthStore = create<AuthState>()((set) => {
 
     if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") {
       getQueryClient().invalidateQueries();
+      supabase.realtime.setAuth(session?.access_token ?? null); // force Realtime token sync
     }
 
     await syncUser(user);
