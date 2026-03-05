@@ -1,5 +1,3 @@
-// src/shared/hooks/useRealtimeSubscription.ts
-
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/shared/store/authStore";
@@ -32,6 +30,9 @@ const RETRY = {
   MAX_DELAY_MS: 30000,
   BACKOFF_FACTOR: 1.8,
 } as const;
+
+// Simple check to avoid Node/test env issues
+const isBrowser = typeof window !== "undefined" && typeof document !== "undefined";
 
 export function useRealtimeSubscription<T extends TableRow = TableRow>({
   channelName,
@@ -88,27 +89,30 @@ export function useRealtimeSubscription<T extends TableRow = TableRow>({
   const subscribe = useCallback(async () => {
     if (!enabled || isUnsubscribing || channelRef.current) return;
 
-    // Force refresh token in case of expiration / race in prod
-    const {
-      data: { session },
-      error: refreshError,
-    } = await supabase.auth.refreshSession();
-    if (refreshError || !session?.access_token) {
-      console.warn(
-        "[Realtime] Token refresh failed or no token:",
-        refreshError?.message,
-      );
+    let accessToken = useAuthStore.getState().session?.access_token;
+
+    // Only attempt refresh in browser environments (skip in tests/Node)
+    if (isBrowser) {
+      try {
+        const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError) {
+          console.warn("[Realtime] Token refresh failed:", refreshError.message);
+        } else if (session?.access_token) {
+          accessToken = session.access_token;
+          console.log("[Realtime] Token refreshed successfully");
+        }
+      } catch (err) {
+        console.warn("[Realtime] RefreshSession error (skipping):", err);
+      }
+    }
+
+    if (!accessToken) {
+      console.warn("[Realtime] No access_token available for", channelName);
       return;
     }
 
-    const accessToken = session.access_token;
     supabase.realtime.setAuth(accessToken);
-
-    console.log(
-      "[Realtime] Subscribing to",
-      channelName,
-      "- token refreshed & set",
-    );
+    console.log("[Realtime] Subscribing to", channelName, "- token set");
 
     const changesFilter: RealtimePostgresChangesFilter<PostgresChangesEvent> = {
       event,
@@ -124,11 +128,7 @@ export function useRealtimeSubscription<T extends TableRow = TableRow>({
         onPayloadRef.current(payload);
       })
       .subscribe((status, err) => {
-        console.log(
-          `[Realtime ${channelName}] status:`,
-          status,
-          err ? err.message : "",
-        );
+        console.log(`[Realtime ${channelName}] status:`, status, err ? err.message : "");
 
         if (status === "SUBSCRIBED") {
           retryCountRef.current = 0;
