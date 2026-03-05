@@ -30,7 +30,7 @@ export const useAuthStore = create<AuthState>()((set) => {
         email: user.email,
       });
     } catch {
-      // empty
+      //
     }
   };
 
