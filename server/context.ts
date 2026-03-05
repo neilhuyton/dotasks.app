@@ -77,11 +77,31 @@ export async function createContext({
 }): Promise<Context> {
   const token = extractBearerToken(req);
 
+  // ────────────────────────────────────────────────────────────────
+  // TEMPORARY DEBUG LOG - remove after diagnosing 401 on refresh
+  console.log("[tRPC createContext]", {
+    hasToken: !!token,
+    tokenLength: token ? token.length : 0,
+    verifiedUserId: null as string | null,
+    verifiedEmail: null as string | null,
+  });
+  // ────────────────────────────────────────────────────────────────
+
   if (!token) {
     return { prisma, userId: null, email: null };
   }
 
   const { userId, email } = await verifySupabaseToken(token);
+
+  // ────────────────────────────────────────────────────────────────
+  // TEMPORARY DEBUG LOG - update with actual verification result
+  console.log("[tRPC createContext]", {
+    hasToken: !!token,
+    tokenLength: token.length,
+    verifiedUserId: userId,
+    verifiedEmail: email,
+  });
+  // ────────────────────────────────────────────────────────────────
 
   return { prisma, userId, email };
 }

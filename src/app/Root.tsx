@@ -1,6 +1,4 @@
-// src/app/Root.tsx
-
-import { Suspense, useEffect } from "react";
+import { useEffect } from "react";
 import { RouterProvider } from "@tanstack/react-router";
 
 import { router } from "@/router";
@@ -47,16 +45,7 @@ export function Root() {
             storageKey="vite-ui-theme"
             enableSystem={true}
           >
-            <Suspense
-              fallback={
-                <div className="flex min-h-screen items-center justify-center">
-                  <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                </div>
-              }
-            >
-              <RouterProvider router={router} />
-            </Suspense>
-
+            <RouterProvider router={router} />
             <RealtimeListeners />
           </ThemeProvider>
         </TRPCProvider>

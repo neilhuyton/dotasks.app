@@ -80,9 +80,7 @@ export function useRealtimeSubscription<T extends TableRow = TableRow>({
     const { session } = useAuthStore.getState();
     const accessToken = session?.access_token;
 
-    if (!accessToken) {
-      return;
-    }
+    if (!accessToken) return; // wait for valid session
 
     supabase.realtime.setAuth(accessToken);
 
@@ -151,7 +149,7 @@ export function useRealtimeSubscription<T extends TableRow = TableRow>({
       return;
     }
 
-    const unsubscribeAuth = useAuthStore.subscribe((state) => {
+    const unsubscribe = useAuthStore.subscribe((state) => {
       if (state.session?.access_token && enabled && mountedRef.current) {
         subscribe();
       } else {
@@ -159,10 +157,11 @@ export function useRealtimeSubscription<T extends TableRow = TableRow>({
       }
     });
 
+    // attempt immediately in case session is already loaded
     subscribe();
 
     return () => {
-      unsubscribeAuth();
+      unsubscribe();
       cleanupChannel();
     };
   }, [enabled, subscribe, cleanupChannel]);

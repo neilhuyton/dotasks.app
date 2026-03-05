@@ -28,7 +28,7 @@ export const useAuthStore = create<AuthState>()((set) => {
         email: user.email,
       });
     } catch {
-      // empty
+      // silently ignore user sync failures — don't block auth
     }
   };
 
@@ -64,11 +64,12 @@ export const useAuthStore = create<AuthState>()((set) => {
     initialize: async () => {
       set({ loading: true, error: null });
       try {
-        await supabase.auth.getSession();
+        await supabase.auth.getSession(); // triggers onAuthStateChange → INITIAL_SESSION
       } catch (err) {
+        // storage read or network failure during initial session fetch
         set({
           loading: false,
-          error: err instanceof Error ? err : new Error("Auth init failed"),
+          error: err instanceof Error ? err : new Error("Failed to initialize auth"),
         });
       }
     },
@@ -124,7 +125,7 @@ export const useAuthStore = create<AuthState>()((set) => {
         await syncUser(user);
         return { error: null };
       } catch (err) {
-        const error = err instanceof Error ? err : new Error("Login failed");
+        const error = err instanceof Error ? err : new Error("Sign in failed");
         set({ loading: false, error });
         return { error };
       }
@@ -136,12 +137,16 @@ export const useAuthStore = create<AuthState>()((set) => {
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
 
-        const projectRef = new URL(
-          import.meta.env.VITE_SUPABASE_URL!,
-        ).hostname.split(".")[0];
+        const projectRef = new URL(import.meta.env.VITE_SUPABASE_URL!).hostname.split(".")[0];
         localStorage.removeItem(`sb-${projectRef}-auth-token`);
 
-        set({ session: null, user: null, loading: false, error: null });
+        set({
+          session: null,
+          user: null,
+          loading: false,
+          error: null,
+        });
+
         clearCacheOnSignOut();
       } catch (err) {
         const error = err instanceof Error ? err : new Error("Sign out failed");
