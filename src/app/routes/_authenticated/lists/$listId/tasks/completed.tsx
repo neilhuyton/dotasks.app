@@ -39,16 +39,16 @@ function CompletedTasksPage() {
     });
   };
 
-if (isLoadingTasks) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-background"
-      data-testid="tasks-loading"   // ← ADD THIS
-    >
-      <Loader2 className="h-10 w-10 animate-spin text-primary" />
-    </div>
-  );
-}
+  if (isLoadingTasks) {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-background"
+        data-testid="tasks-loading"
+      >
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div

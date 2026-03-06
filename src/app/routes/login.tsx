@@ -89,7 +89,6 @@ function LoginPage() {
     setMessage("Login successful!");
     form.reset();
     navigate({ to: "/lists" });
-    // No setIsPending(false) here — component will unmount soon anyway
   };
 
   form.watch((_, { name }) => {

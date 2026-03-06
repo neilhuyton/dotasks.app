@@ -18,6 +18,7 @@ import * as z from "zod";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
+import { RouteError } from "@/app/components/RouteError";
 
 const formSchema = z
   .object({
@@ -33,6 +34,16 @@ type FormData = z.infer<typeof formSchema>;
 
 export const Route = createFileRoute("/update-password")({
   component: UpdatePasswordPage,
+
+  errorComponent: ({ error, reset }) => (
+    <RouteError
+      error={error}
+      reset={reset}
+      title="Reset Link Error"
+      backTo="/reset-password"
+      backLabel="Request New Link"
+    />
+  ),
 });
 
 function UpdatePasswordPage() {
@@ -50,12 +61,10 @@ function UpdatePasswordPage() {
   });
 
   useEffect(() => {
-    // Check session from magic link redirect
     const checkSession = async () => {
       const { data, error } = await supabase.auth.getSession();
 
       if (error || !data.session) {
-        // Also parse hash for explicit errors (Supabase puts them in # fragment)
         const hashParams = new URLSearchParams(
           window.location.hash.substring(1),
         );
@@ -77,7 +86,6 @@ function UpdatePasswordPage() {
 
     checkSession();
 
-    // Listen for auth changes (in case session loads async after redirect)
     const { data: listener } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (session) {
@@ -110,10 +118,7 @@ function UpdatePasswordPage() {
     } else {
       setMessage("Password updated successfully! Redirecting to login...");
       setIsSuccess(true);
-
-      // Optional: sign out after update to force fresh login
       supabase.auth.signOut({ scope: "local" }).catch(() => {});
-
       setTimeout(() => navigate({ to: "/login" }), 2500);
     }
 

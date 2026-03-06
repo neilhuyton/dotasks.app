@@ -1,5 +1,6 @@
 // src/app/routes/_authenticated/lists/$listId/tasks/$taskId/edit.tsx
 
+// src/app/routes/_authenticated/lists/$listId/tasks/$taskId/edit.tsx
 import { createFileRoute } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,6 +13,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { RouteError } from "@/app/components/RouteError";
 
 const editTaskSchema = z.object({
   title: z.string().min(1, "Task name is required").trim(),
@@ -48,19 +50,15 @@ export const Route = createFileRoute(
   pendingMs: 0,
   pendingMinMs: 300,
 
-  errorComponent: ({ error }) => {
-    const message = error?.message?.toLowerCase() ?? "";
-    const isNotFound =
-      message.includes("not found") || message.includes("unauthorized");
-
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center p-6 text-center text-muted-foreground">
-        {isNotFound
-          ? "Task or list not found or you don't have access."
-          : `Failed to load: ${error?.message || "Unknown error"}`}
-      </div>
-    );
-  },
+  errorComponent: ({ error, reset }) => (
+    <RouteError
+      error={error}
+      reset={reset}
+      title="Failed to load task for editing"
+      backTo="/lists"
+      backLabel="Back to Lists"
+    />
+  ),
 
   component: EditTaskPage,
 });
@@ -265,26 +263,6 @@ function EditTaskPage() {
                     </p>
                   )}
                 </div>
-
-                {/* Uncomment if/when you want to support task descriptions */}
-                {/* <div className="space-y-2">
-                  <label htmlFor="description" className="text-sm font-medium block">
-                    Description (optional)
-                  </label>
-                  <Textarea
-                    id="description"
-                    {...form.register("description")}
-                    placeholder="Add more details..."
-                    disabled={isPending}
-                    rows={6}
-                    autoComplete="off"
-                  />
-                  {form.formState.errors.description && (
-                    <p className="text-sm text-destructive">
-                      {form.formState.errors.description.message}
-                    </p>
-                  )}
-                </div> */}
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 pt-8 justify-center">

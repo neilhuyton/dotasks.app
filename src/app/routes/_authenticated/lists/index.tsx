@@ -2,11 +2,11 @@
 
 import { Outlet, createFileRoute } from "@tanstack/react-router";
 import { useLists } from "@/hooks/useLists";
-
 import { SortableListsTable } from "@/features/lists/components/SortableListsTable";
 import { FabButton } from "@/app/components/FabButton";
 import { useAuthStore } from "@/shared/store/authStore";
 import { trpc } from "@/trpc";
+import { RouteError } from "@/app/components/RouteError";
 
 export const Route = createFileRoute("/_authenticated/lists/")({
   loader: async ({ context: { queryClient } }) => {
@@ -42,13 +42,14 @@ export const Route = createFileRoute("/_authenticated/lists/")({
   pendingMs: 0,
   pendingMinMs: 400,
 
-  errorComponent: ({ error }) => (
-    <div className="text-center text-muted-foreground">
-      <p className="text-lg font-medium">Failed to load your lists</p>
-      <p className="mt-2">
-        {error?.message || "Something went wrong. Please try again later."}
-      </p>
-    </div>
+  errorComponent: ({ error, reset }) => (
+    <RouteError
+      error={error}
+      reset={reset}
+      title="Failed to load your lists"
+      backTo="/lists"
+      backLabel="Retry"
+    />
   ),
 
   component: ListsPage,

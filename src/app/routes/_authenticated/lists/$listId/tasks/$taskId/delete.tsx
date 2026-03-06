@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { trpc } from "@/trpc";
 import { useBannerStore } from "@/shared/store/bannerStore";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { RouteError } from "@/app/components/RouteError";
 
 export const Route = createFileRoute(
   "/_authenticated/lists/$listId/tasks/$taskId/delete",
@@ -34,18 +35,15 @@ export const Route = createFileRoute(
   pendingMs: 0,
   pendingMinMs: 300,
 
-  errorComponent: ({ error }) => {
-    const message = error?.message?.toLowerCase() ?? "";
-    const isNotFound = message.includes("not found");
-
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center p-6 text-center text-muted-foreground">
-        {isNotFound
-          ? "Task or list not found or you don't have access."
-          : `Failed to load task: ${error?.message || "Unknown error"}`}
-      </div>
-    );
-  },
+  errorComponent: ({ error, reset }) => (
+    <RouteError
+      error={error}
+      reset={reset}
+      title="Failed to load task for deletion"
+      backTo={`/lists/`}
+      backLabel="Back to List"
+    />
+  ),
 
   component: DeleteTaskConfirmPage,
 });
