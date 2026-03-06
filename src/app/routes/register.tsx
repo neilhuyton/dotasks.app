@@ -22,14 +22,11 @@ import { useAuthStore } from "@/shared/store/authStore";
 
 const registerSchema = z
   .object({
-    email: z
-      .email({ message: "Please enter a valid email address" })
-      .trim()
-      .toLowerCase(),
+    email: z.string().email("Please enter a valid email").trim().toLowerCase(),
     password: z
       .string()
-      .min(8, { message: "Password must be at least 8 characters long" })
-      .max(128, { message: "Password is too long" }),
+      .min(8, "Password must be at least 8 characters")
+      .max(128, "Password is too long"),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -52,15 +49,10 @@ function RegisterPage() {
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-      confirmPassword: "",
-    },
+    defaultValues: { email: "", password: "", confirmPassword: "" },
     mode: "onChange",
   });
 
-  // Clear message when user starts typing (improved with useEffect)
   useEffect(() => {
     const subscription = form.watch(() => {
       if (message) setMessage(null);
@@ -72,47 +64,31 @@ function RegisterPage() {
     setMessage(null);
     setIsPending(true);
 
-    // Small delay only in test env so tests can reliably see loading state
-    if (import.meta.env.MODE === "test") {
-      await new Promise((resolve) => setTimeout(resolve, 400));
-    }
-
     const { error } = await signUp(values.email, values.password);
 
     if (error) {
-      let errorMessage = "Failed to register. Please try again.";
+      let errorMsg = "Failed to register. Please try again.";
 
       if (error.message?.toLowerCase().includes("already registered")) {
-        errorMessage = "This email is already registered. Please log in.";
+        errorMsg = "This email is already registered. Please log in.";
       } else if (error.message?.toLowerCase().includes("weak password")) {
-        errorMessage = "Password is too weak. Please choose a stronger password.";
+        errorMsg = "Password is too weak. Please choose a stronger password.";
       } else if (error.message) {
-        errorMessage = error.message;
+        errorMsg = error.message;
       }
 
-      setMessage(`Registration failed: ${errorMessage}`);
+      setMessage(`Registration failed: ${errorMsg}`);
       setIsPending(false);
       return;
     }
 
-    // Success path
-    const currentUser = useAuthStore.getState().user;
-
-    if (currentUser) {
-      // No email confirmation → user is signed in
-      setMessage("Account created successfully! Redirecting...");
-      form.reset();
-      setTimeout(() => navigate({ to: "/lists" }), 1800);
-    } else {
-      // Email confirmation required
-      setMessage(
-        "Account created! Please check your email (including spam/junk) to verify your account.",
-      );
-      form.reset();
-      setTimeout(() => navigate({ to: "/login" }), 4000);
-    }
-
+    setMessage(
+      "Account created! Please check your email (including spam/junk) to verify your account.",
+    );
+    form.reset();
     setIsPending(false);
+
+    setTimeout(() => navigate({ to: "/login" }), 4000);
   };
 
   return (

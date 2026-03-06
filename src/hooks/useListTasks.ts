@@ -42,7 +42,9 @@ export function useListTasks(listId: string | null | undefined) {
   useTaskRealtime({ listId });
 
   const [pendingReorder, setPendingReorder] = useState<Task[] | null>(null);
-  const [pendingToggleIds, setPendingToggleIds] = useState<Set<string>>(new Set());
+  const [pendingToggleIds, setPendingToggleIds] = useState<Set<string>>(
+    new Set(),
+  );
 
   const displayedTasks = pendingReorder ?? tasks;
 

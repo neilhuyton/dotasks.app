@@ -1,6 +1,6 @@
 // src/app/routes/login.tsx
 
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import {
   Form,
@@ -16,7 +16,7 @@ import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuthStore } from "@/shared/store/authStore";
 
@@ -28,6 +28,16 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export const Route = createFileRoute("/login")({
+  beforeLoad: async () => {
+    const session = await useAuthStore.getState().waitUntilReady();
+
+    if (session?.user?.id) {
+      throw redirect({
+        to: "/lists",
+        replace: true,
+      });
+    }
+  },
   component: LoginPage,
 });
 
@@ -43,6 +53,15 @@ function LoginPage() {
     defaultValues: { email: "", password: "" },
     mode: "onChange",
   });
+
+  useEffect(() => {
+    if (
+      useAuthStore.getState().isInitialized &&
+      useAuthStore.getState().session?.user?.id
+    ) {
+      navigate({ to: "/lists", replace: true });
+    }
+  }, [navigate]);
 
   const onSubmit = async (values: FormValues) => {
     setMessage(null);
@@ -70,10 +89,9 @@ function LoginPage() {
     setMessage("Login successful!");
     form.reset();
     navigate({ to: "/lists" });
-    setIsPending(false);
+    // No setIsPending(false) here — component will unmount soon anyway
   };
 
-  // Clear message when user types in email or password
   form.watch((_, { name }) => {
     if (name === "email" || name === "password") {
       if (message) setMessage(null);
@@ -161,7 +179,6 @@ function LoginPage() {
                 </p>
               )}
 
-              {/* Always-visible resend link */}
               <div className="text-center text-sm mt-2">
                 Didn't receive verification email or can't log in?{" "}
                 <button

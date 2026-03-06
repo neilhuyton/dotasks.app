@@ -3,14 +3,26 @@
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
 
 export function GlobalFetchingIndicator() {
   const fetchingCount = useIsFetching();
   const mutatingCount = useIsMutating();
 
-  const isAnyActivity = fetchingCount + mutatingCount > 0;
+  const [showSpinner, setShowSpinner] = useState(false);
 
-  if (!isAnyActivity) return null;
+  useEffect(() => {
+    const isActive = fetchingCount + mutatingCount > 0;
+    if (isActive) {
+      setShowSpinner(true);
+      const timer = setTimeout(() => setShowSpinner(false), 15000); // force hide after 15s if stuck
+      return () => clearTimeout(timer);
+    } else {
+      setShowSpinner(false);
+    }
+  }, [fetchingCount, mutatingCount]);
+
+  if (!showSpinner) return null;
 
   return (
     <div

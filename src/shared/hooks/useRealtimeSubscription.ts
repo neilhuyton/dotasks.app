@@ -1,3 +1,5 @@
+// src/shared/hooks/useRealtimeSubscription.ts
+
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/shared/store/authStore";
@@ -59,22 +61,13 @@ export function useRealtimeSubscription<T extends TableRow = TableRow>({
 
   const cleanupChannel = useCallback(() => {
     if (isUnsubscribing || !channelRef.current) return;
-
     setIsUnsubscribing(true);
     const channel = channelRef.current;
     channelRef.current = null;
-
-    const removeResult = supabase.removeChannel(channel);
-
-    if (removeResult && typeof removeResult.then === "function") {
-      removeResult.finally(() => {
-        retryCountRef.current = 0;
-        setIsUnsubscribing(false);
-      });
-    } else {
+    supabase.removeChannel(channel).finally(() => {
       retryCountRef.current = 0;
       setIsUnsubscribing(false);
-    }
+    });
   }, [isUnsubscribing]);
 
   const calculateDelay = (attempt: number) =>
@@ -86,15 +79,12 @@ export function useRealtimeSubscription<T extends TableRow = TableRow>({
   const subscribe = useCallback(async () => {
     if (!enabled || isUnsubscribing || channelRef.current) return;
 
-    const accessToken = useAuthStore.getState().session?.access_token;
+    const { session } = useAuthStore.getState();
+    const accessToken = session?.access_token;
 
-    if (!accessToken) {
-      console.warn("[Realtime] No access_token for", channelName);
-      return;
-    }
+    if (!accessToken) return; // wait for valid session
 
     supabase.realtime.setAuth(accessToken);
-    console.log("[Realtime] Subscribing to", channelName, "- token set");
 
     const changesFilter: RealtimePostgresChangesFilter<PostgresChangesEvent> = {
       event,
@@ -106,12 +96,9 @@ export function useRealtimeSubscription<T extends TableRow = TableRow>({
     channelRef.current = supabase
       .channel(channelName)
       .on<T>("postgres_changes", changesFilter, (payload) => {
-        console.log("[Realtime] PAYLOAD received on", channelName, payload);
         onPayloadRef.current(payload);
       })
-      .subscribe((status, err) => {
-        console.log(`[Realtime ${channelName}] status:`, status, err ? err.message : "");
-
+      .subscribe((status) => {
         if (status === "SUBSCRIBED") {
           retryCountRef.current = 0;
         }
@@ -164,11 +151,7 @@ export function useRealtimeSubscription<T extends TableRow = TableRow>({
       return;
     }
 
-    const timer = setTimeout(() => {
-      if (mountedRef.current) subscribe();
-    }, 0);
-
-    const unsubscribeAuth = useAuthStore.subscribe((state) => {
+    const unsubscribe = useAuthStore.subscribe((state) => {
       if (state.session?.access_token && enabled && mountedRef.current) {
         subscribe();
       } else {
@@ -176,12 +159,14 @@ export function useRealtimeSubscription<T extends TableRow = TableRow>({
       }
     });
 
+    // attempt immediately in case session is already loaded
+    subscribe();
+
     return () => {
-      clearTimeout(timer);
-      unsubscribeAuth();
+      unsubscribe();
       cleanupChannel();
     };
-  }, [channelName, table, event, filter, enabled, subscribe, cleanupChannel]);
+  }, [enabled, subscribe, cleanupChannel]);
 
   return { cleanup: cleanupChannel };
 }
