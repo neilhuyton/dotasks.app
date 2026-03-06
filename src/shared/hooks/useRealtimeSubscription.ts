@@ -79,13 +79,6 @@ export function useRealtimeSubscription<T extends TableRow = TableRow>({
   const subscribe = useCallback(async () => {
     if (!enabled || isUnsubscribing || channelRef.current) return;
 
-    const { session } = useAuthStore.getState();
-    const accessToken = session?.access_token;
-
-    if (!accessToken) return; // wait for valid session
-
-    supabase.realtime.setAuth(accessToken);
-
     const changesFilter: RealtimePostgresChangesFilter<PostgresChangesEvent> = {
       event,
       schema: "public",
@@ -159,7 +152,6 @@ export function useRealtimeSubscription<T extends TableRow = TableRow>({
       }
     });
 
-    // attempt immediately in case session is already loaded
     subscribe();
 
     return () => {

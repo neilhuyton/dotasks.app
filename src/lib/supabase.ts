@@ -25,7 +25,7 @@ const quietStorage = {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    autoRefreshToken: false,
+    autoRefreshToken: true,
     persistSession: true,
     storage: quietStorage,
     storageKey: `sb-${new URL(supabaseUrl).hostname.split(".")[0]}-auth-token`,
