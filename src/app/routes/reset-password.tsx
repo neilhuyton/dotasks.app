@@ -16,11 +16,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useState } from "react";
-import { supabase } from "@/lib/supabase"; // ← Import directly here
+import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
-  email: z.string().email("Please enter a valid email").trim().toLowerCase(),
+  email: z.email("Please enter a valid email").trim().toLowerCase(),
 });
 
 type FormData = z.infer<typeof formSchema>;

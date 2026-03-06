@@ -4,8 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { trpc } from "@/trpc";
-import { useTRPC } from "@/trpc";
+import { trpc, useTRPC } from "@/trpc";
 import { useBannerStore } from "@/shared/store/bannerStore";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
@@ -13,8 +12,8 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { RouteError } from "@/app/components/RouteError";
 
-// Zod schema
 const editListSchema = z.object({
   title: z.string().min(1, "List name is required").trim(),
   description: z.string().trim().optional(),
@@ -45,19 +44,15 @@ export const Route = createFileRoute("/_authenticated/lists/$listId/edit")({
   pendingMs: 0,
   pendingMinMs: 300,
 
-  errorComponent: ({ error }) => {
-    const message = error?.message?.toLowerCase() ?? "";
-    const isNotFound =
-      message.includes("not found") || message.includes("unauthorized");
-
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center p-6 text-center text-muted-foreground">
-        {isNotFound
-          ? "List not found or you don't have access."
-          : `Failed to load list: ${error?.message || "Unknown error"}`}
-      </div>
-    );
-  },
+  errorComponent: ({ error, reset }) => (
+    <RouteError
+      error={error}
+      reset={reset}
+      title="Failed to load list for editing"
+      backTo="/lists"
+      backLabel="Back to Lists"
+    />
+  ),
 
   component: EditListPage,
 });

@@ -9,6 +9,7 @@ import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import TaskList from "@/features/tasks/components/TaskList";
 import { useAuthStore } from "@/shared/store/authStore";
+import { RouteError } from "@/app/components/RouteError";
 
 export const Route = createFileRoute("/_authenticated/lists/$listId")({
   loader: async ({ context: { queryClient }, params }) => {
@@ -18,27 +19,21 @@ export const Route = createFileRoute("/_authenticated/lists/$listId")({
       return {};
     }
 
-    console.log("[List loader] starting waitUntilReady");
-
     const sessionPromise = useAuthStore.getState().waitUntilReady();
-    const timeout = new Promise<null>((_, reject) => setTimeout(() => reject(new Error("Auth loader timeout")), 8000));
+    const timeout = new Promise<null>((_, reject) =>
+      setTimeout(() => reject(new Error("Auth loader timeout")), 8000),
+    );
 
     let session;
     try {
       session = await Promise.race([sessionPromise, timeout]);
-    } catch (err) {
-      console.error("[List loader] auth timeout/error:", err);
+    } catch {
       session = null;
     }
 
-    console.log("[List loader] waitUntilReady finished - has user:", !!session?.user?.id);
-
     if (!session?.user?.id) {
-      console.log("[List loader] NO valid session → redirecting to /login");
       throw redirect({ to: "/login" });
     }
-
-    console.log("[List loader] prefetching list and tasks");
 
     try {
       await Promise.all([
@@ -46,14 +41,14 @@ export const Route = createFileRoute("/_authenticated/lists/$listId")({
           trpc.list.getOne.queryOptions(
             { id: listId },
             { staleTime: 5 * 60 * 1000 },
-          )
+          ),
         ),
         queryClient.ensureQueryData(
-          trpc.task.getByList.queryOptions({ listId })
+          trpc.task.getByList.queryOptions({ listId }),
         ),
       ]);
-    } catch (err) {
-      console.error("[List loader] prefetch failed:", err);
+    } catch {
+      // empty
     }
 
     return { session };
@@ -63,7 +58,9 @@ export const Route = createFileRoute("/_authenticated/lists/$listId")({
     <div className="flex min-h-[60vh] items-center justify-center">
       <div className="text-center space-y-4">
         <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto"></div>
-        <p className="text-muted-foreground">Restoring session and loading data…</p>
+        <p className="text-muted-foreground">
+          Restoring session and loading data…
+        </p>
       </div>
     </div>
   ),
@@ -71,16 +68,24 @@ export const Route = createFileRoute("/_authenticated/lists/$listId")({
   pendingMs: 0,
   pendingMinMs: 400,
 
-  errorComponent: ({ error }) => {
+  errorComponent: ({ error, reset }) => {
     const message = error?.message?.toLowerCase() ?? "";
-    const isNotFound = message.includes("not found") || message.includes("unauthorized");
+    const isNotFound =
+      message.includes("not found") || message.includes("unauthorized");
 
     return (
-      <div className="flex min-h-[60vh] items-center justify-center p-6 text-center text-muted-foreground">
-        {isNotFound
-          ? "List not found or you don't have access."
-          : `Failed to load: ${error?.message || "Unknown error"} — try refreshing`}
-      </div>
+      <RouteError
+        error={error}
+        reset={reset}
+        title={isNotFound ? "List not found" : "Failed to load list"}
+        message={
+          isNotFound
+            ? "This list doesn't exist or you don't have access to it."
+            : undefined
+        }
+        backTo="/lists"
+        backLabel="Back to Lists"
+      />
     );
   },
 
@@ -91,10 +96,7 @@ function ListDetailPage() {
   const { listId } = Route.useParams();
   const navigate = Route.useNavigate();
 
-  const {
-    data: list,
-    isLoading: isListLoading,
-  } = useQuery(
+  const { data: list, isLoading: isListLoading } = useQuery(
     trpc.list.getOne.queryOptions(
       { id: listId ?? "" },
       {
@@ -117,13 +119,6 @@ function ListDetailPage() {
     updateTaskOrder,
     isReordering,
   } = useListTasks(listId);
-
-  console.log("[ListDetailPage] render state", {
-    isListLoading,
-    isLoadingTasks,
-    hasList: !!list,
-    tasksLength: tasks?.length ?? 0,
-  });
 
   if (!listId) {
     return (

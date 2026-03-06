@@ -74,20 +74,6 @@ export const Route = createFileRoute("/_authenticated/lists/$listId/tasks/new")(
     pendingMs: 0,
     pendingMinMs: 300,
 
-    // errorComponent: ({ error }) => {
-    //   const message = error?.message?.toLowerCase() ?? "";
-    //   const isNotFound =
-    //     message.includes("not found") || message.includes("unauthorized");
-
-    //   return (
-    //     <div className="flex min-h-[60vh] items-center justify-center p-6 text-center text-muted-foreground">
-    //       {isNotFound
-    //         ? "List not found or you don't have access."
-    //         : `Failed to load: ${error?.message || "Unknown error"}`}
-    //     </div>
-    //   );
-    // },
-
     component: NewTaskPage,
   },
 );
@@ -100,7 +86,6 @@ function NewTaskPage() {
   const trpcHook = useTRPC();
 
   const [title, setTitle] = useState("");
-  // const [description, setDescription] = useState("");
 
   const tasksQueryKey = trpcHook.task.getByList.queryKey({ listId });
 
@@ -130,8 +115,6 @@ function NewTaskPage() {
 
       onSettled: () => {
         queryClient.invalidateQueries({ queryKey: tasksQueryKey });
-        // Optional: also refresh the list if it shows task counts
-        // queryClient.invalidateQueries(trpcHook.list.getOne.queryKey({ id: listId! }));
       },
 
       onSuccess: (newTask) => {
@@ -162,7 +145,6 @@ function NewTaskPage() {
     mutation.mutate({
       title: trimmed,
       listId,
-      // description: description.trim() || undefined,
     });
   };
 
@@ -224,21 +206,6 @@ function NewTaskPage() {
                     disabled={isPending}
                   />
                 </div>
-
-                {/* Uncomment when description field is needed */}
-                {/* <div className="space-y-2">
-                  <label htmlFor="description" className="text-sm font-medium block">
-                    Description (optional)
-                  </label>
-                  <Textarea
-                    id="description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Any additional details..."
-                    rows={5}
-                    disabled={isPending}
-                  />
-                </div> */}
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 pt-8 justify-center">

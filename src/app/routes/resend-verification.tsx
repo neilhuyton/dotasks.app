@@ -21,11 +21,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/lib/supabase";
 
 const formSchema = z.object({
-  email: z
-    .string()
-    .email("Please enter a valid email address")
-    .trim()
-    .toLowerCase(),
+  email: z.email("Please enter a valid email address").trim().toLowerCase(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -88,7 +84,6 @@ function ResendVerificationPage() {
     }
   };
 
-  // Clear message on input change
   form.watch(() => {
     if (message) setMessage(null);
   });

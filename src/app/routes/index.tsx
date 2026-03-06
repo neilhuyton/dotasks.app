@@ -11,7 +11,6 @@ export const Route = createFileRoute("/")({
 function HomePage() {
   return (
     <div className="min-h-dvh flex flex-col bg-gradient-to-b from-background to-muted/30">
-      {/* Header / Hero */}
       <header className="px-6 pt-16 pb-12 text-center sm:pt-24 sm:pb-20">
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-6">
           Do Tasks
@@ -36,7 +35,6 @@ function HomePage() {
         </div>
       </header>
 
-      {/* Features / Middle section */}
       <section className="flex-1 px-6 py-16 sm:py-24 bg-muted/20">
         <div className="max-w-5xl mx-auto grid gap-12 md:grid-cols-3 text-center">
           <div className="space-y-4">
@@ -84,7 +82,6 @@ function HomePage() {
         </div>
       </section>
 
-      {/* Footer CTA */}
       <footer className="px-6 py-12 text-center border-t">
         <p className="text-muted-foreground mb-6">
           Ready to start getting things done?

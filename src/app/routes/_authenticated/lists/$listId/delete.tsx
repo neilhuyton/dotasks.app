@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { trpc, useTRPC } from "@/trpc";
 import { useBannerStore } from "@/shared/store/bannerStore";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { RouteError } from "@/app/components/RouteError";
 
 export const Route = createFileRoute("/_authenticated/lists/$listId/delete")({
   loader: async ({ context: { queryClient }, params }) => {
@@ -32,19 +33,15 @@ export const Route = createFileRoute("/_authenticated/lists/$listId/delete")({
   pendingMs: 0,
   pendingMinMs: 300,
 
-  errorComponent: ({ error }) => {
-    const message = error?.message?.toLowerCase() ?? "";
-    const isNotFoundOrUnauthorized =
-      message.includes("not found") || message.includes("unauthorized");
-
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center p-6 text-center text-muted-foreground">
-        {isNotFoundOrUnauthorized
-          ? "List not found or you don't have access."
-          : `Failed to load list: ${error?.message || "Unknown error"}`}
-      </div>
-    );
-  },
+  errorComponent: ({ error, reset }) => (
+    <RouteError
+      error={error}
+      reset={reset}
+      title="Failed to load list for deletion"
+      backTo="/lists"
+      backLabel="Back to Lists"
+    />
+  ),
 
   component: DeleteListConfirmPage,
 });
@@ -155,7 +152,6 @@ function DeleteListConfirmPage() {
       )}
     >
       <div className="relative flex min-h-full flex-col px-6 pt-20 pb-10 sm:px-8">
-        {/* Back / Cancel button */}
         <Button
           variant="outline"
           size="icon"
