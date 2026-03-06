@@ -1,72 +1,34 @@
 // server/context.ts
+
 import { PrismaClient } from "@prisma/client";
 import { jwtVerify, createRemoteJWKSet } from "jose";
 
 const globalForPrisma = globalThis as typeof globalThis & {
   prisma?: PrismaClient;
 };
-
-export const prisma =
-  globalForPrisma.prisma ?? (globalForPrisma.prisma = new PrismaClient());
+export const prisma = (globalForPrisma.prisma ??= new PrismaClient());
 
 export interface Context {
   prisma: PrismaClient;
   userId: string | null;
-  email: string | null;
 }
 
-export type AuthenticatedContext = Context & {
-  userId: string;
-};
-
 const SUPABASE_URL = process.env.SUPABASE_URL;
-
 if (!SUPABASE_URL) {
-  throw new Error("Missing required environment variable: SUPABASE_URL");
+  throw new Error("Missing SUPABASE_URL environment variable");
 }
 
 const JWKS = createRemoteJWKSet(
   new URL(`${SUPABASE_URL}/auth/v1/.well-known/jwks.json`),
 );
+const ISSUER = `${SUPABASE_URL}/auth/v1`;
 
-const SUPABASE_ISSUER = `${SUPABASE_URL}/auth/v1`;
-
-function extractBearerToken(req: Request): string | null {
-  const authHeader =
+function extractToken(req: Request): string | null {
+  const header =
     req.headers.get("authorization") ?? req.headers.get("Authorization");
-
-  if (typeof authHeader !== "string" || !authHeader.startsWith("Bearer ")) {
-    return null;
-  }
-
-  const token = authHeader.slice(7).trim();
+  if (!header?.startsWith("Bearer ")) return null;
+  const token = header.slice(7).trim();
   return token || null;
-}
-
-interface SupabaseJwtPayload {
-  sub?: string;
-  email?: string;
-  [key: string]: unknown;
-}
-
-async function verifySupabaseToken(token: string): Promise<{
-  userId: string | null;
-  email: string | null;
-}> {
-  try {
-    const { payload } = await jwtVerify<SupabaseJwtPayload>(token, JWKS, {
-      issuer: SUPABASE_ISSUER,
-      audience: "authenticated",
-    });
-
-    const userId =
-      typeof payload.sub === "string" && payload.sub ? payload.sub : null;
-    const email = typeof payload.email === "string" ? payload.email : null;
-
-    return { userId, email };
-  } catch {
-    return { userId: null, email: null };
-  }
 }
 
 export async function createContext({
@@ -74,20 +36,20 @@ export async function createContext({
 }: {
   req: Request;
 }): Promise<Context> {
-  const token = extractBearerToken(req);
-
+  const token = extractToken(req);
   if (!token) {
-    return { prisma, userId: null, email: null };
+    return { prisma, userId: null };
   }
 
-  const { userId, email } = await verifySupabaseToken(token);
+  try {
+    const { payload } = await jwtVerify(token, JWKS, {
+      issuer: ISSUER,
+      audience: "authenticated",
+    });
 
-  return { prisma, userId, email };
-}
-
-export function requireAuth(ctx: Context): AuthenticatedContext {
-  if (!ctx.userId) {
-    throw new Error("Authentication required");
+    const userId = typeof payload.sub === "string" ? payload.sub : null;
+    return { prisma, userId };
+  } catch {
+    return { prisma, userId: null };
   }
-  return ctx as AuthenticatedContext;
 }

@@ -1,3 +1,5 @@
+// src/app/routes/reset-password.tsx
+
 import { createFileRoute } from "@tanstack/react-router";
 import {
   Form,
@@ -14,7 +16,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useState } from "react";
-import { useAuthStore } from "@/shared/store/authStore";
+import { supabase } from "@/lib/supabase"; // ← Import directly here
 import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
@@ -29,7 +31,6 @@ export const Route = createFileRoute("/reset-password")({
 
 function ResetPasswordPage() {
   const navigate = Route.useNavigate();
-  const { supabase } = useAuthStore();
 
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);

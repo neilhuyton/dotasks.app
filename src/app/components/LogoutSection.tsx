@@ -2,8 +2,6 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/shared/store/authStore";
-import { supabase } from "@/lib/supabase";
-import { useBannerStore } from "@/shared/store/bannerStore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,33 +18,30 @@ import { LogOut } from "lucide-react";
 
 export default function LogoutSection() {
   const queryClient = useQueryClient();
-  const { show: showBanner } = useBannerStore();
+  const { signOut } = useAuthStore();
 
-  const handleLogout = async () => {
-    try {
-      const key = "sb-gmkfhkydrxmgynzhviip-auth-token";
-      localStorage.removeItem(key);
+  const handleLogout = () => {
+    // 1. Start signOut but DO NOT await — prevents browser freeze if Supabase deadlocks
+    signOut().catch((err) =>
+      console.warn("[Logout] supabase.auth.signOut failed (non-blocking)", err),
+    );
 
-      useAuthStore.setState({
-        session: null,
-        user: null,
-        loading: false,
-        error: null,
-      });
+    // 2. Immediately clean local state & storage (critical)
+    const ref = new URL(import.meta.env.VITE_SUPABASE_URL!).hostname.split(
+      ".",
+    )[0];
+    localStorage.removeItem(`sb-${ref}-auth-token`);
 
-      await supabase.auth.signOut();
+    // Also remove any other supabase-related keys that might linger
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith("sb-") && key.includes("-auth"))
+      .forEach((key) => localStorage.removeItem(key));
 
-      localStorage.removeItem(key);
-      queryClient.clear();
+    // 3. Clear all queries & cache
+    queryClient.clear();
 
-      window.location.replace("/login");
-    } catch {
-      showBanner({
-        message: "Logout failed – please try again",
-        variant: "error",
-        duration: 4000,
-      });
-    }
+    // 4. Force navigation — this is what actually gets the user out
+    window.location.replace("/login");
   };
 
   return (
