@@ -1,4 +1,5 @@
 // src/app/Root.tsx
+
 import { useEffect } from "react";
 import { RouterProvider } from "@tanstack/react-router";
 
@@ -10,6 +11,7 @@ import { getQueryClient } from "@/queryClient";
 import { ErrorBoundary } from "react-error-boundary";
 import { useAuthStore } from "@/shared/store/authStore";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { RealtimeListeners } from "./components/RealtimeListeners";
 
 export function Root() {
   const initialize = useAuthStore((s) => s.initialize);
@@ -45,6 +47,7 @@ export function Root() {
             enableSystem={true}
           >
             <RouterProvider router={router} />
+            <RealtimeListeners />
           </ThemeProvider>
         </TRPCProvider>
       </QueryClientProvider>

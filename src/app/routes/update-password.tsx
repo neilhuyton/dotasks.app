@@ -16,7 +16,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useState, useEffect } from "react";
-import { useAuthStore } from "@/shared/store/authStore";
+import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 
 const formSchema = z
@@ -37,11 +37,11 @@ export const Route = createFileRoute("/update-password")({
 
 function UpdatePasswordPage() {
   const navigate = Route.useNavigate();
-  const { supabase } = useAuthStore();
 
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [hasValidSession, setHasValidSession] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -50,15 +50,54 @@ function UpdatePasswordPage() {
   });
 
   useEffect(() => {
-    // Verify we have a valid session from the reset link
-    supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) {
-        setMessage("Invalid or expired reset link. Please request a new one.");
+    // Check session from magic link redirect
+    const checkSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+
+      if (error || !data.session) {
+        // Also parse hash for explicit errors (Supabase puts them in # fragment)
+        const hashParams = new URLSearchParams(
+          window.location.hash.substring(1),
+        );
+        const errorDesc =
+          hashParams.get("error_description") || hashParams.get("error");
+
+        setMessage(
+          errorDesc
+            ? `Invalid or expired reset link: ${errorDesc}. Please request a new one.`
+            : "Invalid or expired reset link. Please request a new one.",
+        );
+        setHasValidSession(false);
+        return;
       }
-    });
-  }, [supabase]);
+
+      setHasValidSession(true);
+      setMessage(null);
+    };
+
+    checkSession();
+
+    // Listen for auth changes (in case session loads async after redirect)
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (session) {
+          setHasValidSession(true);
+          setMessage(null);
+        }
+      },
+    );
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
 
   const onSubmit = async (values: FormData) => {
+    if (!hasValidSession) {
+      setMessage("No active session. Please use a fresh reset link.");
+      return;
+    }
+
     setMessage(null);
     setIsPending(true);
 
@@ -71,6 +110,10 @@ function UpdatePasswordPage() {
     } else {
       setMessage("Password updated successfully! Redirecting to login...");
       setIsSuccess(true);
+
+      // Optional: sign out after update to force fresh login
+      supabase.auth.signOut({ scope: "local" }).catch(() => {});
+
       setTimeout(() => navigate({ to: "/login" }), 2500);
     }
 
@@ -95,7 +138,7 @@ function UpdatePasswordPage() {
           </p>
         )}
 
-        {!isSuccess && (
+        {hasValidSession && !isSuccess ? (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
@@ -146,7 +189,7 @@ function UpdatePasswordPage() {
               </Button>
             </form>
           </Form>
-        )}
+        ) : null}
 
         <div className="text-center text-sm mt-6">
           <button

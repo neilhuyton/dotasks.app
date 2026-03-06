@@ -16,12 +16,9 @@ import { Mail, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useMutation } from "@tanstack/react-query";
-import { useTRPC } from "@/trpc";
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import type { TRPCClientErrorLike } from "@trpc/client";
-import type { AppRouter } from "server/trpc";
+import { supabase } from "@/lib/supabase";
 
 const formSchema = z.object({
   email: z
@@ -39,9 +36,9 @@ export const Route = createFileRoute("/resend-verification")({
 
 function ResendVerificationPage() {
   const navigate = useNavigate();
-  const trpc = useTRPC();
 
   const [message, setMessage] = useState<string | null>(null);
+  const [isPending, setIsPending] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -49,39 +46,49 @@ function ResendVerificationPage() {
     mode: "onChange",
   });
 
-  const mutation = useMutation(
-    trpc.verification.resendVerificationEmail.mutationOptions({
-      onMutate: () => {
-        setMessage(null);
-      },
+  const onSubmit = async (values: FormValues) => {
+    setMessage(null);
+    setIsPending(true);
 
-      onSuccess: (data) => {
-        setMessage(
-          data.message ||
-            "A new verification email has been sent. Please check your inbox and spam folder.",
-        );
-        form.reset();
-      },
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: values.email,
+      });
 
-      onError: (err: TRPCClientErrorLike<AppRouter>) => {
-        let msg = "Failed to send verification email. Please try again later.";
+      if (error) {
+        let msg =
+          "Failed to resend verification email. Please try again later.";
 
-        if (err.message?.includes("already verified")) {
+        if (
+          error.message?.includes("already confirmed") ||
+          error.message?.includes("already verified")
+        ) {
           msg = "This email is already verified. You can log in now.";
-        } else if (err.message) {
-          msg = err.message;
+        } else if (
+          error.message?.includes("rate limit") ||
+          error.message?.includes("too many requests")
+        ) {
+          msg = "Too many requests. Please wait a minute and try again.";
+        } else if (error.message) {
+          msg = error.message;
         }
 
         setMessage(msg);
-      },
-    }),
-  );
-
-  const onSubmit = (values: FormValues) => {
-    mutation.mutate(values);
+      } else {
+        setMessage(
+          "A new verification email has been sent. Please check your inbox and spam folder.",
+        );
+        form.reset();
+      }
+    } catch {
+      setMessage("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsPending(false);
+    }
   };
 
-  // Clear message when user changes input
+  // Clear message on input change
   form.watch(() => {
     if (message) setMessage(null);
   });
@@ -90,7 +97,9 @@ function ResendVerificationPage() {
     !!message &&
     (message.toLowerCase().includes("failed") ||
       message.toLowerCase().includes("error") ||
-      message.toLowerCase().includes("try again"));
+      message.toLowerCase().includes("try again") ||
+      message.toLowerCase().includes("too many") ||
+      message.toLowerCase().includes("rate limit"));
 
   return (
     <div className="min-h-dvh flex flex-col items-center p-1 sm:p-2 lg:p-3">
@@ -128,7 +137,7 @@ function ResendVerificationPage() {
                           id="email"
                           placeholder="name@example.com"
                           className="pl-9"
-                          disabled={mutation.isPending}
+                          disabled={isPending}
                           {...field}
                         />
                       </div>
@@ -143,7 +152,9 @@ function ResendVerificationPage() {
                   data-testid="resend-message"
                   className={cn(
                     "text-sm text-center",
-                    isErrorMessage ? "text-red-500" : "text-green-600 dark:text-green-500",
+                    isErrorMessage
+                      ? "text-red-500"
+                      : "text-green-600 dark:text-green-500",
                   )}
                 >
                   {message}
@@ -153,12 +164,10 @@ function ResendVerificationPage() {
               <Button
                 type="submit"
                 className="w-full mt-2"
-                disabled={mutation.isPending || !form.formState.isValid}
+                disabled={isPending || !form.formState.isValid}
               >
-                {mutation.isPending && (
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                )}
-                {mutation.isPending ? "Sending..." : "Resend Verification Email"}
+                {isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+                {isPending ? "Sending..." : "Resend Verification Email"}
               </Button>
 
               <div className="mt-4 text-center text-sm">

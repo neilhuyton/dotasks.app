@@ -1,12 +1,9 @@
-// src/shared/store/authStore.ts
-
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
 import {
   safeGetSession,
   safeSignInWithPassword,
   safeSignUp,
-  safeSignOut,
 } from "@/lib/supabase-utils";
 import { trpcClient } from "@/trpc";
 import type { Session, User } from "@supabase/supabase-js";
@@ -24,6 +21,7 @@ interface AuthState {
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   waitUntilReady: () => Promise<Session | null>;
+  updateUserEmail: (newEmail: string) => void;
 }
 
 export const useAuthStore = create<AuthState>()((set, get) => {
@@ -90,8 +88,14 @@ export const useAuthStore = create<AuthState>()((set, get) => {
         });
         await syncUser(user);
       } catch (err) {
+        console.error("Auth init failed:", err);
         setError(err);
-        set({ isInitialized: true });
+        set({
+          loading: false,
+          isInitialized: true,
+          session: null,
+          user: null,
+        });
       }
     },
 
@@ -111,11 +115,12 @@ export const useAuthStore = create<AuthState>()((set, get) => {
 
         setTimeout(() => {
           unsubscribe();
+          console.warn("waitUntilReady timed out — forcing logged-out state");
           resolve(null);
-        }, 10000);
+        }, 6000);
       }),
 
-    signIn: async (email, password) => {
+    signIn: async (email: string, password: string) => {
       set({ loading: true, error: null });
       try {
         const { data, error } = await safeSignInWithPassword({
@@ -140,7 +145,7 @@ export const useAuthStore = create<AuthState>()((set, get) => {
       }
     },
 
-    signUp: async (email, password) => {
+    signUp: async (email: string, password: string) => {
       set({ loading: true, error: null });
       try {
         const { data, error } = await safeSignUp({
@@ -168,27 +173,35 @@ export const useAuthStore = create<AuthState>()((set, get) => {
 
     signOut: async () => {
       set({ loading: true, error: null });
-      try {
-        const { error } = await safeSignOut();
-        if (error) throw error;
 
-        const ref = new URL(import.meta.env.VITE_SUPABASE_URL!).hostname.split(
-          ".",
-        )[0];
-        localStorage.removeItem(`sb-${ref}-auth-token`);
+      const ref = new URL(import.meta.env.VITE_SUPABASE_URL!).hostname.split(
+        ".",
+      )[0];
+      localStorage.removeItem(`sb-${ref}-auth-token`);
 
-        set({
-          session: null,
-          user: null,
-          loading: false,
-          error: null,
-          isInitialized: true,
-        });
-        getQueryClient().clear();
-        supabase.realtime.setAuth(null);
-      } catch (err) {
-        setError(err);
-      }
+      Object.keys(localStorage)
+        .filter((key) => key.startsWith("sb-") && key.includes("-auth"))
+        .forEach((key) => localStorage.removeItem(key));
+
+      supabase.realtime.setAuth(null);
+
+      supabase.auth.signOut({ scope: "local" }).catch(() => {});
+
+      set({
+        session: null,
+        user: null,
+        loading: false,
+        error: null,
+        isInitialized: true,
+      });
+
+      getQueryClient().clear();
+    },
+
+    updateUserEmail: (newEmail: string) => {
+      set((state) => ({
+        user: state.user ? { ...state.user, email: newEmail } : null,
+      }));
     },
   };
 });

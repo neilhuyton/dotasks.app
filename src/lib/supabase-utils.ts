@@ -22,7 +22,3 @@ export async function safeSignUp(
 ) {
   return supabase.auth.signUp(credentials);
 }
-
-export async function safeSignOut() {
-  return supabase.auth.signOut();
-}

@@ -3,11 +3,17 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTRPC } from "@/trpc";
+import { useBannerStore } from "@/shared/store/bannerStore";
 import { useAuthStore } from "@/shared/store/authStore";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
+import { InstallPWA } from "@/app/components/InstallPWA";
 import { useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
+import ProfileHeader from "@/app/components/ProfileHeader";
+import CurrentEmailSection from "@/app/components/CurrentEmailSection";
+import EmailChangeForm from "@/app/components/EmailChangeForm";
+import PasswordResetForm from "@/app/components/PasswordResetForm";
 import LogoutSection from "@/app/components/LogoutSection";
 
 export const Route = createFileRoute("/_authenticated/profile")({
@@ -15,12 +21,15 @@ export const Route = createFileRoute("/_authenticated/profile")({
 });
 
 function ProfilePage() {
+  const navigate = Route.useNavigate();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { show: showBanner } = useBannerStore();
   const { user, updateUserEmail } = useAuthStore();
   const trpc = useTRPC();
 
   const currentEmail = user?.email ?? "";
+  const hasUser = !!user;
 
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange(
@@ -29,6 +38,11 @@ function ProfilePage() {
           const newEmail = session.user.email;
           if (newEmail !== currentEmail) {
             updateUserEmail(newEmail);
+            showBanner({
+              message: `Your email has been updated to ${newEmail}`,
+              variant: "success",
+              duration: 5000,
+            });
             queryClient.invalidateQueries({
               queryKey: trpc.user.getCurrent.queryKey(),
             });
@@ -38,7 +52,7 @@ function ProfilePage() {
     );
 
     return () => listener.subscription.unsubscribe();
-  }, [currentEmail, updateUserEmail, queryClient, trpc]);
+  }, [currentEmail, updateUserEmail, showBanner, queryClient, trpc]);
 
   const handleClose = () => {
     try {
@@ -49,6 +63,7 @@ function ProfilePage() {
     } catch {
       // treat error as no history → fallback
     }
+    navigate({ to: "/lists", replace: true });
   };
 
   return (
@@ -74,12 +89,21 @@ function ProfilePage() {
 
         <div className="flex flex-1 flex-col items-center justify-center">
           <div className="w-full max-w-2xl space-y-10">
+            <ProfileHeader />
+
             <div className="space-y-10">
-              Hello
+              <CurrentEmailSection
+                currentEmail={currentEmail}
+                hasUser={hasUser}
+              />
+              <EmailChangeForm currentEmail={currentEmail} hasUser={hasUser} />
+              <PasswordResetForm />
               <LogoutSection />
             </div>
           </div>
         </div>
+
+        <InstallPWA />
       </div>
     </div>
   );
