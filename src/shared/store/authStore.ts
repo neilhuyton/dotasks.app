@@ -45,19 +45,22 @@ export const useAuthStore = create<AuthState>()((set, get) => {
     }
   };
 
+  const updateRealtimeAuth = (access_token: string | null) => {
+    supabase.realtime.setAuth(access_token);
+  };
+
   supabase.auth.onAuthStateChange(async (event, session) => {
     const user = session?.user ?? null;
+    updateRealtimeAuth(session?.access_token ?? null);
     set({ session, user, loading: false, error: null, isInitialized: true });
 
     if (["TOKEN_REFRESHED", "SIGNED_IN", "INITIAL_SESSION"].includes(event)) {
       getQueryClient().invalidateQueries();
-      supabase.realtime.setAuth(session?.access_token ?? null);
       await syncUser(user);
     }
 
     if (!session) {
       getQueryClient().clear();
-      supabase.realtime.setAuth(null);
     }
   });
 
@@ -74,6 +77,9 @@ export const useAuthStore = create<AuthState>()((set, get) => {
         const {
           data: { session },
         } = await safeGetSession();
+        if (session?.access_token) {
+          updateRealtimeAuth(session.access_token);
+        }
         if (session) {
           await supabase.auth.setSession({
             access_token: session.access_token,
@@ -117,7 +123,6 @@ export const useAuthStore = create<AuthState>()((set, get) => {
 
         setTimeout(() => {
           unsubscribe();
-          console.warn("waitUntilReady timed out — forcing logged-out state");
           resolve(null);
         }, 6000);
       }),
@@ -132,6 +137,9 @@ export const useAuthStore = create<AuthState>()((set, get) => {
         if (error) throw error;
         const session = data.session;
         const user = data.user ?? null;
+        if (session?.access_token) {
+          updateRealtimeAuth(session.access_token);
+        }
         set({
           session,
           user,
@@ -158,6 +166,9 @@ export const useAuthStore = create<AuthState>()((set, get) => {
         if (error) throw error;
         const session = data.session;
         const user = data.user ?? null;
+        if (session?.access_token) {
+          updateRealtimeAuth(session.access_token);
+        }
         set({
           session,
           user,
@@ -185,7 +196,7 @@ export const useAuthStore = create<AuthState>()((set, get) => {
         .filter((key) => key.startsWith("sb-") && key.includes("-auth"))
         .forEach((key) => localStorage.removeItem(key));
 
-      supabase.realtime.setAuth(null);
+      updateRealtimeAuth(null);
 
       supabase.auth.signOut({ scope: "local" }).catch(() => {});
 
