@@ -40,9 +40,7 @@ export const useAuthStore = create<AuthState>()((set, get) => {
         id: user.id,
         email: user.email,
       });
-    } catch {
-      // empty
-    }
+    } catch {}
   };
 
   const updateRealtimeAuth = (access_token: string | null) => {
