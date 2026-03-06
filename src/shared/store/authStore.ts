@@ -22,6 +22,7 @@ interface AuthState {
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  forceLogout: () => void;
   waitUntilReady: () => Promise<Session | null>;
   updateUserEmail: (newEmail: string) => void;
 }
@@ -209,6 +210,35 @@ export const useAuthStore = create<AuthState>()((set, get) => {
       });
 
       getQueryClient().clear();
+
+      // Safe imperative redirect (no hooks)
+      window.location.href = "/login";
+    },
+
+    forceLogout: () => {
+      updateRealtimeAuth(null);
+      supabase.auth.signOut({ scope: "local" }).catch(() => {});
+
+      const ref = new URL(import.meta.env.VITE_SUPABASE_URL!).hostname.split(
+        ".",
+      )[0];
+      localStorage.removeItem(`sb-${ref}-auth-token`);
+      Object.keys(localStorage)
+        .filter((key) => key.startsWith("sb-") && key.includes("-auth"))
+        .forEach((key) => localStorage.removeItem(key));
+
+      set({
+        session: null,
+        user: null,
+        loading: false,
+        error: new Error("Session expired - please log in again"),
+        isInitialized: true,
+      });
+
+      getQueryClient().clear();
+
+      // Safe imperative redirect (no hooks)
+      window.location.href = "/login";
     },
 
     updateUserEmail: (newEmail: string) => {
