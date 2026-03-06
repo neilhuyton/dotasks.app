@@ -2,6 +2,8 @@
 
 import { router, createCallerFactory, publicProcedure } from "./trpc-base";
 import { userRouter } from "./routers/user";
+import { listRouter } from "./routers/todo/list";
+import { taskRouter } from "./routers/todo/task";
 
 export const healthRouter = router({
   ping: publicProcedure.query(async () => {
@@ -14,6 +16,9 @@ export const healthRouter = router({
 
 export const appRouter = router({
   user: userRouter,
+
+  list: listRouter,
+  task: taskRouter,
 
   health: healthRouter,
 });

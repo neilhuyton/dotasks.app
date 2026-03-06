@@ -1,11 +1,9 @@
 // src/app/Root.tsx
-
 import { useEffect } from "react";
 import { RouterProvider } from "@tanstack/react-router";
 
 import { router } from "@/router";
 import { ThemeProvider } from "./components/ThemeProvider";
-
 import { TRPCProvider } from "@/trpc";
 import { trpcClient } from "@/trpc";
 import { getQueryClient } from "@/queryClient";

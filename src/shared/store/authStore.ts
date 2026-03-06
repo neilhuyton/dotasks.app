@@ -2,26 +2,37 @@
 
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
+import {
+  safeGetSession,
+  safeSignInWithPassword,
+  safeSignUp,
+  safeSignOut,
+} from "@/lib/supabase-utils";
+import { trpcClient } from "@/trpc";
 import type { Session, User } from "@supabase/supabase-js";
 import { getQueryClient } from "@/queryClient";
-import { trpcClient } from "@/trpc";
 
-export interface AuthState {
+interface AuthState {
   session: Session | null;
   user: User | null;
   loading: boolean;
   error: Error | null;
+  isInitialized: boolean;
 
   initialize: () => Promise<void>;
-  signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
-  updateUserEmail: (newEmail: string) => void;
-
-  supabase: typeof supabase;
+  waitUntilReady: () => Promise<Session | null>;
 }
 
-export const useAuthStore = create<AuthState>()((set) => {
+export const useAuthStore = create<AuthState>()((set, get) => {
+  const setError = (err: unknown) =>
+    set({
+      error: err instanceof Error ? err : new Error(String(err)),
+      loading: false,
+    });
+
   const syncUser = async (user: User | null) => {
     if (!user?.id || !user.email) return;
     try {
@@ -30,28 +41,23 @@ export const useAuthStore = create<AuthState>()((set) => {
         email: user.email,
       });
     } catch {
-      // silently ignore user sync failures — don't block auth
+      // empty
     }
-  };
-
-  const clearCacheOnSignOut = () => {
-    getQueryClient().clear();
   };
 
   supabase.auth.onAuthStateChange(async (event, session) => {
     const user = session?.user ?? null;
+    set({ session, user, loading: false, error: null, isInitialized: true });
 
-    set({ session, user, loading: false, error: null });
-
-    if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") {
+    if (["TOKEN_REFRESHED", "SIGNED_IN", "INITIAL_SESSION"].includes(event)) {
       getQueryClient().invalidateQueries();
       supabase.realtime.setAuth(session?.access_token ?? null);
+      await syncUser(user);
     }
 
-    await syncUser(user);
-
     if (!session) {
-      clearCacheOnSignOut();
+      getQueryClient().clear();
+      supabase.realtime.setAuth(null);
     }
   });
 
@@ -60,106 +66,129 @@ export const useAuthStore = create<AuthState>()((set) => {
     user: null,
     loading: true,
     error: null,
-
-    supabase,
+    isInitialized: false,
 
     initialize: async () => {
-      set({ loading: true, error: null });
+      set({ loading: true, error: null, isInitialized: false });
       try {
-        await supabase.auth.getSession(); // triggers onAuthStateChange → INITIAL_SESSION
-      } catch (err) {
-        // storage read or network failure during initial session fetch
+        const {
+          data: { session },
+        } = await safeGetSession();
+        if (session) {
+          await supabase.auth.setSession({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+          });
+        }
+        const user = session?.user ?? null;
         set({
+          session,
+          user,
           loading: false,
-          error: err instanceof Error ? err : new Error("Failed to initialize auth"),
+          error: null,
+          isInitialized: true,
         });
+        await syncUser(user);
+      } catch (err) {
+        setError(err);
+        set({ isInitialized: true });
       }
     },
 
-    signUp: async (email: string, password: string) => {
-      set({ loading: true, error: null });
-      try {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/welcome`,
+    waitUntilReady: () =>
+      new Promise<Session | null>((resolve) => {
+        const { isInitialized, session } = get();
+        if (isInitialized) return resolve(session);
+
+        const unsubscribe = useAuthStore.subscribe(
+          ({ isInitialized, session }) => {
+            if (isInitialized) {
+              unsubscribe();
+              resolve(session);
+            }
           },
-        });
-        if (error) throw error;
+        );
 
-        const user = data.user ?? null;
+        setTimeout(() => {
+          unsubscribe();
+          resolve(null);
+        }, 10000);
+      }),
 
-        set({
-          session: data.session,
-          user,
-          loading: false,
-          error: null,
-        });
-
-        await syncUser(user);
-        return { error: null };
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error("Signup failed");
-        set({ loading: false, error });
-        return { error };
-      }
-    },
-
-    signIn: async (email: string, password: string) => {
+    signIn: async (email, password) => {
       set({ loading: true, error: null });
       try {
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await safeSignInWithPassword({
           email,
           password,
         });
         if (error) throw error;
-
+        const session = data.session;
         const user = data.user ?? null;
-
         set({
-          session: data.session,
+          session,
           user,
           loading: false,
           error: null,
+          isInitialized: true,
         });
-
         await syncUser(user);
         return { error: null };
       } catch (err) {
-        const error = err instanceof Error ? err : new Error("Sign in failed");
-        set({ loading: false, error });
-        return { error };
+        setError(err);
+        return { error: get().error };
+      }
+    },
+
+    signUp: async (email, password) => {
+      set({ loading: true, error: null });
+      try {
+        const { data, error } = await safeSignUp({
+          email,
+          password,
+          options: { emailRedirectTo: `${window.location.origin}/welcome` },
+        });
+        if (error) throw error;
+        const session = data.session;
+        const user = data.user ?? null;
+        set({
+          session,
+          user,
+          loading: false,
+          error: null,
+          isInitialized: true,
+        });
+        await syncUser(user);
+        return { error: null };
+      } catch (err) {
+        setError(err);
+        return { error: get().error };
       }
     },
 
     signOut: async () => {
       set({ loading: true, error: null });
       try {
-        const { error } = await supabase.auth.signOut();
+        const { error } = await safeSignOut();
         if (error) throw error;
 
-        const projectRef = new URL(import.meta.env.VITE_SUPABASE_URL!).hostname.split(".")[0];
-        localStorage.removeItem(`sb-${projectRef}-auth-token`);
+        const ref = new URL(import.meta.env.VITE_SUPABASE_URL!).hostname.split(
+          ".",
+        )[0];
+        localStorage.removeItem(`sb-${ref}-auth-token`);
 
         set({
           session: null,
           user: null,
           loading: false,
           error: null,
+          isInitialized: true,
         });
-
-        clearCacheOnSignOut();
+        getQueryClient().clear();
+        supabase.realtime.setAuth(null);
       } catch (err) {
-        const error = err instanceof Error ? err : new Error("Sign out failed");
-        set({ loading: false, error });
+        setError(err);
       }
-    },
-
-    updateUserEmail: (newEmail: string) => {
-      set((state) => ({
-        user: state.user ? { ...state.user, email: newEmail } : null,
-      }));
     },
   };
 });

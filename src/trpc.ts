@@ -1,5 +1,4 @@
 // src/trpc.ts
-
 import { createTRPCClient, httpLink } from "@trpc/client";
 import type { TRPCLink } from "@trpc/client";
 import { TRPCClientError } from "@trpc/client";
@@ -10,79 +9,94 @@ import {
 } from "@trpc/tanstack-react-query";
 import type { AppRouter } from "../server/trpc";
 
-import { supabase } from "@/lib/supabase";
+import { safeGetSession, safeRefreshSession } from "@/lib/supabase-utils";
 import { getQueryClient } from "@/queryClient";
+import { useAuthStore } from "@/shared/store/authStore";
+
+let isRefreshing = false;
+let refreshPromise: Promise<unknown> | null = null;
+
+const dedupedRefresh = (): Promise<unknown> => {
+  if (isRefreshing && refreshPromise) return refreshPromise;
+
+  isRefreshing = true;
+  refreshPromise = safeRefreshSession().finally(() => {
+    isRefreshing = false;
+    refreshPromise = null;
+  });
+  return refreshPromise;
+};
 
 const refreshOn401Link = (): TRPCLink<AppRouter> => {
   return () =>
     ({ op, next }) =>
       observable((observer) => {
-        const subscription = next(op).subscribe({
-          next(result) {
-            observer.next(result);
-          },
-          error(err) {
+        const sub = next(op).subscribe({
+          next: (res) => observer.next(res),
+          error: (err) => {
             if (
               err instanceof TRPCClientError &&
               (err.data?.code === "UNAUTHORIZED" ||
                 err.message?.includes("UNAUTHORIZED") ||
                 err.data?.httpStatus === 401)
             ) {
-              supabase.auth
-                .refreshSession()
-                .then(({ data, error: refreshError }) => {
-                  if (refreshError || !data.session) {
-                    observer.error(err);
-                    return;
-                  }
-
-                  const retrySub = next(op).subscribe({
-                    next: (res) => observer.next(res),
-                    error: (e) => observer.error(e),
-                    complete: () => observer.complete(),
-                  });
-
-                  return () => retrySub.unsubscribe();
-                })
-                .catch(() => {
-                  observer.error(err);
-                });
+              dedupedRefresh()
+                .then(() => next(op).subscribe(observer))
+                .catch(() => observer.error(err));
             } else {
               observer.error(err);
             }
           },
-          complete() {
-            observer.complete();
-          },
+          complete: () => observer.complete(),
         });
-
-        return () => subscription.unsubscribe();
+        return () => sub.unsubscribe();
       });
 };
 
-export function createTrpcClient() {
-  const isTest = import.meta.env.MODE === "test";
-  const baseUrl = isTest ? "http://localhost:8888" : "";
+const REFRESH_THRESHOLD_SECONDS = 120;
 
+const needsRefresh = (expiresAt: number | null | undefined): boolean => {
+  if (!expiresAt) return true;
+  const now = Math.floor(Date.now() / 1000);
+  return expiresAt - now < REFRESH_THRESHOLD_SECONDS;
+};
+
+const getFreshAccessToken = async (): Promise<string | null> => {
+  const storeSession = useAuthStore.getState().session;
+
+  if (storeSession?.access_token) {
+    if (needsRefresh(storeSession.expires_at)) {
+      await safeRefreshSession();
+      return useAuthStore.getState().session?.access_token ?? null;
+    }
+    return storeSession.access_token;
+  }
+
+  const {
+    data: { session },
+  } = await safeGetSession();
+  if (!session?.access_token) return null;
+
+  if (needsRefresh(session.expires_at)) {
+    const { data: refreshed } = await safeRefreshSession();
+    return refreshed.session?.access_token ?? null;
+  }
+
+  return session.access_token;
+};
+
+export function createTrpcClient() {
   return createTRPCClient<AppRouter>({
     links: [
       refreshOn401Link(),
-
       httpLink({
-        url: `${baseUrl}/trpc`,
-
+        url: "/trpc",
         async headers() {
-          const sessionPromise = supabase.auth.getSession();
-
-          const timeoutPromise = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("getSession timeout")), 5000)
-          );
-
           try {
-            const result = await Promise.race([sessionPromise, timeoutPromise]);
-            const token = result.data?.session?.access_token;
+            const token = await getFreshAccessToken();
             return token ? { Authorization: `Bearer ${token}` } : {};
-          } catch {
+          } catch (err) {
+            console.warn("[tRPC headers] Failed to get token", err);
             return {};
           }
         },

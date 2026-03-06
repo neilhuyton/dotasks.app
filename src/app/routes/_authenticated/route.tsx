@@ -1,29 +1,12 @@
 // src/app/routes/_authenticated/route.tsx
 
 import { createFileRoute, redirect, Outlet } from "@tanstack/react-router";
-import { useAuthStore } from "@/shared/store/authStore";
 import { ThemeToggle } from "@/app/components/ThemeToggle";
 import { ColorThemeSelector } from "@/app/components/ColorThemeSelector";
-import { useEffect } from "react";
 import { Suspense } from "react";
+import { useAuthStore } from "@/shared/store/authStore";
 
 const AuthenticatedLayout = () => {
-  const { initialize, loading, user } = useAuthStore();
-
-  useEffect(() => {
-    if (!user && !loading) {
-      initialize();
-    }
-  }, [initialize, user, loading]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        Loading session...
-      </div>
-    );
-  }
-
   return (
     <Suspense
       fallback={
@@ -63,9 +46,7 @@ const AuthenticatedLayout = () => {
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: ({ location }) => {
-    const { user, loading } = useAuthStore.getState();
-
-    if (loading) return;
+    const { user } = useAuthStore.getState();
 
     if (!user) {
       throw redirect({
