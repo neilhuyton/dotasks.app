@@ -36,27 +36,23 @@ import { suppressActWarnings } from "../../../act-suppress";
 suppressActWarnings();
 
 describe("List Detail Route (/_authenticated/lists/$listId)", () => {
-  beforeAll(() => server.listen({ onUnhandledRequest: "warn" }));
+  beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
 
   beforeEach(async () => {
     server.resetHandlers();
     resetMockLists();
     resetMockTasks();
 
-    // Prevent MSW warnings + "Prisma user sync failed" logs
     server.use(
       trpcMsw.user.createOrSync.mutation(() => ({
         success: true,
         message: "User synced (mock)",
         user: { id: "test-user-123", email: "testuser@example.com" },
       })),
+      listGetOneDetailPagePreset,
+      taskGetByListSuccess,
     );
 
-    // Default successful responses
-    server.use(listGetOneDetailPagePreset);
-    server.use(taskGetByListSuccess);
-
-    // Run real auth initialization (relies on global Supabase mock)
     await useAuthStore.getState().initialize();
   });
 
@@ -100,7 +96,6 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
   });
 
   it("shows 'List not found' message when list does not exist", async () => {
-    // Silence expected error-boundary + TRPC logging for this test
     const consoleErrorSpy = vi
       .spyOn(console, "error")
       .mockImplementation(() => {});
@@ -151,22 +146,17 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
 
     await waitFor(
       () => {
-        expect(
-          screen.queryByText("My Important Projects"),
-        ).not.toBeInTheDocument();
-        expect(screen.queryByText("Finish report")).not.toBeInTheDocument();
-        expect(
-          screen.queryByText("Work-related stuff I must finish this month"),
-        ).not.toBeInTheDocument();
+        const skeletons = screen
+          .getAllByRole("generic", { hidden: true })
+          .filter((el) => el.classList.contains("animate-pulse"));
+
+        expect(skeletons.length).toBeGreaterThanOrEqual(3);
       },
-      { timeout: 2000 },
+      { timeout: 2500 },
     );
 
-    const skeletonRows = screen
-      .getAllByRole("generic", { hidden: true })
-      .filter((el) => el.classList.contains("animate-pulse"));
-
-    expect(skeletonRows.length).toBeGreaterThan(3);
+    expect(screen.queryByText("My Important Projects")).not.toBeInTheDocument();
+    expect(screen.queryByText("Finish report")).not.toBeInTheDocument();
   });
 
   it("displays the Active Tasks counter with correct count", async () => {

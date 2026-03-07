@@ -37,7 +37,7 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
   const LIST_TITLE = "My Important Projects";
 
   beforeAll(() => {
-    server.listen({ onUnhandledRequest: "warn" });
+    server.listen({ onUnhandledRequest: "bypass" });
   });
 
   beforeEach(async () => {
@@ -51,9 +51,6 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
         message: "User synced (mock)",
         user: { id: "test-user-123", email: "testuser@example.com" },
       })),
-    );
-
-    server.use(
       listGetOneDetailPagePreset,
       listGetAllHandler,
       listDeleteHandler,
@@ -82,9 +79,13 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
     });
 
     if (options.waitForContent) {
-      await screen.findByRole("heading", {
-        name: new RegExp(`Delete "${LIST_TITLE}"`, "i"),
-      }, { timeout: 5000 });
+      await screen.findByRole(
+        "heading",
+        {
+          name: new RegExp(`Delete "${LIST_TITLE}"`, "i"),
+        },
+        { timeout: 5000 },
+      );
     }
 
     return result;
@@ -100,7 +101,9 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
       }),
     ).toBeInTheDocument();
 
-    expect(screen.getByText(/This action cannot be undone/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/This action cannot be undone/i),
+    ).toBeInTheDocument();
 
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
 
@@ -148,7 +151,7 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
 
     expect(navigateSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        to: "/lists/$listId",           // ← this is correct (route pattern)
+        to: "/lists/$listId",
         params: { listId: TEST_LIST_ID },
         replace: true,
       }),
@@ -166,7 +169,7 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
 
     expect(navigateSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        to: "/lists/$listId",           // ← this is correct (route pattern)
+        to: "/lists/$listId",
         params: { listId: TEST_LIST_ID },
         replace: true,
       }),

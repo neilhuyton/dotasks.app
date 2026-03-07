@@ -20,7 +20,11 @@ export function RouteError({
 }: RouteErrorProps) {
   const errorMessage =
     message ||
-    (error instanceof Error ? error.message : "An unexpected error occurred");
+    (error instanceof Error
+      ? error.message
+      : error != null
+        ? String(error)
+        : "An unexpected error occurred");
 
   return (
     <div className="min-h-dvh flex flex-col items-center justify-center p-6 text-center">

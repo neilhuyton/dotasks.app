@@ -37,7 +37,7 @@ describe("Edit List Page (/_authenticated/lists/$listId/edit)", () => {
   const ORIGINAL_TITLE = "My Important Projects";
 
   beforeAll(() => {
-    server.listen({ onUnhandledRequest: "warn" });
+    server.listen({ onUnhandledRequest: "bypass" });
   });
 
   beforeEach(async () => {
@@ -45,24 +45,18 @@ describe("Edit List Page (/_authenticated/lists/$listId/edit)", () => {
     resetMockLists();
     prepareDetailPageTestList();
 
-    // Prevent MSW warnings + "Prisma user sync failed" logs
     server.use(
       trpcMsw.user.createOrSync.mutation(() => ({
         success: true,
         message: "User synced (mock)",
         user: { id: "test-user-123", email: "testuser@example.com" },
       })),
-    );
-
-    // Default successful handlers
-    server.use(
       listGetOneDetailPagePreset,
       listGetAllHandler,
       listUpdateHandler,
       trpcMsw.task.getByList.query(() => []),
     );
 
-    // Run real auth initialization (uses global Supabase mock)
     await useAuthStore.getState().initialize();
   });
 
@@ -79,8 +73,6 @@ describe("Edit List Page (/_authenticated/lists/$listId/edit)", () => {
     listId = TEST_LIST_ID,
     options: { waitForForm?: boolean } = { waitForForm: true },
   ) {
-    server.use(listGetOneDetailPagePreset);
-
     const result = renderWithProviders({
       initialEntries: [`/lists/${listId}/edit`],
     });

@@ -27,7 +27,7 @@ suppressActWarnings();
 describe("Completed Tasks Page (/_authenticated/lists/$listId/tasks/completed)", () => {
   const TEST_LIST_ID = "list-abc-123";
 
-  beforeAll(() => server.listen({ onUnhandledRequest: "warn" }));
+  beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
 
   beforeEach(async () => {
     server.resetHandlers();
@@ -38,11 +38,7 @@ describe("Completed Tasks Page (/_authenticated/lists/$listId/tasks/completed)",
         message: "User synced (mock)",
         user: { id: "test-user-123", email: "testuser@example.com" },
       })),
-    );
-
-    server.use(listGetOneDetailPagePreset);
-
-    server.use(
+      listGetOneDetailPagePreset,
       trpcMsw.task.getByList.query(({ input }) => {
         if (input.listId !== TEST_LIST_ID) {
           throw new TRPCError({
@@ -91,7 +87,9 @@ describe("Completed Tasks Page (/_authenticated/lists/$listId/tasks/completed)",
     if (options.waitForContent) {
       await waitFor(
         () => {
-          expect(screen.getByRole("heading", { name: "Completed Tasks" })).toBeInTheDocument();
+          expect(
+            screen.getByRole("heading", { name: "Completed Tasks" }),
+          ).toBeInTheDocument();
         },
         { timeout: 4000 },
       );
