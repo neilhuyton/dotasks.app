@@ -34,16 +34,30 @@ const refreshOn401Link = (): TRPCLink<AppRouter> => {
       observable((observer) => {
         const sub = next(op).subscribe({
           next: (res) => observer.next(res),
-          error: (err) => {
+          error: async (err) => {
             if (
               err instanceof TRPCClientError &&
               (err.data?.code === "UNAUTHORIZED" ||
                 err.message?.includes("UNAUTHORIZED") ||
                 err.data?.httpStatus === 401)
             ) {
-              dedupedRefresh()
-                .then(() => next(op).subscribe(observer))
-                .catch(() => observer.error(err));
+              try {
+                await dedupedRefresh();
+                // Refresh succeeded → retry original request
+                next(op).subscribe(observer);
+              } catch (refreshErr) {
+                // Refresh failed → this is the critical case: force logout
+                console.error(
+                  "Token refresh failed → forcing logout",
+                  refreshErr,
+                );
+
+                // Clear auth & queries
+                useAuthStore.getState().forceLogout();
+
+                // Let the original error propagate so UI shows it, but user is logged out
+                observer.error(err);
+              }
             } else {
               observer.error(err);
             }
