@@ -55,13 +55,11 @@ test.describe('Register Functionality', () => {
       registerButton.click(),
     ]);
 
-    // Check message within 2 seconds to avoid navigation
     await expect(page.getByTestId('register-message')).toHaveText(
       'Registration successful! Please check your email to verify your account.!',
-      { timeout: 2000 } // Reduced to ensure check before navigation
+      { timeout: 2000 }
     );
 
-    // Wait for navigation to /login triggered by setTimeout
     await page.waitForURL('**/login', { timeout: 5000 });
 
     await expect(page.getByTestId('login-form')).toBeVisible({ timeout: 10000 });

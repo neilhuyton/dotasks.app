@@ -48,7 +48,6 @@ describe("Netlify Function: trpc", () => {
       http.post(TRPC_ENDPOINT, async ({ request }) => {
         const body = (await request.json()) as unknown;
 
-        // Guard + type assertion
         if (!body || typeof body !== "object" || !("json" in body)) {
           return HttpResponse.json(
             {

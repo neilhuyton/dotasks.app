@@ -20,16 +20,16 @@ export function ThemeToggle() {
           variant="outline"
           size="icon"
           className="
-            h-8 w-8               // smaller overall button (was default ~10x10)
-            p-0                   // remove extra padding inside button
-            border-border/70      // slightly softer border (optional, looks cleaner when small)
+            h-8 w-8            
+            p-0                 
+            border-border/70      
             hover:bg-muted/80
           "
           data-testid="theme-toggle"
         >
           <Sun
             className="
-              h-4 w-4               // smaller icon (was 1.2rem ≈19px)
+              h-4 w-4              
               rotate-0 scale-100 
               transition-all 
               dark:-rotate-90 dark:scale-0
@@ -38,7 +38,7 @@ export function ThemeToggle() {
           <Moon
             className="
               absolute 
-              h-4 w-4               // same size as Sun
+              h-4 w-4              
               rotate-90 scale-0 
               transition-all 
               dark:rotate-0 dark:scale-100
