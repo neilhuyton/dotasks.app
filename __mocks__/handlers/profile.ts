@@ -5,10 +5,6 @@ import { http, HttpResponse } from "msw";
 
 export const TEST_USER_ID = "00000000-0000-0000-0000-000000000001";
 
-// ────────────────────────────────────────────────
-// tRPC handlers
-// ────────────────────────────────────────────────
-
 export const getCurrentUserHandler = trpcMsw.user.getCurrent.query(() => {
   return {
     id: TEST_USER_ID,
@@ -48,10 +44,6 @@ export const userCreateOrSyncHandler = trpcMsw.user.createOrSync.mutation(() => 
   };
 });
 
-// ────────────────────────────────────────────────
-// Supabase handlers
-// ────────────────────────────────────────────────
-
 export const supabaseUpdateEmailSuccess = http.put(
   "*/auth/v1/user",
   async ({ request }) => {
@@ -90,7 +82,7 @@ export const supabaseUpdateEmailTaken = http.put(
 );
 
 export const supabaseUpdateEmailDelayed = http.put("*/auth/v1/user", async () => {
-  await new Promise((r) => setTimeout(r, 1400)); // ← increased from 1000 → more reliable in CI
+  await new Promise((r) => setTimeout(r, 1400));
   return HttpResponse.json(
     {
       id: TEST_USER_ID,

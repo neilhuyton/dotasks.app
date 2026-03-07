@@ -3,10 +3,6 @@
 import { TRPCError } from "@trpc/server";
 import { trpcMsw } from "../trpcMsw";
 
-// ──────────────────────────────────────────────
-// Types
-// ──────────────────────────────────────────────
-
 type MockList = {
   id: string;
   userId: string;
@@ -34,10 +30,6 @@ type ListUpdateInput = Partial<ListCreateInput> & {
   order?: number;
   isPinned?: boolean;
 };
-
-// ──────────────────────────────────────────────
-// In-memory storage
-// ──────────────────────────────────────────────
 
 let mockLists: MockList[] = [];
 
@@ -83,10 +75,6 @@ export function getMockLists(): MockList[] {
   return [...mockLists];
 }
 
-// ──────────────────────────────────────────────
-// Preset for detail page tests
-// ──────────────────────────────────────────────
-
 export const TEST_LIST_DETAIL_ID = "list-abc-123";
 
 const detailPageListPreset: Omit<MockList, "createdAt" | "updatedAt"> = {
@@ -114,10 +102,6 @@ function addDetailPageListToMock(): void {
 export function prepareDetailPageTestList(): void {
   addDetailPageListToMock();
 }
-
-// ──────────────────────────────────────────────
-// Shared utilities
-// ──────────────────────────────────────────────
 
 function formatListForResponse(list: MockList) {
   return {
@@ -172,10 +156,6 @@ function updateListInMock(id: string, updates: ListUpdateInput): MockList {
   return updated;
 }
 
-// ──────────────────────────────────────────────
-// Handlers – getAll
-// ──────────────────────────────────────────────
-
 export const listGetAllHandler = trpcMsw.list.getAll.query(() => {
   return mockLists.map(formatListForResponse);
 });
@@ -195,10 +175,6 @@ export const listGetAllDelayedHandler = trpcMsw.list.getAll.query(async () => {
   await new Promise((r) => setTimeout(r, 1200));
   return mockLists.map(formatListForResponse);
 });
-
-// ──────────────────────────────────────────────
-// Handlers – getOne
-// ──────────────────────────────────────────────
 
 export const listGetOneDetailPagePreset = trpcMsw.list.getOne.query(
   ({ input }) => {
@@ -224,7 +200,7 @@ export const listGetOneDetailPagePreset = trpcMsw.list.getOne.query(
 
     return {
       ...formatListForResponse(list),
-      _count: { tasks: 1 }, // detail-page specific
+      _count: { tasks: 1 },
     };
   },
 );
@@ -249,10 +225,6 @@ export const listGetOneNotFoundHandler = trpcMsw.list.getOne.query(() => {
     message: "List not found or you don't have access.",
   });
 });
-
-// ──────────────────────────────────────────────
-// Handlers – create
-// ──────────────────────────────────────────────
 
 export const listCreateHandler = trpcMsw.list.create.mutation(({ input }) => {
   const data = Array.isArray(input) ? input[0] : input;
@@ -289,10 +261,6 @@ export const listCreateDelayedHandler = trpcMsw.list.create.mutation(
     return formatListForResponse(newList);
   },
 );
-
-// ──────────────────────────────────────────────
-// Handlers – update
-// ──────────────────────────────────────────────
 
 export const listUpdateHandler = trpcMsw.list.update.mutation(({ input }) => {
   const data = Array.isArray(input) ? input[0] : input;
@@ -351,20 +319,12 @@ export const listUpdateNotFoundHandler = trpcMsw.list.update.mutation(
   },
 );
 
-// ──────────────────────────────────────────────
-// Handlers – delete (placeholder)
-// ──────────────────────────────────────────────
-
 export const listDeleteHandler = trpcMsw.list.delete.mutation(() => {
   throw new TRPCError({
     code: "NOT_IMPLEMENTED",
     message: "Delete not implemented in mock yet",
   });
 });
-
-// ──────────────────────────────────────────────
-// All exported handlers (for convenience)
-// ──────────────────────────────────────────────
 
 export const listHandlers = [
   listGetAllHandler,

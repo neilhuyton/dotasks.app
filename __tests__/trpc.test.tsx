@@ -46,9 +46,6 @@ describe("trpc setup", () => {
 
     expect(trpcClient).toBeDefined();
     expect(typeof trpcClient).toBe("object");
-
-    // No deep assertions on lazy properties here
-    // This test only confirms export + basic type
   });
 
   it("conditionally uses httpLink in test mode", async () => {
@@ -71,18 +68,5 @@ describe("trpc setup", () => {
 
     expect(client).toBeDefined();
     expect(typeof client).toBe("object");
-
-    // If you want to verify the link choice more precisely,
-    // mock @trpc/client's httpLink / httpBatchLink imports:
-    //
-    // vi.doMock("@trpc/client", () => ({
-    //   httpLink: vi.fn().mockReturnValue({ type: "httpLink" }),
-    //   httpBatchLink: vi.fn().mockReturnValue({ type: "httpBatchLink" }),
-    //   createTRPCClient: vi.fn(),
-    // }));
-    //
-    // Then assert:
-    // expect(httpLink).toHaveBeenCalled();
-    // expect(httpBatchLink).not.toHaveBeenCalled();
   });
 });

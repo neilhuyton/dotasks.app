@@ -3,7 +3,6 @@
 import { TRPCError } from "@trpc/server";
 import { trpcMsw } from "../trpcMsw";
 
-// In-memory mock storage matching Prisma Task model exactly
 let mockTasks: {
   id: string;
   listId: string;
@@ -85,7 +84,6 @@ export function getMockTasks() {
   return [...mockTasks];
 }
 
-// Helper to quickly pin/unpin a task for tests
 export function setTaskPinned(taskId: string, pinned: boolean = true) {
   const task = mockTasks.find((t) => t.id === taskId);
   if (task) {
@@ -93,10 +91,6 @@ export function setTaskPinned(taskId: string, pinned: boolean = true) {
     task.updatedAt = new Date(); // simulate update
   }
 }
-
-// ────────────────────────────────────────────────
-// Input shapes
-// ────────────────────────────────────────────────
 
 type TaskCreateInput = {
   listId: string;
@@ -123,9 +117,6 @@ type PinToggleInput = {
   id: string;
 };
 
-// ────────────────────────────────────────────────
-// Shared resolvers
-// ────────────────────────────────────────────────
 
 const createTaskResolver = ({ input }: { input: TaskCreateInput }) => {
   const now = new Date();
@@ -262,9 +253,6 @@ const deleteTaskResolver = ({ input }: { input: { id: string } }) => {
   };
 };
 
-// ────────────────────────────────────────────────
-// CREATE handlers
-// ────────────────────────────────────────────────
 
 export const taskCreateHandler =
   trpcMsw.task.create.mutation(createTaskResolver);
@@ -276,9 +264,6 @@ export const delayedTaskCreateHandler = trpcMsw.task.create.mutation(
   },
 );
 
-// ────────────────────────────────────────────────
-// UPDATE handlers
-// ────────────────────────────────────────────────
 
 export const taskUpdateHandler =
   trpcMsw.task.update.mutation(taskUpdateResolver);
@@ -297,9 +282,6 @@ export const taskUpdateAlwaysFails = trpcMsw.task.update.mutation(() => {
   });
 });
 
-// ────────────────────────────────────────────────
-// DELETE handlers
-// ────────────────────────────────────────────────
 
 export const taskDeleteSuccess =
   trpcMsw.task.delete.mutation(deleteTaskResolver);
@@ -311,9 +293,6 @@ export const delayedTaskDeleteHandler = trpcMsw.task.delete.mutation(
   },
 );
 
-// ────────────────────────────────────────────────
-// GET BY LIST handlers
-// ────────────────────────────────────────────────
 
 export const taskGetByListSuccess = trpcMsw.task.getByList.query(
   ({ input }) => {
@@ -369,9 +348,6 @@ export const taskGetByListLoading = trpcMsw.task.getByList.query(async () => {
   return [];
 });
 
-// ────────────────────────────────────────────────
-// PIN TOGGLE handlers
-// ────────────────────────────────────────────────
 
 export const taskPinToggleSuccess =
   trpcMsw.task.pinToggle.mutation(pinToggleResolver);
@@ -379,7 +355,6 @@ export const taskPinToggleSuccess =
 export const delayedTaskPinToggle = trpcMsw.task.pinToggle.mutation(
   async () => {
     await new Promise((resolve) => setTimeout(resolve, 3000));
-    // We simulate success – use a dummy input since we don't need the real one here
     return pinToggleResolver({ input: { id: "t-real-1" } });
   },
 );
@@ -416,10 +391,6 @@ export const taskGetByListOnlyCompleted = trpcMsw.task.getByList.query(
       }));
   },
 );
-
-// ────────────────────────────────────────────────
-// Handler groups
-// ────────────────────────────────────────────────
 
 export const taskHandlers = [
   taskGetByListSuccess,

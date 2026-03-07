@@ -64,7 +64,7 @@ export function TaskActionsDropdown({
           {!task.isCompleted && (
             <DropdownMenuItem
               onClick={handleToggleCurrent}
-              disabled={isPending} // ← disable action during pending
+              disabled={isPending}
               className={cn(
                 "cursor-pointer",
                 task.isCurrent &&

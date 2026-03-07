@@ -22,7 +22,6 @@ export function ColorThemeSelector() {
     return saved && colorThemes[saved] ? saved : "blue";
   });
 
-  // Apply theme and persist whenever it changes
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, colorTheme);
     document.documentElement.setAttribute("data-color-theme", colorTheme);

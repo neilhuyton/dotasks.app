@@ -69,9 +69,6 @@ test.describe("Login Functionality", () => {
     await expect(page.getByTestId("login-form")).not.toBeVisible({
       timeout: 10000,
     });
-    // await expect(page.getByRole("link", { name: "" })).toBeVisible({
-    //   timeout: 10000,
-    // });
   });
 
   test("should display error message with invalid credentials", async ({

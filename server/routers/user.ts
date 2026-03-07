@@ -93,7 +93,6 @@ export const userRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { id, email } = input;
 
-      // Check if already exists (idempotent)
       let user = await ctx.prisma.user.findUnique({
         where: { id },
         select: { id: true, email: true },

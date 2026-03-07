@@ -6,9 +6,6 @@ import { TRPCError } from "@trpc/server";
 import { Prisma } from "@prisma/client";
 
 export const taskRouter = router({
-  // ──────────────────────────────────────────────
-  // getOne – Fetch a single task by ID
-  // ──────────────────────────────────────────────
   getOne: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
@@ -82,7 +79,6 @@ export const taskRouter = router({
         throw new TRPCError({ code: "FORBIDDEN" });
       }
 
-      // Find the current HIGHEST order in this list
       const lastTask = await ctx.prisma.task.findFirst({
         where: { listId: input.listId },
         select: { order: true },
@@ -139,7 +135,6 @@ export const taskRouter = router({
 
       const finalData: Prisma.TaskUpdateInput = { ...inputData };
 
-      // Enforce: completed tasks cannot be pinned
       const isOrWillBeCompleted =
         inputData.isCompleted === true ||
         (inputData.isCompleted === undefined && task.isCompleted);
@@ -193,8 +188,6 @@ export const taskRouter = router({
       if (willBeCompleted) {
         updateData.isPinned = false;
         updateData.isCurrent = false;
-        // Optional: push completed tasks toward the bottom
-        // updateData.order = 999999;
       }
 
       return ctx.prisma.task.update({
@@ -260,7 +253,6 @@ export const taskRouter = router({
       }
 
       return ctx.prisma.$transaction(async (tx) => {
-        // Clear current status from all other tasks in the list
         await tx.task.updateMany({
           where: {
             listId: input.listId,
@@ -270,12 +262,11 @@ export const taskRouter = router({
           data: { isCurrent: false },
         });
 
-        // Set the selected task as current and give it the lowest order
         return tx.task.update({
           where: { id: input.id },
           data: {
             isCurrent: true,
-            order: -1, // Ensures it appears at the very top
+            order: -1,
           },
         });
       });

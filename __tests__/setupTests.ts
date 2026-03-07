@@ -109,7 +109,7 @@ vi.mock("@/lib/supabase", () => {
       auth: mockAuth,
       realtime: { setAuth: vi.fn() },
       channel: vi.fn().mockReturnValue(mockChannel),
-      removeChannel: vi.fn().mockResolvedValue(undefined), // returns Promise
+      removeChannel: vi.fn().mockResolvedValue(undefined),
       removeAllChannels: vi.fn().mockResolvedValue(undefined),
     },
   };

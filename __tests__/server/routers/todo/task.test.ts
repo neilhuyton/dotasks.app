@@ -114,7 +114,7 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
-        order: 42,               // ← added
+        order: 42,           
         isArchived: false,
         isPinned: false,
         createdAt: new Date(),
@@ -144,7 +144,7 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
-        order: 7,                // ← added
+        order: 7,                
         isArchived: false,
         isPinned: false,
         createdAt: new Date(),
@@ -195,7 +195,7 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
-        order: 10,               // ← added
+        order: 10,               
         isArchived: false,
         isPinned: false,
         createdAt: new Date(),
@@ -248,7 +248,7 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
-        order: 10,               // ← added
+        order: 10,               
         isArchived: false,
         isPinned: false,
         createdAt: new Date(),
@@ -312,7 +312,7 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
-        order: 5,                // ← added
+        order: 5,                
         isArchived: false,
         isPinned: false,
         createdAt: new Date(),
@@ -351,7 +351,7 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
-        order: 3,                // ← added
+        order: 3,                
         isArchived: false,
         isPinned: false,
         createdAt: new Date(),
@@ -409,7 +409,7 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
-        order: 8,                // ← added
+        order: 8,                
         isArchived: false,
         isPinned: false,
         createdAt: new Date(),
@@ -490,8 +490,6 @@ describe("task router (protected procedures)", () => {
         }),
       );
     });
-
-    // ... other setCurrent tests unchanged ...
   });
 
   describe("clearCurrent", () => {
@@ -505,7 +503,7 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
-        order: 1,                // ← added
+        order: 1,                
         isArchived: false,
         isPinned: false,
         createdAt: new Date(),
@@ -537,7 +535,7 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
-        order: 99,               // ← added
+        order: 99,               
         isArchived: false,
         isPinned: false,
         createdAt: new Date(),

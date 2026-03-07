@@ -1,5 +1,4 @@
 // __mocks__/mockData.ts
-// (you can expand this later with more realistic mock data)
 
 export const mockLists = [
   {
@@ -8,9 +7,7 @@ export const mockLists = [
     description: "Work-related stuff I must finish this month",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    // add other fields if your List type requires them (userId, color, etc.)
   },
-  // more lists if needed for other tests
 ];
 
 export const mockTasks = [
@@ -20,7 +17,6 @@ export const mockTasks = [
     isPinned: false,
     isCompleted: false,
     isCurrent: false,
-    // add description, dueDate, etc. if your Task type has them
   },
   {
     id: "t2",

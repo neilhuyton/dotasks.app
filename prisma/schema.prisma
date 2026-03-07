@@ -28,8 +28,8 @@ model TodoList {
 
   title       String
   description String?
-  color       String?     // e.g. "#ef4444"
-  icon        String?     // emoji or icon name
+  color       String?     
+  icon        String?   
   isArchived  Boolean   @default(false)
   order       Int       @default(0)
   isPinned    Boolean   @default(false)

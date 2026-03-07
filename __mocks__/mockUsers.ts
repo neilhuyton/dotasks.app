@@ -2,7 +2,6 @@
 
 import { TEST_VERIFICATION_TOKENS } from "../__tests__/test-constants";
 
-// Use real Date objects (Prisma returns Date, not string)
 export interface MockUser {
   id: string;
   email: string;
@@ -13,8 +12,6 @@ export interface MockUser {
   resetPasswordTokenExpiresAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
-  // Remove refreshToken unless you add it to User model later
-  // refreshToken?: string | null;   ← commented out
 }
 
 export const mockUsers: MockUser[] = [
@@ -37,7 +34,7 @@ export const mockUsers: MockUser[] = [
     isEmailVerified: true,
     resetPasswordToken: null,
     resetPasswordTokenExpiresAt: null,
-    createdAt: new Date(), // or fixed date
+    createdAt: new Date(),
     updatedAt: new Date(),
   },
   {
@@ -64,7 +61,7 @@ export const mockUsers: MockUser[] = [
   },
 ];
 
-// Optional: helper to get a copy of a user by id or email
+
 export function getMockUserById(id: string): MockUser | undefined {
   return mockUsers.find(u => u.id === id);
 }
@@ -89,7 +86,6 @@ export function createTestUser(overrides: Partial<MockUser> = {}): MockUser {
   };
 }
 
-// Optional: named presets
 export const TEST_USER = createTestUser({
   id: "test-user-123",
   email: "testuser@example.com",
