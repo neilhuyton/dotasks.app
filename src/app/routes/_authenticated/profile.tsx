@@ -15,21 +15,9 @@ import CurrentEmailSection from "@/app/components/CurrentEmailSection";
 import EmailChangeForm from "@/app/components/EmailChangeForm";
 import PasswordResetForm from "@/app/components/PasswordResetForm";
 import LogoutSection from "@/app/components/LogoutSection";
-import { RouteError } from "@/app/components/RouteError";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   component: ProfilePage,
-
-  errorComponent: ({ error, reset }) => (
-    <RouteError
-      error={error}
-      reset={reset}
-      title="Profile Error"
-      message="Failed to load profile. Your session may have expired."
-      backTo="/lists"
-      backLabel="Back to Lists"
-    />
-  ),
 });
 
 function ProfilePage() {
@@ -73,7 +61,7 @@ function ProfilePage() {
         return;
       }
     } catch {
-      // empty
+      // treat error as no history → fallback
     }
     navigate({ to: "/lists", replace: true });
   };
@@ -120,3 +108,5 @@ function ProfilePage() {
     </div>
   );
 }
+
+export default ProfilePage;

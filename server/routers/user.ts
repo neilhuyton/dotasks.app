@@ -3,7 +3,6 @@
 import { protectedProcedure, publicProcedure, router } from "../trpc-base";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { sendEmailChangeNotification } from "../email";
 
 export const userRouter = router({
   getCurrent: protectedProcedure.query(async ({ ctx }) => {
@@ -78,20 +77,6 @@ export const userRouter = router({
         select: { email: true },
       });
 
-      if (oldEmail !== email) {
-        try {
-          await sendEmailChangeNotification(oldEmail, email);
-        } catch (err) {
-          console.error("Failed to send email change notification:", {
-            userId,
-            oldEmail,
-            newEmail: email,
-            error: err instanceof Error ? err.message : String(err),
-          });
-          // Do NOT throw — the email is non-critical
-        }
-      }
-
       return {
         message: "Email updated successfully",
         email: updatedUser.email,
@@ -115,7 +100,6 @@ export const userRouter = router({
       });
 
       if (user) {
-        // Optional: sync email if Supabase changed it (rare during initial signup)
         if (user.email !== email) {
           user = await ctx.prisma.user.update({
             where: { id },
@@ -130,10 +114,9 @@ export const userRouter = router({
         };
       }
 
-      // Create the missing user row
       user = await ctx.prisma.user.create({
         data: {
-          id, // Must match Supabase auth.users.id
+          id, 
           email,
         },
         select: { id: true, email: true },

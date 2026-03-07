@@ -1,6 +1,5 @@
 // src/app/routes/_authenticated/lists/$listId/tasks/$taskId/edit.tsx
 
-// src/app/routes/_authenticated/lists/$listId/tasks/$taskId/edit.tsx
 import { createFileRoute } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";

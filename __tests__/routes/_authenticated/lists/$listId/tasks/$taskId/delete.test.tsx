@@ -43,7 +43,7 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
   const TASK_TITLE = "Finish report";
 
   beforeAll(() => {
-    server.listen({ onUnhandledRequest: "warn" });
+    server.listen({ onUnhandledRequest: "bypass" });
   });
 
   beforeEach(async () => {
@@ -52,16 +52,12 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
     resetMockTasks();
     prepareDetailPageTestList();
 
-    // Prevent MSW warnings + "Prisma user sync failed" logs
     server.use(
       trpcMsw.user.createOrSync.mutation(() => ({
         success: true,
         message: "User synced (mock)",
         user: { id: "test-user-123", email: "testuser@example.com" },
       })),
-    );
-
-    server.use(
       listGetAllHandler,
       listGetOneDetailPagePreset,
       taskGetByListSuccess,
@@ -120,7 +116,6 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
       screen.getByRole("button", { name: "Delete Task" }),
     ).toBeInTheDocument();
 
-    // Assuming the back button has aria-label="Cancel and return to list" (singular "list")
     expect(
       screen.getByRole("button", { name: /Cancel and return to list/i }),
     ).toBeInTheDocument();
@@ -137,7 +132,7 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
       () => {
         expect(navigateSpy).toHaveBeenCalledWith(
           expect.objectContaining({
-            to: "/lists/$listId", // ← parametric route pattern (what router receives)
+            to: "/lists/$listId",
             params: { listId: TEST_LIST_ID },
             replace: true,
           }),

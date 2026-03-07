@@ -5,7 +5,11 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 
-export function GlobalFetchingIndicator() {
+export function GlobalFetchingIndicator({
+  timeoutMs = 15000,
+}: {
+  timeoutMs?: number;
+}) {
   const fetchingCount = useIsFetching();
   const mutatingCount = useIsMutating();
 
@@ -15,12 +19,12 @@ export function GlobalFetchingIndicator() {
     const isActive = fetchingCount + mutatingCount > 0;
     if (isActive) {
       setShowSpinner(true);
-      const timer = setTimeout(() => setShowSpinner(false), 15000); // force hide after 15s if stuck
+      const timer = setTimeout(() => setShowSpinner(false), timeoutMs);
       return () => clearTimeout(timer);
     } else {
       setShowSpinner(false);
     }
-  }, [fetchingCount, mutatingCount]);
+  }, [fetchingCount, mutatingCount, timeoutMs]);
 
   if (!showSpinner) return null;
 
@@ -33,7 +37,10 @@ export function GlobalFetchingIndicator() {
       )}
       title={`Syncing — ${fetchingCount} query / ${mutatingCount} mutation in progress`}
     >
-      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      <Loader2
+        data-testid="global-fetching-spinner"
+        className="h-3.5 w-3.5 animate-spin"
+      />
     </div>
   );
 }

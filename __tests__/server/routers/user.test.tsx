@@ -21,9 +21,6 @@ vi.mock('../../../server/email', () => ({
   sendMailWithDebug: vi.fn().mockResolvedValue({ success: true }),
 }));
 
-import { sendEmailChangeNotification } from '../../../server/email';
-
-// Helper to create a complete Prisma User object
 function mockFullUser(partial: Partial<User> = {}): User {
   const defaults = {
     id: crypto.randomUUID(),
@@ -48,9 +45,6 @@ function mockFullUser(partial: Partial<User> = {}): User {
       partial.updatedAt instanceof Date
         ? partial.updatedAt
         : new Date(partial.updatedAt || defaults.updatedAt),
-    resetPasswordTokenExpiresAt: partial.resetPasswordTokenExpiresAt
-      ? new Date(partial.resetPasswordTokenExpiresAt)
-      : null,
   } as User;
 }
 
@@ -141,13 +135,6 @@ describe('user router (protected procedures)', () => {
         data: { email: newEmail },
         select: { email: true },
       });
-
-      // Verify notification was sent (real email prevented by mock)
-      expect(sendEmailChangeNotification).toHaveBeenCalledTimes(1);
-      expect(sendEmailChangeNotification).toHaveBeenCalledWith(
-        currentUserBase.email,
-        newEmail
-      );
     });
 
     it('returns success message when email is unchanged (same value)', async () => {
@@ -169,8 +156,6 @@ describe('user router (protected procedures)', () => {
       expect(mockPrisma.user.findUnique).toHaveBeenCalledTimes(1);
       expect(mockPrisma.user.update).not.toHaveBeenCalled();
 
-      // No notification when email unchanged
-      expect(sendEmailChangeNotification).not.toHaveBeenCalled();
     });
 
     it('throws BAD_REQUEST for invalid email format (Zod)', async () => {
@@ -178,8 +163,6 @@ describe('user router (protected procedures)', () => {
         caller.user.updateEmail({ email: 'invalid-email-format' })
       ).rejects.toThrow(/Invalid email address/);
 
-      // No email send attempted
-      expect(sendEmailChangeNotification).not.toHaveBeenCalled();
     });
 
     it('throws CONFLICT when new email is already taken by another user', async () => {
@@ -207,8 +190,6 @@ describe('user router (protected procedures)', () => {
 
       expect(mockPrisma.user.update).not.toHaveBeenCalled();
 
-      // No email send on conflict
-      expect(sendEmailChangeNotification).not.toHaveBeenCalled();
     });
 
     it('throws NOT_FOUND when current user does not exist (edge case)', async () => {
@@ -221,8 +202,6 @@ describe('user router (protected procedures)', () => {
         message: 'User not found',
       });
 
-      // No email send
-      expect(sendEmailChangeNotification).not.toHaveBeenCalled();
     });
   });
 });

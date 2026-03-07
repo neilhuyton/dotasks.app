@@ -23,29 +23,28 @@ import {
 } from "../../../../__mocks__/handlers/lists";
 import { trpcMsw } from "../../../../__mocks__/trpcMsw";
 import { useAuthStore } from "@/shared/store/authStore";
+import { suppressActWarnings } from "../../../../__tests__/act-suppress";
+
+suppressActWarnings();
 
 describe("Lists Overview Page (/_authenticated/lists/)", () => {
   beforeAll(() => {
-    server.listen({ onUnhandledRequest: "warn" });
+    server.listen({ onUnhandledRequest: "bypass" });
   });
 
   beforeEach(async () => {
     server.resetHandlers();
     resetMockLists();
 
-    // Prevent MSW warnings + sync failure logs
     server.use(
       trpcMsw.user.createOrSync.mutation(() => ({
         success: true,
         message: "User synced (mock)",
         user: { id: "test-user-123", email: "testuser@example.com" },
       })),
+      listGetAllHandler,
     );
 
-    // Default successful lists response
-    server.use(listGetAllHandler);
-
-    // Run real auth flow (uses global Supabase mock)
     await useAuthStore.getState().initialize();
   });
 
@@ -103,10 +102,11 @@ describe("Lists Overview Page (/_authenticated/lists/)", () => {
   });
 
   it("shows error message when getAll query fails", async () => {
-    // Silence expected React Query / TRPC error logging
-    const consoleErrorSpy = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, 'error');
+    const warnSpy = vi.spyOn(console, 'warn');
+
+    errorSpy.mockImplementation(() => {});
+    warnSpy.mockImplementation(() => {});
 
     server.use(listGetAllErrorHandler);
 
@@ -122,7 +122,8 @@ describe("Lists Overview Page (/_authenticated/lists/)", () => {
       { timeout: 1500 },
     );
 
-    consoleErrorSpy.mockRestore();
+    errorSpy.mockRestore();
+    warnSpy.mockRestore();
   });
 
   it("navigates to /lists/new when FAB is clicked", async () => {

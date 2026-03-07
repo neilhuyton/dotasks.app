@@ -58,8 +58,10 @@ export default defineConfig(({ mode }) => {
       },
       include: ["__tests__/**/*.{test,spec}.{ts,tsx}"],
       exclude: ["e2e/**/*", "node_modules", "dist", ".idea", ".git", ".cache"],
+      isolate: true,
+      maxConcurrency: 1,
       // coverage: {
-      //   provider: "v8", 
+      //   provider: "v8",
       //   reporter: ["text", "json", "html"],
       //   reportsDirectory: "./coverage",
       //   exclude: [

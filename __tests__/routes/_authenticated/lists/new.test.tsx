@@ -30,23 +30,23 @@ import { TRPCError } from "@trpc/server";
 suppressActWarnings();
 
 describe("Create New List Page (/_authenticated/lists/new)", () => {
-  beforeAll(() => server.listen({ onUnhandledRequest: "warn" }));
+  beforeAll(() => {
+    server.listen({ onUnhandledRequest: "bypass" });
+  });
 
   beforeEach(async () => {
     server.resetHandlers();
     resetMockLists();
 
-    // Prevent MSW warnings + "Prisma user sync failed" logs
     server.use(
       trpcMsw.user.createOrSync.mutation(() => ({
         success: true,
         message: "User synced (mock)",
         user: { id: "test-user-123", email: "testuser@example.com" },
       })),
+      listGetAllHandler,
+      listCreateHandler,
     );
-
-    server.use(listGetAllHandler);
-    server.use(listCreateHandler);
 
     await useAuthStore.getState().initialize();
   });

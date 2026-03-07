@@ -1,14 +1,6 @@
 // __tests__/routes/_authenticated/lists/$listId/tasks/$taskId/edit.test.tsx
 
-import {
-  describe,
-  it,
-  expect,
-  beforeAll,
-  beforeEach,
-  afterEach,
-  afterAll,
-} from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
@@ -41,43 +33,53 @@ describe("Edit Task Page (/_authenticated/lists/$listId/tasks/$taskId/edit)", ()
 
   const user = userEvent.setup();
 
-  beforeAll(() => {
-    server.listen({
-      onUnhandledRequest: (req) => {
-        if (req.url.toString().includes("supabase.co/realtime")) return;
-        console.warn(`[MSW] Unhandled ${req.method} ${req.url}`);
-      },
-    });
-  });
-
   beforeEach(async () => {
     server.resetHandlers();
     resetMockLists();
     prepareDetailPageTestList();
 
-    // Prevent MSW warnings + "Prisma user sync failed" logs
     server.use(
       trpcMsw.user.createOrSync.mutation(() => ({
         success: true,
         message: "User synced (mock)",
         user: { id: "test-user-123", email: "testuser@example.com" },
       })),
+      listGetAllHandler,
+      listGetOneDetailPagePreset,
+      taskGetByListSuccess,
+      taskUpdateHandler,
     );
 
-    server.use(listGetAllHandler);
-    server.use(listGetOneDetailPagePreset);
-    server.use(taskGetByListSuccess);
-    server.use(taskUpdateHandler);
+    const mockUser = {
+      id: "test-user-123",
+      email: "testuser@example.com",
+      role: "authenticated",
+      aud: "authenticated",
+      app_metadata: {},
+      user_metadata: {},
+      identities: [],
+      created_at: new Date().toISOString(),
+    };
 
-    await useAuthStore.getState().initialize();
+    useAuthStore.setState({
+      session: {
+        access_token: "mock-access-token",
+        refresh_token: "mock-refresh-token",
+        expires_in: 3600,
+        token_type: "bearer",
+        user: mockUser,
+      },
+      user: mockUser,
+      loading: false,
+      error: null,
+      isInitialized: true,
+    });
   });
 
   afterEach(async () => {
     server.resetHandlers();
-    await useAuthStore.getState().signOut();
+    useAuthStore.setState(useAuthStore.getInitialState());
   });
-
-  afterAll(() => server.close());
 
   async function renderEditTaskPage(suffix = Date.now().toString()) {
     const path = `/lists/${TEST_LIST_ID}/tasks/${TEST_TASK_ID}/edit${suffix ? `?test=${suffix}` : ""}`;
@@ -86,7 +88,7 @@ describe("Edit Task Page (/_authenticated/lists/$listId/tasks/$taskId/edit)", ()
       initialEntries: [path],
     });
 
-    await screen.findByText("Edit Task", {}, { timeout: 5000 });
+    await screen.findByTestId("edit-task-form", {}, { timeout: 5000 });
 
     const titleInput = await screen.findByRole("textbox", {
       name: /Task name/i,
@@ -102,7 +104,7 @@ describe("Edit Task Page (/_authenticated/lists/$listId/tasks/$taskId/edit)", ()
   it("renders page title, pre-filled inputs, and action buttons", async () => {
     await renderEditTaskPage();
 
-    expect(screen.getByText("Edit Task")).toBeInTheDocument();
+    expect(screen.getByTestId("edit-task-form")).toBeInTheDocument();
 
     const titleInput = screen.getByRole("textbox", { name: /Task name/i });
     expect(titleInput).toHaveValue(ORIGINAL_TITLE);
@@ -135,7 +137,8 @@ describe("Edit Task Page (/_authenticated/lists/$listId/tasks/$taskId/edit)", ()
     await user.clear(titleInput);
     await user.type(titleInput, "Updated report");
 
-    await user.click(screen.getByRole("button", { name: /Save Changes/i }));
+    const saveButton = screen.getByRole("button", { name: /Save Changes/i });
+    await user.click(saveButton);
 
     await screen.findByText("Saving...", {}, { timeout: 2500 });
 
@@ -156,7 +159,7 @@ describe("Edit Task Page (/_authenticated/lists/$listId/tasks/$taskId/edit)", ()
 
     await waitFor(
       () => {
-        expect(screen.queryByText("Edit Task")).not.toBeInTheDocument();
+        expect(screen.queryByTestId("edit-task-form")).not.toBeInTheDocument();
       },
       { timeout: 5000 },
     );

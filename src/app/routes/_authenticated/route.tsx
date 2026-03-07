@@ -71,6 +71,14 @@ export const Route = createFileRoute("/_authenticated")({
   beforeLoad: ({ location }) => {
     const { user, loading } = useAuthStore.getState();
 
+    if (typeof useAuthStore === "undefined" || !useAuthStore.getState) {
+      throw redirect({
+        to: "/login",
+        replace: true,
+        search: { redirect: location.href },
+      });
+    }
+
     if (loading) return;
 
     if (!user) {

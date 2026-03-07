@@ -1,3 +1,4 @@
+// tsconfig.app.json
 {
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
@@ -29,6 +30,7 @@
     "server/**/*",
     "netlify/**/*",
     "__mocks__",
-    "__tests__"
+    "__tests__",
+    "__tests__/vitest.d.ts"
   ]
 }

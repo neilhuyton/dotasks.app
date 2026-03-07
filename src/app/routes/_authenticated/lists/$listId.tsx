@@ -128,7 +128,7 @@ function ListDetailPage() {
     );
   }
 
-  if ((isListLoading || isLoadingTasks) && (!list || tasks.length === 0)) {
+  if (isListLoading || isLoadingTasks) {
     return (
       <div className="space-y-6 sm:space-y-8">
         <div className="flex items-center justify-between">

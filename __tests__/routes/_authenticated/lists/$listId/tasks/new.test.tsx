@@ -39,7 +39,7 @@ suppressActWarnings();
 describe("New Task Page (/_authenticated/lists/$listId/tasks/new)", () => {
   const TEST_LIST_ID = "list-abc-123";
 
-  beforeAll(() => server.listen({ onUnhandledRequest: "warn" }));
+  beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
 
   beforeEach(async () => {
     server.resetHandlers();
@@ -47,16 +47,12 @@ describe("New Task Page (/_authenticated/lists/$listId/tasks/new)", () => {
     resetMockTasks();
     prepareDetailPageTestList();
 
-    // Prevent MSW warnings + "Prisma user sync failed" logs
     server.use(
       trpcMsw.user.createOrSync.mutation(() => ({
         success: true,
         message: "User synced (mock)",
         user: { id: "test-user-123", email: "testuser@example.com" },
       })),
-    );
-
-    server.use(
       listGetAllHandler,
       listGetOneDetailPagePreset,
       taskGetByListSuccess,
@@ -82,10 +78,16 @@ describe("New Task Page (/_authenticated/lists/$listId/tasks/new)", () => {
   async function waitForFormReady() {
     await waitFor(
       () => {
-        expect(screen.getByRole("heading", { name: /New Task/i })).toBeInTheDocument();
-        expect(screen.getByLabelText(/Title/i)).toBeInTheDocument(); // ← use label, not placeholder
-        expect(screen.getByRole("button", { name: "Create Task" })).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+        expect(
+          screen.getByRole("heading", { name: /New Task/i }),
+        ).toBeInTheDocument();
+        expect(screen.getByLabelText(/Title/i)).toBeInTheDocument();
+        expect(
+          screen.getByRole("button", { name: "Create Task" }),
+        ).toBeInTheDocument();
+        expect(
+          screen.getByRole("button", { name: "Cancel" }),
+        ).toBeInTheDocument();
       },
       { timeout: 3000 },
     );
@@ -109,7 +111,9 @@ describe("New Task Page (/_authenticated/lists/$listId/tasks/new)", () => {
     );
 
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Create Task" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Create Task" }),
+    ).toBeInTheDocument();
   });
 
   it("disables Create button when title is empty or whitespace only", async () => {
@@ -126,7 +130,9 @@ describe("New Task Page (/_authenticated/lists/$listId/tasks/new)", () => {
 
     await userEvent.clear(titleInput);
     await userEvent.type(titleInput, "Buy milk");
-    await waitFor(() => expect(createBtn).not.toBeDisabled(), { timeout: 2000 });
+    await waitFor(() => expect(createBtn).not.toBeDisabled(), {
+      timeout: 2000,
+    });
   });
 
   it("shows loading state during creation", async () => {
@@ -197,8 +203,6 @@ describe("New Task Page (/_authenticated/lists/$listId/tasks/new)", () => {
       { timeout: 3000 },
     );
 
-    // If form remains mounted briefly, check cleared state
-    // (optional — since navigation unmounts it)
     const titleInput = screen.queryByLabelText(/Title/i);
     if (titleInput) {
       expect(titleInput).toHaveValue("");
@@ -211,17 +215,15 @@ describe("New Task Page (/_authenticated/lists/$listId/tasks/new)", () => {
 
     const initialLength = getMockTasks().length;
 
-    const createBtn = screen.getByRole("button", { name: "Create Task" });
-    expect(createBtn).toBeDisabled();
+    const titleInput = screen.getByLabelText(/Title/i);
 
-    // Try submitting with empty title (should do nothing)
-    await userEvent.click(createBtn);
+    await userEvent.type(titleInput, "{Enter}");
 
     await waitFor(
       () => {
         expect(getMockTasks().length).toBe(initialLength);
       },
-      { timeout: 1500 },
+      { timeout: 1200 },
     );
   });
 });

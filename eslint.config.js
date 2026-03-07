@@ -8,7 +8,7 @@ import tseslint from "typescript-eslint";
 import { globalIgnores } from "eslint/config";
 
 export default tseslint.config([
-  globalIgnores(["dist", "src/app/components/ui/**"]),
+  globalIgnores(["coverage", "dist", "src/app/components/ui/**"]),
   {
     files: ["**/*.{ts,tsx}"],
     extends: [
