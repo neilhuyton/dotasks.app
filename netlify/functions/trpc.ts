@@ -28,7 +28,7 @@ export default async function handler(req: Request): Promise<Response> {
       endpoint: '/trpc',
       req,                       
       router: appRouter,
-      createContext: ({ req }) => createContext({ req }),  // now receives real Request
+      createContext: ({ req }) => createContext({ req }),
       batching: { enabled: true },
       allowMethodOverride: true,
     });
