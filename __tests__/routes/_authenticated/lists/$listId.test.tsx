@@ -128,7 +128,7 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
     await userEvent.click(fab);
 
     expect(router.state.location.pathname).toBe(
-      "/lists/list-abc-123/tasks/new",
+      "/lists/list-abc-123/tasks/new"
     );
   });
 
