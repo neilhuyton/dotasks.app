@@ -1,7 +1,7 @@
 // src/main.tsx
 
 import { createRoot } from "react-dom/client";
-import { Root } from "./app/Root";
+import { Root } from "./Root";
 import '@steel-cut/steel-lib/dist/steel-lib.css';
 import "./index.css";
 import { StrictMode } from "react";

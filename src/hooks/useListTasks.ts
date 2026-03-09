@@ -11,8 +11,8 @@ import { useTRPC } from "@/trpc";
 
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/../server/trpc";
-import { useTaskRealtime } from "@/shared/hooks/useTaskRealtime";
-import { useBannerStore } from '@steel-cut/steel-lib'
+import { useTaskRealtime } from "@/hooks/useTaskRealtime";
+import { useBannerStore } from "@steel-cut/steel-lib";
 
 type RouterOutput = inferRouterOutputs<AppRouter>;
 export type Task = RouterOutput["task"]["getByList"][number];

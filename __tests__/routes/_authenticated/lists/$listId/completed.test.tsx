@@ -19,7 +19,7 @@ import { renderWithProviders } from "../../../../utils/test-helpers";
 import { trpcMsw } from "../../../../../__mocks__/trpcMsw";
 
 import { listGetOneDetailPagePreset } from "../../../../../__mocks__/handlers/lists";
-import { useAuthStore } from "@/shared/store/authStore";
+import { useAuthStore } from "@/store/authStore";
 import { suppressActWarnings } from "../../../../act-suppress";
 
 suppressActWarnings();

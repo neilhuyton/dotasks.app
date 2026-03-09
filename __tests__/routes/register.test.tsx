@@ -4,12 +4,12 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../utils/test-helpers";
-import { useAuthStore } from "@/shared/store/authStore";
+import { useAuthStore } from "@/store/authStore";
 import { suppressActWarnings } from "../../__tests__/act-suppress";
 
 suppressActWarnings();
 
-vi.mock("@/shared/store/authStore", () => {
+vi.mock("@/store/authStore", () => {
   const mockSession = { user: null };
 
   const signUp = vi.fn();

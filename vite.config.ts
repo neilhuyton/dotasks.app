@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => {
       react(),
       tailwindcss(),
       tanstackRouter({
-        routesDirectory: "./src/app/routes",
+        routesDirectory: "./src/routes",
         generatedRouteTree: "./src/types/routeTree.gen.ts",
         routeFileIgnorePrefix: "-",
       }),

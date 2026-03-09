@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { useAuthStore } from "@/shared/store/authStore";
+import { useAuthStore } from "@/store/authStore";
 import { renderWithProviders } from "../../../__tests__/utils/test-helpers";
 
 vi.mock("@steel-cut/steel-lib", async (importOriginal) => {

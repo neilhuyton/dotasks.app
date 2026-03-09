@@ -22,7 +22,7 @@ import {
 } from "../../../../__mocks__/handlers/lists";
 
 import { renderWithProviders } from "../../../utils/test-helpers";
-import { useAuthStore } from "@/shared/store/authStore";
+import { useAuthStore } from "@/store/authStore";
 import { suppressActWarnings } from "../../../act-suppress";
 import { trpcMsw } from "../../../../__mocks__/trpcMsw";
 import { TRPCError } from "@trpc/server";
@@ -65,7 +65,9 @@ describe("Create New List Page (/_authenticated/lists/new)", () => {
   async function waitForFormReady() {
     await waitFor(
       () => {
-        expect(screen.getByRole("heading", { name: /Create New List/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole("heading", { name: /Create New List/i }),
+        ).toBeInTheDocument();
         expect(screen.getByLabelText(/List name/i)).toBeInTheDocument();
         expect(screen.getByTestId("create-button")).toBeInTheDocument();
         expect(screen.getByTestId("cancel-button")).toBeInTheDocument();
@@ -109,7 +111,9 @@ describe("Create New List Page (/_authenticated/lists/new)", () => {
 
     await userEvent.clear(titleInput);
     await userEvent.type(titleInput, "My List");
-    await waitFor(() => expect(createBtn).not.toBeDisabled(), { timeout: 2000 });
+    await waitFor(() => expect(createBtn).not.toBeDisabled(), {
+      timeout: 2000,
+    });
   });
 
   it("shows loading state during creation", async () => {
@@ -158,7 +162,9 @@ describe("Create New List Page (/_authenticated/lists/new)", () => {
     );
 
     expect(getMockLists().length).toBeGreaterThan(initialCount);
-    expect(getMockLists().some((l) => l.title === "Travel Bucket List")).toBe(true);
+    expect(getMockLists().some((l) => l.title === "Travel Bucket List")).toBe(
+      true,
+    );
   });
 
   it("rolls back optimistic update on creation failure", async () => {

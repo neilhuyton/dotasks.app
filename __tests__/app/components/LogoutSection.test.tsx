@@ -2,12 +2,12 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import LogoutSection from "@/app/components/LogoutSection";
-import { useAuthStore } from "@/shared/store/authStore";
+import LogoutSection from "@/components/LogoutSection";
+import { useAuthStore } from "@/store/authStore";
 import { useQueryClient } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
 
-vi.mock("@/shared/store/authStore", () => ({
+vi.mock("@/store/authStore", () => ({
   useAuthStore: vi.fn(),
 }));
 

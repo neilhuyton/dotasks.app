@@ -30,7 +30,7 @@ import {
   resetMockTasks,
 } from "../../../../__mocks__/handlers/tasks";
 
-import { useAuthStore } from "@/shared/store/authStore";
+import { useAuthStore } from "@/store/authStore";
 import { suppressActWarnings } from "../../../act-suppress";
 
 suppressActWarnings();
@@ -122,7 +122,7 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
 
     // Verify accessible label via sr-only span
     expect(
-      screen.getByText("Add new task", { selector: ".sr-only" })
+      screen.getByText("Add new task", { selector: ".sr-only" }),
     ).toBeInTheDocument();
 
     await userEvent.click(fab);
