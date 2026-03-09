@@ -2,7 +2,7 @@
 
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { Logo } from "@/app/components/Logo";
+import { Logo } from "@/components/Logo";
 
 describe("Logo", () => {
   it("renders the SVG logo with correct accessibility attributes", () => {

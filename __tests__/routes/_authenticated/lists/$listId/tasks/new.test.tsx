@@ -31,7 +31,7 @@ import {
   delayedTaskCreateHandler,
 } from "../../../../../../__mocks__/handlers/tasks";
 
-import { useAuthStore } from "@/shared/store/authStore";
+import { useAuthStore } from "@/store/authStore";
 import { suppressActWarnings } from "../../../../../act-suppress";
 
 suppressActWarnings();

@@ -22,7 +22,7 @@ import {
   resetMockLists,
 } from "../../../../__mocks__/handlers/lists";
 import { trpcMsw } from "../../../../__mocks__/trpcMsw";
-import { useAuthStore } from "@/shared/store/authStore";
+import { useAuthStore } from "@/store/authStore";
 import { suppressActWarnings } from "../../../../__tests__/act-suppress";
 
 suppressActWarnings();

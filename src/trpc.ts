@@ -12,7 +12,7 @@ import type { AppRouter } from "../server/trpc";
 
 import { safeGetSession, safeRefreshSession } from "@/lib/supabase-utils";
 import { getQueryClient } from "@/queryClient";
-import { useAuthStore } from "@/shared/store/authStore";
+import { useAuthStore } from "@/store/authStore";
 
 let isRefreshing = false;
 let refreshPromise: Promise<unknown> | null = null;

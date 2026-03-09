@@ -11,13 +11,13 @@ import {
 import { QueryClient } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 
-import { useAuthStore } from "@/shared/store/authStore";
-import { Route as AuthenticatedRoute } from "@/app/routes/_authenticated/route";
+import { useAuthStore } from "@/store/authStore";
+import { Route as AuthenticatedRoute } from "@/routes/_authenticated/route";
 import { suppressActWarnings } from "../../../__tests__/act-suppress";
 
 suppressActWarnings();
 
-vi.mock("@/shared/store/authStore", () => {
+vi.mock("@/store/authStore", () => {
   return {
     useAuthStore: vi.fn(),
   };

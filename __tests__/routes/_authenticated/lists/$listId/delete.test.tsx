@@ -26,7 +26,7 @@ import {
   getMockLists,
 } from "../../../../../__mocks__/handlers/lists";
 
-import { useAuthStore } from "@/shared/store/authStore";
+import { useAuthStore } from "@/store/authStore";
 import { suppressActWarnings } from "../../../../act-suppress";
 import { TRPCError } from "@trpc/server";
 

@@ -1,11 +1,11 @@
 // __tests__/app/components/RealtimeListeners.test.tsx
 
-import { RealtimeListeners } from "@/app/components/RealtimeListeners";
-import { useListRealtime } from "@/shared/hooks/useListRealtime";
+import { RealtimeListeners } from "@/components/RealtimeListeners";
+import { useListRealtime } from "@/hooks/useListRealtime";
 import { render } from "@testing-library/react";
 import { vi, describe, it, expect } from "vitest";
 
-vi.mock("@/shared/hooks/useListRealtime", () => ({
+vi.mock("@/hooks/useListRealtime", () => ({
   useListRealtime: vi.fn(),
 }));
 
