@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { RouterProvider } from "@tanstack/react-router";
 
 import { router } from "@/router";
-import { ThemeProvider } from "./components/ThemeProvider";
 import { TRPCProvider } from "@/trpc";
 import { trpcClient } from "@/trpc";
 import { getQueryClient } from "@/queryClient";
@@ -12,6 +11,7 @@ import { ErrorBoundary } from "react-error-boundary";
 import { useAuthStore } from "@/shared/store/authStore";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RealtimeListeners } from "./components/RealtimeListeners";
+import { ThemeProvider } from "@steel-cut/steel-lib";
 
 export function Root() {
   const initialize = useAuthStore((s) => s.initialize);

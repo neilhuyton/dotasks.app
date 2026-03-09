@@ -4,7 +4,7 @@ import { createRouter } from "@tanstack/react-router";
 
 import { getQueryClient } from "@/queryClient";
 import { routeTree } from "./types/routeTree.gen";
-import { RouteError } from "@/app/components/RouteError";
+import { RouteError } from "@steel-cut/steel-lib";
 
 export interface RouterContext {
   queryClient: ReturnType<typeof getQueryClient>;

@@ -2,6 +2,7 @@
 
 import { createRoot } from "react-dom/client";
 import { Root } from "./app/Root";
+import '@steel-cut/steel-lib/dist/steel-lib.css';
 import "./index.css";
 import { StrictMode } from "react";
 

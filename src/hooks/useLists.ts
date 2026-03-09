@@ -7,7 +7,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useTRPC } from "@/trpc";
-import { useBannerStore } from "@/shared/store/bannerStore";
+import { useBannerStore } from '@steel-cut/steel-lib'
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/../server/trpc";
 

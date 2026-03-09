@@ -18,7 +18,7 @@ import * as z from "zod";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
-import { RouteError } from "@/app/components/RouteError";
+import { RouteError } from "@steel-cut/steel-lib";
 
 const formSchema = z
   .object({

@@ -2,14 +2,14 @@
 
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
+import { trpcClient } from "@/trpc";
+import type { Session, User } from "@supabase/supabase-js";
+import { getQueryClient } from "@/queryClient";
 import {
   safeGetSession,
   safeSignInWithPassword,
   safeSignUp,
 } from "@/lib/supabase-utils";
-import { trpcClient } from "@/trpc";
-import type { Session, User } from "@supabase/supabase-js";
-import { getQueryClient } from "@/queryClient";
 
 interface AuthState {
   session: Session | null;

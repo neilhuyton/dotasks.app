@@ -113,22 +113,22 @@ describe("List Detail Route (/_authenticated/lists/$listId)", () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it("renders Add Task FAB with correct navigation target", async () => {
+  it("renders Add Task FAB and navigates when clicked", async () => {
     const { router } = await renderListDetail();
 
     const fab = await screen.findByTestId("fab-add-task");
 
-    expect(fab.tagName.toLowerCase()).toBe("a");
-    expect(fab).toHaveAttribute("href", "/lists/list-abc-123/tasks/new");
+    expect(fab.tagName.toLowerCase()).toBe("button");
 
+    // Verify accessible label via sr-only span
     expect(
-      within(fab).getByText("Add new task", { selector: "span.sr-only" }),
+      screen.getByText("Add new task", { selector: ".sr-only" })
     ).toBeInTheDocument();
 
     await userEvent.click(fab);
 
     expect(router.state.location.pathname).toBe(
-      "/lists/list-abc-123/tasks/new",
+      "/lists/list-abc-123/tasks/new"
     );
   });
 

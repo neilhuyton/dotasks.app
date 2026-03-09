@@ -5,9 +5,8 @@ import { Button } from "@/app/components/ui/button";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trpc, useTRPC } from "@/trpc";
-import { useBannerStore } from "@/shared/store/bannerStore";
+import { RouteError, useBannerStore } from '@steel-cut/steel-lib'
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { RouteError } from "@/app/components/RouteError";
 
 export const Route = createFileRoute("/_authenticated/lists/$listId/delete")({
   loader: async ({ context: { queryClient }, params }) => {

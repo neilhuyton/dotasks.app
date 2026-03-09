@@ -43,9 +43,11 @@ export default defineConfig(({ mode }) => {
       env: {
         VITE_TRPC_URL: "/trpc",
       },
+      css: true,
       globals: true,
       testTimeout: 15000,
       deps: {
+        inline: ['@steel-cut/steel-lib'], 
         optimizer: {
           web: {
             include: [
