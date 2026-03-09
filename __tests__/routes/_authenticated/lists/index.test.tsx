@@ -64,7 +64,7 @@ describe("Lists Overview Page (/_authenticated/lists/)", () => {
   it("shows empty state when no lists are returned", async () => {
     server.use(listGetAllEmptyHandler);
 
-    renderListsPage();
+    const { router } = renderListsPage();
 
     await waitFor(
       () => {
@@ -78,12 +78,22 @@ describe("Lists Overview Page (/_authenticated/lists/)", () => {
 
     const fab = screen.getByTestId("fab-add-list");
     expect(fab).toBeInTheDocument();
-    expect(fab).toHaveTextContent(/create your first list/i);
-    expect(fab).toHaveAttribute("href", "/lists/new");
+
+    // Verify sr-only text for accessibility
+    expect(
+      screen.getByText("Create your first list", { selector: ".sr-only" }),
+    ).toBeInTheDocument();
+
+    // Confirm it's a button (no href)
+    expect(fab.tagName.toLowerCase()).toBe("button");
+    expect(fab).not.toHaveAttribute("href");
+
+    await userEvent.click(fab);
+    expect(router.state.location.pathname).toBe("/lists/new");
   });
 
   it("renders list count, sortable table, and FAB when lists exist", async () => {
-    renderListsPage();
+    const { router } = renderListsPage();
 
     await waitFor(
       () => {
@@ -98,12 +108,19 @@ describe("Lists Overview Page (/_authenticated/lists/)", () => {
 
     const fab = screen.getByTestId("fab-add-list");
     expect(fab).toBeInTheDocument();
-    expect(fab).toHaveTextContent(/create new list/i);
+
+    // Verify sr-only text for accessibility
+    expect(
+      screen.getByText("Create new list", { selector: ".sr-only" }),
+    ).toBeInTheDocument();
+
+    await userEvent.click(fab);
+    expect(router.state.location.pathname).toBe("/lists/new");
   });
 
   it("shows error message when getAll query fails", async () => {
-    const errorSpy = vi.spyOn(console, 'error');
-    const warnSpy = vi.spyOn(console, 'warn');
+    const errorSpy = vi.spyOn(console, "error");
+    const warnSpy = vi.spyOn(console, "warn");
 
     errorSpy.mockImplementation(() => {});
     warnSpy.mockImplementation(() => {});

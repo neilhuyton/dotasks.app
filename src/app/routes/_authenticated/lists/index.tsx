@@ -1,12 +1,11 @@
 // src/app/routes/_authenticated/lists/index.tsx
 
-import { Outlet, createFileRoute } from "@tanstack/react-router";
+import { Outlet, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useLists } from "@/hooks/useLists";
 import { SortableListsTable } from "@/features/lists/components/SortableListsTable";
-import { FabButton } from "@/app/components/FabButton";
 import { useAuthStore } from "@/shared/store/authStore";
 import { trpc } from "@/trpc";
-import { RouteError } from "@/app/components/RouteError";
+import { FabButton, RouteError } from "@steel-cut/steel-lib";
 
 export const Route = createFileRoute("/_authenticated/lists/")({
   loader: async ({ context: { queryClient } }) => {
@@ -47,7 +46,6 @@ export const Route = createFileRoute("/_authenticated/lists/")({
       error={error}
       reset={reset}
       title="Failed to load your lists"
-      backTo="/lists"
       backLabel="Retry"
     />
   ),
@@ -56,9 +54,14 @@ export const Route = createFileRoute("/_authenticated/lists/")({
 });
 
 function ListsPage() {
+  const navigate = useNavigate();
   const { lists = [], updateListOrder, isReordering } = useLists();
 
   const listCount = lists.length;
+
+  const handleCreateNew = () => {
+    navigate({ to: "/lists/new" });
+  };
 
   if (listCount === 0) {
     return (
@@ -74,10 +77,9 @@ function ListsPage() {
           </div>
 
           <FabButton
-            to="/lists/new"
+            onClick={handleCreateNew}
             label="Create your first list"
             testId="fab-add-list"
-            size="lg"
             pulse={true}
           />
         </div>
@@ -89,7 +91,7 @@ function ListsPage() {
 
   return (
     <>
-      <div className="space-y-6 sm:space-y-8 pb-18">
+      <div className="space-y-6 sm:space-y-8 pb-20 md:pb-24">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
             Your Lists
@@ -107,9 +109,10 @@ function ListsPage() {
       </div>
 
       <FabButton
-        to="/lists/new"
+        onClick={handleCreateNew}
         label="Create new list"
         testId="fab-add-list"
+        pulse={listCount <= 1}
       />
 
       <Outlet />

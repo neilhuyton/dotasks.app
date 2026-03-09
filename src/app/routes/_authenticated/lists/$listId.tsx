@@ -4,20 +4,18 @@ import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
 import { useListTasks } from "@/hooks/useListTasks";
 import { trpc } from "@/trpc";
-import { FabButton } from "@/app/components/FabButton";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import TaskList from "@/features/tasks/components/TaskList";
 import { useAuthStore } from "@/shared/store/authStore";
-import { RouteError } from "@/app/components/RouteError";
+import { FabButton, RouteError } from "@steel-cut/steel-lib";
+import { useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/lists/$listId")({
   loader: async ({ context: { queryClient }, params }) => {
     const { listId } = params;
 
-    if (!listId) {
-      return {};
-    }
+    if (!listId) return {};
 
     const sessionPromise = useAuthStore.getState().waitUntilReady();
     const timeout = new Promise<null>((_, reject) =>
@@ -48,7 +46,7 @@ export const Route = createFileRoute("/_authenticated/lists/$listId")({
         ),
       ]);
     } catch {
-      // empty
+      // silent fail
     }
 
     return { session };
@@ -83,7 +81,6 @@ export const Route = createFileRoute("/_authenticated/lists/$listId")({
             ? "This list doesn't exist or you don't have access to it."
             : undefined
         }
-        backTo="/lists"
         backLabel="Back to Lists"
       />
     );
@@ -94,7 +91,7 @@ export const Route = createFileRoute("/_authenticated/lists/$listId")({
 
 function ListDetailPage() {
   const { listId } = Route.useParams();
-  const navigate = Route.useNavigate();
+  const navigate = useNavigate();
 
   const { data: list, isLoading: isListLoading } = useQuery(
     trpc.list.getOne.queryOptions(
@@ -201,8 +198,12 @@ function ListDetailPage() {
       </div>
 
       <FabButton
-        to="/lists/$listId/tasks/new"
-        params={{ listId }}
+        onClick={() =>
+          navigate({
+            to: "/lists/$listId/tasks/new",
+            params: { listId },
+          })
+        }
         label="Add new task"
         testId="fab-add-task"
       />

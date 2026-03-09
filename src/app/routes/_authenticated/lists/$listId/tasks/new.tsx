@@ -8,7 +8,7 @@ import { Loader2, ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { trpc, useTRPC } from "@/trpc";
-import { useBannerStore } from "@/shared/store/bannerStore";
+import { useBannerStore } from '@steel-cut/steel-lib'
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import type { inferRouterOutputs } from "@trpc/server";

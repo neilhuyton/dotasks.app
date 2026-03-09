@@ -3,18 +3,19 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTRPC } from "@/trpc";
-import { useBannerStore } from "@/shared/store/bannerStore";
+import { InstallPWA, useBannerStore } from "@steel-cut/steel-lib";
 import { useAuthStore } from "@/shared/store/authStore";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
-import { InstallPWA } from "@/app/components/InstallPWA";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
-import ProfileHeader from "@/app/components/ProfileHeader";
-import CurrentEmailSection from "@/app/components/CurrentEmailSection";
-import EmailChangeForm from "@/app/components/EmailChangeForm";
-import PasswordResetForm from "@/app/components/PasswordResetForm";
 import LogoutSection from "@/app/components/LogoutSection";
+import {
+  ProfileHeader,
+  CurrentEmailSection,
+  EmailChangeForm,
+  PasswordResetForm,
+} from "@steel-cut/steel-lib";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   component: ProfilePage,
@@ -30,6 +31,7 @@ function ProfilePage() {
 
   const currentEmail = user?.email ?? "";
   const hasUser = !!user;
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange(
@@ -66,6 +68,16 @@ function ProfilePage() {
     navigate({ to: "/lists", replace: true });
   };
 
+  const handleEmailChange = async (newEmail: string) => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ email: newEmail });
+      if (error) throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div
       className={cn(
@@ -96,8 +108,23 @@ function ProfilePage() {
                 currentEmail={currentEmail}
                 hasUser={hasUser}
               />
-              <EmailChangeForm currentEmail={currentEmail} hasUser={hasUser} />
-              <PasswordResetForm />
+              <EmailChangeForm
+                currentEmail={currentEmail}
+                isDisabled={!hasUser}
+                isLoading={isLoading}
+                onSubmit={handleEmailChange}
+              />
+              <PasswordResetForm
+                onSubmit={async (email) => {
+                  const { error } = await supabase.auth.resetPasswordForEmail(
+                    email,
+                    {
+                      redirectTo: `${window.location.origin}/update-password`,
+                    },
+                  );
+                  if (error) throw error;
+                }}
+              />
               <LogoutSection />
             </div>
           </div>

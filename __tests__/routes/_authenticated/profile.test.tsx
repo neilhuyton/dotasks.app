@@ -7,9 +7,16 @@ import userEvent from "@testing-library/user-event";
 import { useAuthStore } from "@/shared/store/authStore";
 import { renderWithProviders } from "../../../__tests__/utils/test-helpers";
 
-vi.mock("@/shared/store/bannerStore", () => ({
-  useBannerStore: () => ({ show: vi.fn() }),
-}));
+vi.mock("@steel-cut/steel-lib", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@steel-cut/steel-lib")>();
+  return {
+    ...actual,
+    ActionBanner: () => null,
+    useBannerStore: vi.fn(() => ({
+      show: vi.fn(),
+    })),
+  };
+});
 
 vi.mock("@/lib/supabase", () => ({
   supabase: {
