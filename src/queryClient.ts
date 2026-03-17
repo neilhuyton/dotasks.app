@@ -1,23 +1,33 @@
-// src/queryClient.ts
-
 import { QueryClient, QueryCache, MutationCache } from "@tanstack/react-query";
+import { isTRPCClientError } from "@trpc/client";
 
-let queryClientInstance: QueryClient | undefined;
+let queryClient: QueryClient | undefined;
 
-const createQueryClient = () => {
-  if (queryClientInstance) {
-    return queryClientInstance;
-  }
+function is401Error(error: unknown): boolean {
+  if (!isTRPCClientError(error)) return false;
+  const data = error.data as { code?: string; httpStatus?: number } | undefined;
+  return (
+    data?.code === "UNAUTHORIZED" ||
+    error.message.includes("UNAUTHORIZED") ||
+    data?.httpStatus === 401
+  );
+}
 
-  queryClientInstance = new QueryClient({
+export function getQueryClient(): QueryClient {
+  if (queryClient) return queryClient;
+
+  queryClient = new QueryClient({
     defaultOptions: {
       queries: {
         staleTime: 1000 * 60 * 1,
         gcTime: 5 * 60 * 1000,
         refetchOnMount: true,
-        refetchOnWindowFocus: false,
+        refetchOnWindowFocus: true,
         refetchOnReconnect: false,
-        retry: 1,
+        retry: (failureCount, error) => {
+          if (is401Error(error)) return false;
+          return failureCount < 3;
+        },
         retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
         structuralSharing: false,
         notifyOnChangeProps: "all",
@@ -26,14 +36,9 @@ const createQueryClient = () => {
         retry: false,
       },
     },
-
     queryCache: new QueryCache(),
     mutationCache: new MutationCache(),
   });
 
-  return queryClientInstance;
-};
-
-export function getQueryClient(): QueryClient {
-  return createQueryClient();
+  return queryClient;
 }

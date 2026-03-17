@@ -1,5 +1,3 @@
-// src/app/Root.tsx
-
 import { useEffect } from "react";
 import { RouterProvider } from "@tanstack/react-router";
 
@@ -10,8 +8,9 @@ import { getQueryClient } from "@/queryClient";
 import { ErrorBoundary } from "react-error-boundary";
 import { useAuthStore } from "@/store/authStore";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { RealtimeListeners } from "./components/RealtimeListeners";
-import { ThemeProvider } from "@steel-cut/steel-lib";
+import { RealtimeListeners } from "./RealtimeListeners";
+import { BannerProvider, ThemeProvider } from "@steel-cut/steel-lib";
+import { AuthProvider } from "./AuthProvider";
 
 export function Root() {
   const initialize = useAuthStore((s) => s.initialize);
@@ -39,18 +38,25 @@ export function Root() {
         </div>
       }
     >
-      <QueryClientProvider client={getQueryClient()}>
-        <TRPCProvider trpcClient={trpcClient} queryClient={getQueryClient()}>
-          <ThemeProvider
-            defaultTheme="dark"
-            storageKey="vite-ui-theme"
-            enableSystem={true}
-          >
-            <RouterProvider router={router} />
-            <RealtimeListeners />
-          </ThemeProvider>
-        </TRPCProvider>
-      </QueryClientProvider>
+      <BannerProvider>
+        <AuthProvider>
+          <QueryClientProvider client={getQueryClient()}>
+            <TRPCProvider
+              trpcClient={trpcClient}
+              queryClient={getQueryClient()}
+            >
+              <ThemeProvider
+                defaultTheme="dark"
+                storageKey="vite-ui-theme"
+                enableSystem={true}
+              >
+                <RouterProvider router={router} />
+                <RealtimeListeners />
+              </ThemeProvider>
+            </TRPCProvider>
+          </QueryClientProvider>
+        </AuthProvider>
+      </BannerProvider>
     </ErrorBoundary>
   );
 }

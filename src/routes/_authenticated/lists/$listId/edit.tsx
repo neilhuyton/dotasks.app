@@ -1,5 +1,3 @@
-// src/app/routes/_authenticated/lists/$listId/edit.tsx
-
 import { createFileRoute } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";

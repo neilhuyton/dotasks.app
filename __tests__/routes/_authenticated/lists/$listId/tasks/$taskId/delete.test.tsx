@@ -1,5 +1,3 @@
-// __tests__/routes/_authenticated/lists/$listId/tasks/$taskId/delete.test.tsx
-
 import {
   describe,
   it,
@@ -33,7 +31,7 @@ import {
 
 import { TRPCError } from "@trpc/server";
 import { useAuthStore } from "@/store/authStore";
-import { suppressActWarnings } from "../../../../../../act-suppress";
+import { suppressActWarnings } from "../../../../../../utils/act-suppress";
 
 suppressActWarnings();
 
@@ -53,11 +51,6 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
     prepareDetailPageTestList();
 
     server.use(
-      trpcMsw.user.createOrSync.mutation(() => ({
-        success: true,
-        message: "User synced (mock)",
-        user: { id: "test-user-123", email: "testuser@example.com" },
-      })),
       listGetAllHandler,
       listGetOneDetailPagePreset,
       taskGetByListSuccess,

@@ -1,31 +1,21 @@
-// src/shared/hooks/useTaskRealtime.ts
-
 import { useQueryClient } from "@tanstack/react-query";
 import { trpc } from "@/trpc";
 import { useRealtimeSubscription } from "./useRealtimeSubscription";
+import { useAuthStore } from "@/store/authStore";
 
-interface TaskRealtimeProps {
-  listId: string | null | undefined;
-}
-
-export function useTaskRealtime({ listId }: TaskRealtimeProps) {
+export function useTaskRealtime() {
   const queryClient = useQueryClient();
+  const userId = useAuthStore((s) => s.user?.id);
 
   useRealtimeSubscription({
-    channelName: listId ? `tasks-for-list:${listId}` : "noop-task-subscription",
+    channelName: userId ? `task:user:${userId}` : "task:placeholder",
     table: "task",
     event: "*",
-    enabled: !!listId,
+    filter: userId ? `userId=eq.${userId}` : undefined,
+    enabled: !!userId,
     onPayload: () => {
-      if (!listId) return;
-
       queryClient.invalidateQueries({
-        queryKey: trpc.list.getOne.queryKey({ id: listId }),
-        refetchType: "active",
-      });
-
-      queryClient.invalidateQueries({
-        queryKey: trpc.task.getByList.queryKey({ listId }),
+        queryKey: trpc.task.getByList.queryKey(),
         refetchType: "active",
       });
 
@@ -33,9 +23,11 @@ export function useTaskRealtime({ listId }: TaskRealtimeProps) {
         queryKey: trpc.list.getAll.queryKey(),
         refetchType: "active",
       });
-    },
-    autoResubscribe: true,
-  });
 
-  return null;
+      queryClient.invalidateQueries({
+        queryKey: trpc.list.getOne.queryKey(),
+        refetchType: "active",
+      });
+    },
+  });
 }

@@ -1,5 +1,3 @@
-// __tests__/routes/_authenticated/lists/$listId/tasks/completed.test.tsx
-
 import {
   describe,
   it,
@@ -20,7 +18,7 @@ import { trpcMsw } from "../../../../../__mocks__/trpcMsw";
 
 import { listGetOneDetailPagePreset } from "../../../../../__mocks__/handlers/lists";
 import { useAuthStore } from "@/store/authStore";
-import { suppressActWarnings } from "../../../../act-suppress";
+import { suppressActWarnings } from "../../../../utils/act-suppress";
 
 suppressActWarnings();
 
@@ -33,11 +31,6 @@ describe("Completed Tasks Page (/_authenticated/lists/$listId/tasks/completed)",
     server.resetHandlers();
 
     server.use(
-      trpcMsw.user.createOrSync.mutation(() => ({
-        success: true,
-        message: "User synced (mock)",
-        user: { id: "test-user-123", email: "testuser@example.com" },
-      })),
       listGetOneDetailPagePreset,
       trpcMsw.task.getByList.query(({ input }) => {
         if (input.listId !== TEST_LIST_ID) {

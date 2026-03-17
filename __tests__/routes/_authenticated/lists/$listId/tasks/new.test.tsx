@@ -1,5 +1,3 @@
-// __tests__/routes/_authenticated/lists/$listId/tasks/new.test.tsx
-
 import {
   describe,
   it,
@@ -14,7 +12,6 @@ import userEvent from "@testing-library/user-event";
 
 import { server } from "../../../../../../__mocks__/server";
 import { renderWithProviders } from "../../../../../utils/test-helpers";
-import { trpcMsw } from "../../../../../../__mocks__/trpcMsw";
 
 import {
   resetMockLists,
@@ -32,7 +29,7 @@ import {
 } from "../../../../../../__mocks__/handlers/tasks";
 
 import { useAuthStore } from "@/store/authStore";
-import { suppressActWarnings } from "../../../../../act-suppress";
+import { suppressActWarnings } from "../../../../../utils/act-suppress";
 
 suppressActWarnings();
 
@@ -48,11 +45,6 @@ describe("New Task Page (/_authenticated/lists/$listId/tasks/new)", () => {
     prepareDetailPageTestList();
 
     server.use(
-      trpcMsw.user.createOrSync.mutation(() => ({
-        success: true,
-        message: "User synced (mock)",
-        user: { id: "test-user-123", email: "testuser@example.com" },
-      })),
       listGetAllHandler,
       listGetOneDetailPagePreset,
       taskGetByListSuccess,

@@ -1,5 +1,3 @@
-// src/app/routes/_authenticated/lists/$listId/tasks/$taskId/delete.tsx
-
 import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft } from "lucide-react";
