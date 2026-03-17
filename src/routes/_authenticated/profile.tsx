@@ -27,7 +27,7 @@ function ProfilePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { show: showBanner } = useBannerStore();
-  const { user, updateUserEmail, signOut } = useAuthStore();
+  const { user, changeUserEmail, signOut } = useAuthStore();
 
   const currentEmail = user?.email ?? "";
   const hasUser = !!user;
@@ -39,7 +39,6 @@ function ProfilePage() {
         if (event === "USER_UPDATED" && session?.user?.email) {
           const newEmail = session.user.email;
           if (newEmail !== currentEmail) {
-            updateUserEmail(newEmail);
             showBanner({
               message: `Your email has been updated to ${newEmail}`,
               variant: "success",
@@ -54,7 +53,7 @@ function ProfilePage() {
     );
 
     return () => listener.subscription.unsubscribe();
-  }, [currentEmail, updateUserEmail, showBanner, queryClient]);
+  }, [currentEmail, showBanner, queryClient]);
 
   const handleClose = () => {
     try {
@@ -70,18 +69,19 @@ function ProfilePage() {
 
   const handleEmailChange = async (newEmail: string) => {
     setIsLoading(true);
-    try {
-      const { error } = await supabase.auth.updateUser({ email: newEmail });
-      if (error) throw error;
-    } finally {
-      setIsLoading(false);
+    const { error } = await changeUserEmail(newEmail);
+    setIsLoading(false);
+
+    if (error) {
+      showBanner({
+        message: `Failed to update email: ${error.message}`,
+        duration: 5000,
+      });
     }
   };
 
-  const handleLogout = () => {
-    signOut().catch((err) =>
-      console.warn("[Logout] supabase.auth.signOut failed (non-blocking)", err),
-    );
+  const handleLogout = async () => {
+    await signOut();
 
     const ref = new URL(import.meta.env.VITE_SUPABASE_URL!).hostname.split(
       ".",

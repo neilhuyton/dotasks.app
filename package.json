@@ -28,7 +28,7 @@
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-visually-hidden": "^1.2.4",
-    "@steel-cut/steel-lib": "file:steel-cut-steel-lib-0.1.89.tgz",
+    "@steel-cut/steel-lib": "file:steel-cut-steel-lib-0.1.97.tgz",
     "@steel-cut/trpc-shared": "file:steel-cut-trpc-shared-0.0.23.tgz",
     "@supabase/auth-js": "^2.98.0",
     "@supabase/realtime-js": "^2.98.0",
