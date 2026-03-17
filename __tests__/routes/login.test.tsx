@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../utils/test-helpers";
 import { useAuthStore } from "@/store/authStore";
 import type { Session, User } from "@supabase/supabase-js";
+import { APP_CONFIG } from "@/appConfig";
 
 vi.mock("@/store/authStore", () => {
   let mockUser: User | null = null;
@@ -118,7 +119,7 @@ describe("Login Page (/login)", () => {
 
     expect(navigate).toHaveBeenCalledWith(
       expect.objectContaining({
-        to: expect.stringContaining("home"),
+        to: expect.stringContaining(APP_CONFIG.defaultAuthenticatedPath),
       }),
     );
   });
