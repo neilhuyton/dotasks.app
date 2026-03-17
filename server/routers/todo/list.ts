@@ -1,5 +1,3 @@
-// server/routers/todo/list.ts
-
 import { z } from "zod";
 import { router, protectedProcedure } from "../../trpc-base";
 import { TRPCError } from "@trpc/server";

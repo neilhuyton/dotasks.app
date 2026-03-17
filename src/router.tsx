@@ -1,5 +1,3 @@
-// src/router/router.tsx
-
 import { createRouter } from "@tanstack/react-router";
 
 import { getQueryClient } from "@/queryClient";

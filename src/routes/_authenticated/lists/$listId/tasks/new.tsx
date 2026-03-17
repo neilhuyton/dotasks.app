@@ -1,5 +1,3 @@
-// src/app/routes/_authenticated/lists/$listId/tasks/new.tsx
-
 import { createFileRoute } from "@tanstack/react-router";
 import { type QueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";

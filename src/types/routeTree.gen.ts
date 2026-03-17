@@ -11,12 +11,13 @@
 import { Route as rootRouteImport } from './../routes/__root'
 import { Route as UpdatePasswordRouteImport } from './../routes/update-password'
 import { Route as ResetPasswordRouteImport } from './../routes/reset-password'
-import { Route as ResendVerificationRouteImport } from './../routes/resend-verification'
 import { Route as RegisterRouteImport } from './../routes/register'
 import { Route as LoginRouteImport } from './../routes/login'
+import { Route as EmailChangeRouteImport } from './../routes/email-change'
 import { Route as AuthenticatedRouteRouteImport } from './../routes/_authenticated/route'
 import { Route as IndexRouteImport } from './../routes/index'
 import { Route as AuthenticatedProfileRouteImport } from './../routes/_authenticated/profile'
+import { Route as AuthenticatedHomeRouteImport } from './../routes/_authenticated/home'
 import { Route as AuthenticatedListsIndexRouteImport } from './../routes/_authenticated/lists/index'
 import { Route as AuthenticatedListsNewRouteImport } from './../routes/_authenticated/lists/new'
 import { Route as AuthenticatedListsListIdRouteImport } from './../routes/_authenticated/lists/$listId'
@@ -37,11 +38,6 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ResendVerificationRoute = ResendVerificationRouteImport.update({
-  id: '/resend-verification',
-  path: '/resend-verification',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
@@ -50,6 +46,11 @@ const RegisterRoute = RegisterRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmailChangeRoute = EmailChangeRouteImport.update({
+  id: '/email-change',
+  path: '/email-change',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
@@ -64,6 +65,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
+  id: '/home',
+  path: '/home',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedListsIndexRoute = AuthenticatedListsIndexRouteImport.update({
@@ -121,11 +127,12 @@ const AuthenticatedListsListIdTasksTaskIdDeleteRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/email-change': typeof EmailChangeRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/resend-verification': typeof ResendVerificationRoute
   '/reset-password': typeof ResetPasswordRoute
   '/update-password': typeof UpdatePasswordRoute
+  '/home': typeof AuthenticatedHomeRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/lists/$listId': typeof AuthenticatedListsListIdRouteWithChildren
   '/lists/new': typeof AuthenticatedListsNewRoute
@@ -139,11 +146,12 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/email-change': typeof EmailChangeRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/resend-verification': typeof ResendVerificationRoute
   '/reset-password': typeof ResetPasswordRoute
   '/update-password': typeof UpdatePasswordRoute
+  '/home': typeof AuthenticatedHomeRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/lists/$listId': typeof AuthenticatedListsListIdRouteWithChildren
   '/lists/new': typeof AuthenticatedListsNewRoute
@@ -159,11 +167,12 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/email-change': typeof EmailChangeRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/resend-verification': typeof ResendVerificationRoute
   '/reset-password': typeof ResetPasswordRoute
   '/update-password': typeof UpdatePasswordRoute
+  '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/lists/$listId': typeof AuthenticatedListsListIdRouteWithChildren
   '/_authenticated/lists/new': typeof AuthenticatedListsNewRoute
@@ -179,11 +188,12 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/email-change'
     | '/login'
     | '/register'
-    | '/resend-verification'
     | '/reset-password'
     | '/update-password'
+    | '/home'
     | '/profile'
     | '/lists/$listId'
     | '/lists/new'
@@ -197,11 +207,12 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/email-change'
     | '/login'
     | '/register'
-    | '/resend-verification'
     | '/reset-password'
     | '/update-password'
+    | '/home'
     | '/profile'
     | '/lists/$listId'
     | '/lists/new'
@@ -216,11 +227,12 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/email-change'
     | '/login'
     | '/register'
-    | '/resend-verification'
     | '/reset-password'
     | '/update-password'
+    | '/_authenticated/home'
     | '/_authenticated/profile'
     | '/_authenticated/lists/$listId'
     | '/_authenticated/lists/new'
@@ -236,9 +248,9 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  EmailChangeRoute: typeof EmailChangeRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
-  ResendVerificationRoute: typeof ResendVerificationRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   UpdatePasswordRoute: typeof UpdatePasswordRoute
 }
@@ -259,13 +271,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/resend-verification': {
-      id: '/resend-verification'
-      path: '/resend-verification'
-      fullPath: '/resend-verification'
-      preLoaderRoute: typeof ResendVerificationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/register': {
       id: '/register'
       path: '/register'
@@ -278,6 +283,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/email-change': {
+      id: '/email-change'
+      path: '/email-change'
+      fullPath: '/email-change'
+      preLoaderRoute: typeof EmailChangeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -299,6 +311,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof AuthenticatedProfileRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/home': {
+      id: '/_authenticated/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof AuthenticatedHomeRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/lists/': {
@@ -396,6 +415,7 @@ const AuthenticatedListsListIdRouteWithChildren =
   )
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedListsListIdRoute: typeof AuthenticatedListsListIdRouteWithChildren
   AuthenticatedListsNewRoute: typeof AuthenticatedListsNewRoute
@@ -403,6 +423,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedHomeRoute: AuthenticatedHomeRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedListsListIdRoute: AuthenticatedListsListIdRouteWithChildren,
   AuthenticatedListsNewRoute: AuthenticatedListsNewRoute,
@@ -415,9 +436,9 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  EmailChangeRoute: EmailChangeRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
-  ResendVerificationRoute: ResendVerificationRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   UpdatePasswordRoute: UpdatePasswordRoute,
 }

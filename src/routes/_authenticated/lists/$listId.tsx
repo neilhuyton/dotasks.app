@@ -1,5 +1,3 @@
-// src/app/routes/_authenticated/lists/$listId.tsx
-
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
 import { useListTasks } from "@/hooks/useListTasks";

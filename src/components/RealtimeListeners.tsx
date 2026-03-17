@@ -1,9 +1,9 @@
-// src/app/components/RealtimeListeners.tsx
-
 import { useListRealtime } from "@/hooks/useListRealtime";
+import { useTaskRealtime } from "@/hooks/useTaskRealtime";
 
 export function RealtimeListeners() {
-  useListRealtime({ table: "todolist" });
+  useListRealtime();
+  useTaskRealtime();
 
   return null;
 }

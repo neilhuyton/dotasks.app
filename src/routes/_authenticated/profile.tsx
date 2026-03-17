@@ -1,21 +1,22 @@
-// src/app/routes/_authenticated/profile.tsx
-
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTRPC } from "@/trpc";
-import { InstallPWA, useBannerStore } from "@steel-cut/steel-lib";
+import {
+  InstallPWA,
+  LogoutSection,
+  useBannerStore,
+} from "@steel-cut/steel-lib";
 import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
-import LogoutSection from "@/components/LogoutSection";
 import {
   ProfileHeader,
   CurrentEmailSection,
   EmailChangeForm,
   PasswordResetForm,
 } from "@steel-cut/steel-lib";
+import { APP_CONFIG } from "@/appConfig";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   component: ProfilePage,
@@ -26,8 +27,7 @@ function ProfilePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { show: showBanner } = useBannerStore();
-  const { user, updateUserEmail } = useAuthStore();
-  const trpc = useTRPC();
+  const { user, updateUserEmail, signOut } = useAuthStore();
 
   const currentEmail = user?.email ?? "";
   const hasUser = !!user;
@@ -46,7 +46,7 @@ function ProfilePage() {
               duration: 5000,
             });
             queryClient.invalidateQueries({
-              queryKey: trpc.user.getCurrent.queryKey(),
+              queryKey: [["user", "getCurrent"]],
             });
           }
         }
@@ -54,7 +54,7 @@ function ProfilePage() {
     );
 
     return () => listener.subscription.unsubscribe();
-  }, [currentEmail, updateUserEmail, showBanner, queryClient, trpc]);
+  }, [currentEmail, updateUserEmail, showBanner, queryClient]);
 
   const handleClose = () => {
     try {
@@ -63,9 +63,9 @@ function ProfilePage() {
         return;
       }
     } catch {
-      // treat error as no history → fallback
+      // empty
     }
-    navigate({ to: "/lists", replace: true });
+    navigate({ to: APP_CONFIG.defaultAuthenticatedPath, replace: true });
   };
 
   const handleEmailChange = async (newEmail: string) => {
@@ -76,6 +76,25 @@ function ProfilePage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleLogout = () => {
+    signOut().catch((err) =>
+      console.warn("[Logout] supabase.auth.signOut failed (non-blocking)", err),
+    );
+
+    const ref = new URL(import.meta.env.VITE_SUPABASE_URL!).hostname.split(
+      ".",
+    )[0];
+    localStorage.removeItem(`sb-${ref}-auth-token`);
+
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith("sb-") && key.includes("-auth"))
+      .forEach((key) => localStorage.removeItem(key));
+
+    queryClient.clear();
+
+    window.location.replace("/login");
   };
 
   return (
@@ -115,6 +134,7 @@ function ProfilePage() {
                 onSubmit={handleEmailChange}
               />
               <PasswordResetForm
+                email={currentEmail}
                 onSubmit={async (email) => {
                   const { error } = await supabase.auth.resetPasswordForEmail(
                     email,
@@ -125,7 +145,7 @@ function ProfilePage() {
                   if (error) throw error;
                 }}
               />
-              <LogoutSection />
+              <LogoutSection onLogout={handleLogout} />
             </div>
           </div>
         </div>
@@ -135,5 +155,3 @@ function ProfilePage() {
     </div>
   );
 }
-
-export default ProfilePage;

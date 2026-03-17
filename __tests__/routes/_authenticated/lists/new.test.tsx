@@ -1,5 +1,3 @@
-// __tests__/routes/_authenticated/lists/new.test.tsx
-
 import {
   describe,
   it,
@@ -23,7 +21,7 @@ import {
 
 import { renderWithProviders } from "../../../utils/test-helpers";
 import { useAuthStore } from "@/store/authStore";
-import { suppressActWarnings } from "../../../act-suppress";
+import { suppressActWarnings } from "../../../utils/act-suppress";
 import { trpcMsw } from "../../../../__mocks__/trpcMsw";
 import { TRPCError } from "@trpc/server";
 
@@ -38,15 +36,7 @@ describe("Create New List Page (/_authenticated/lists/new)", () => {
     server.resetHandlers();
     resetMockLists();
 
-    server.use(
-      trpcMsw.user.createOrSync.mutation(() => ({
-        success: true,
-        message: "User synced (mock)",
-        user: { id: "test-user-123", email: "testuser@example.com" },
-      })),
-      listGetAllHandler,
-      listCreateHandler,
-    );
+    server.use(listGetAllHandler, listCreateHandler);
 
     await useAuthStore.getState().initialize();
   });

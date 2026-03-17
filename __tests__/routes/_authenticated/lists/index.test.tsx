@@ -1,5 +1,3 @@
-// __tests__/routes/_authenticated/lists/index.test.tsx
-
 import {
   describe,
   it,
@@ -21,9 +19,8 @@ import {
   listGetAllErrorHandler,
   resetMockLists,
 } from "../../../../__mocks__/handlers/lists";
-import { trpcMsw } from "../../../../__mocks__/trpcMsw";
 import { useAuthStore } from "@/store/authStore";
-import { suppressActWarnings } from "../../../../__tests__/act-suppress";
+import { suppressActWarnings } from "../../../utils/act-suppress";
 
 suppressActWarnings();
 
@@ -35,16 +32,7 @@ describe("Lists Overview Page (/_authenticated/lists/)", () => {
   beforeEach(async () => {
     server.resetHandlers();
     resetMockLists();
-
-    server.use(
-      trpcMsw.user.createOrSync.mutation(() => ({
-        success: true,
-        message: "User synced (mock)",
-        user: { id: "test-user-123", email: "testuser@example.com" },
-      })),
-      listGetAllHandler,
-    );
-
+    server.use(listGetAllHandler);
     await useAuthStore.getState().initialize();
   });
 
@@ -79,12 +67,10 @@ describe("Lists Overview Page (/_authenticated/lists/)", () => {
     const fab = screen.getByTestId("fab-add-list");
     expect(fab).toBeInTheDocument();
 
-    // Verify sr-only text for accessibility
     expect(
       screen.getByText("Create your first list", { selector: ".sr-only" }),
     ).toBeInTheDocument();
 
-    // Confirm it's a button (no href)
     expect(fab.tagName.toLowerCase()).toBe("button");
     expect(fab).not.toHaveAttribute("href");
 
@@ -109,7 +95,6 @@ describe("Lists Overview Page (/_authenticated/lists/)", () => {
     const fab = screen.getByTestId("fab-add-list");
     expect(fab).toBeInTheDocument();
 
-    // Verify sr-only text for accessibility
     expect(
       screen.getByText("Create new list", { selector: ".sr-only" }),
     ).toBeInTheDocument();
@@ -119,28 +104,29 @@ describe("Lists Overview Page (/_authenticated/lists/)", () => {
   });
 
   it("shows error message when getAll query fails", async () => {
-    const errorSpy = vi.spyOn(console, "error");
-    const warnSpy = vi.spyOn(console, "warn");
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    errorSpy.mockImplementation(() => {});
-    warnSpy.mockImplementation(() => {});
+    try {
+      server.use(listGetAllErrorHandler);
 
-    server.use(listGetAllErrorHandler);
+      renderListsPage();
 
-    renderListsPage();
-
-    await waitFor(
-      () => {
-        expect(
-          screen.getByText("Failed to load your lists"),
-        ).toBeInTheDocument();
-        expect(screen.getByText("Failed to fetch lists")).toBeInTheDocument();
-      },
-      { timeout: 1500 },
-    );
-
-    errorSpy.mockRestore();
-    warnSpy.mockRestore();
+      await waitFor(
+        () => {
+          expect(
+            screen.getByText("Failed to load your lists"),
+          ).toBeInTheDocument();
+          expect(screen.getByText("Failed to fetch lists")).toBeInTheDocument();
+        },
+        { timeout: 1500 },
+      );
+    } finally {
+      consoleError.mockRestore();
+      consoleWarn.mockRestore();
+    }
   });
 
   it("navigates to /lists/new when FAB is clicked", async () => {

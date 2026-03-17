@@ -1,5 +1,3 @@
-// src/app/routes/_authenticated/route.tsx
-
 import {
   createFileRoute,
   redirect,
@@ -7,32 +5,31 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import { useAuthStore } from "@/store/authStore";
+import { ProfileIcon } from "@steel-cut/steel-lib";
+import { ThemeToggle } from "@steel-cut/steel-lib";
+import { ColorThemeSelector } from "@steel-cut/steel-lib";
+import { ActionBanner } from "@steel-cut/steel-lib";
 import { useEffect } from "react";
 import { Suspense } from "react";
-import {
-  ActionBanner,
-  ColorThemeSelector,
-  ProfileIcon,
-  ThemeToggle,
-  // GlobalFetchingIndicator,
-} from "@steel-cut/steel-lib";
+import { APP_CONFIG } from "@/appConfig";
 
 const AuthenticatedLayout = () => {
   const navigate = useNavigate();
-  const { initialize, loading, user } = useAuthStore();
+  const { user, loading } = useAuthStore();
 
   useEffect(() => {
     if (!user && !loading) {
-      initialize();
+      navigate({
+        to: "/login",
+        search: { redirect: window.location.pathname },
+      });
     }
-  }, [initialize, user, loading]);
+  }, [user, loading, navigate]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <p className="text-muted-foreground animate-pulse">
-          Loading session...
-        </p>
+      <div className="flex items-center justify-center min-h-screen">
+        Loading session...
       </div>
     );
   }
@@ -44,16 +41,15 @@ const AuthenticatedLayout = () => {
   return (
     <Suspense
       fallback={
-        <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="flex items-center justify-center min-h-screen">
           Loading...
         </div>
       }
     >
       <div className="flex flex-col min-h-dvh overscroll-none bg-background">
-        <header className="fixed top-0 left-0 right-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+        <header className="fixed top-0 left-0 right-0 z-30 bg-background px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between border-b">
           <div className="text-xl font-semibold tracking-tight flex items-center gap-2.5">
-            Do Tasks
-            {/* {!loading && <GlobalFetchingIndicator />} */}
+            {APP_CONFIG.appName}
           </div>
 
           <div className="flex items-center gap-3 sm:gap-4">
@@ -82,16 +78,24 @@ const AuthenticatedLayout = () => {
 };
 
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: ({ location }) => {
+  beforeLoad: async ({ location }) => {
+    const store = useAuthStore.getState();
+
+    // If store not ready → wait for init
+    if (!store.isInitialized) {
+      await store.initialize();
+    }
+
     const { user, loading } = useAuthStore.getState();
 
+    // Still loading after init → defer decision to layout
     if (loading) return;
 
     if (!user) {
       throw redirect({
         to: "/login",
         replace: true,
-        search: { redirect: location.href || "/lists" },
+        search: { redirect: location.href || location.pathname },
       });
     }
   },

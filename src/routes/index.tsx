@@ -1,8 +1,7 @@
-// src/app/routes/index.tsx
-
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Plus, ListTodo, LogIn, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { APP_CONFIG } from "@/appConfig";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -13,7 +12,7 @@ function HomePage() {
     <div className="min-h-dvh flex flex-col bg-gradient-to-b from-background to-muted/30">
       <header className="px-6 pt-16 pb-12 text-center sm:pt-24 sm:pb-20">
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-6">
-          Do Tasks
+          {APP_CONFIG.appName}
         </h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
           Simple, focused task management. Get things done without the noise.

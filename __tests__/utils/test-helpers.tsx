@@ -11,6 +11,7 @@ import {
 import { router as appRouter, type RouterContext } from "@/router";
 import { trpcClient, TRPCProvider } from "@/trpc";
 import type { QueryClient as QCType } from "@tanstack/react-query";
+import { BannerProvider } from "@steel-cut/steel-lib";
 
 // ────────────────────────────────────────────────
 // Create a fresh QueryClient for tests (no retries, no stale time)
@@ -62,11 +63,13 @@ export function renderWithProviders({
   });
 
   const wrapped = (
-    <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={testRouter} />
-      </QueryClientProvider>
-    </TRPCProvider>
+    <BannerProvider>
+      <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={testRouter} />
+        </QueryClientProvider>
+      </TRPCProvider>
+    </BannerProvider>
   );
 
   const renderResult = render(wrapped);

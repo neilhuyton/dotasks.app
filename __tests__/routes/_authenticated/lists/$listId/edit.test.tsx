@@ -1,5 +1,3 @@
-// __tests__/routes/_authenticated/lists/$listId/edit.test.tsx
-
 import {
   describe,
   it,
@@ -28,7 +26,7 @@ import {
 
 import { TRPCError } from "@trpc/server";
 import { useAuthStore } from "@/store/authStore";
-import { suppressActWarnings } from "../../../../act-suppress";
+import { suppressActWarnings } from "../../../../utils/act-suppress";
 
 suppressActWarnings();
 
@@ -46,11 +44,6 @@ describe("Edit List Page (/_authenticated/lists/$listId/edit)", () => {
     prepareDetailPageTestList();
 
     server.use(
-      trpcMsw.user.createOrSync.mutation(() => ({
-        success: true,
-        message: "User synced (mock)",
-        user: { id: "test-user-123", email: "testuser@example.com" },
-      })),
       listGetOneDetailPagePreset,
       listGetAllHandler,
       listUpdateHandler,

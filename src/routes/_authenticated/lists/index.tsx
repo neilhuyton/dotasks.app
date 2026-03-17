@@ -1,5 +1,3 @@
-// src/app/routes/_authenticated/lists/index.tsx
-
 import { Outlet, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useLists } from "@/hooks/useLists";
 import { SortableListsTable } from "@/components/lists/SortableListsTable";
