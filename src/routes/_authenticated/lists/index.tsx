@@ -110,7 +110,7 @@ function ListsPage() {
         onClick={handleCreateNew}
         label="Create new list"
         testId="fab-add-list"
-        pulse={listCount <= 1}
+        pulse={listCount < 1}
       />
 
       <Outlet />
