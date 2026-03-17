@@ -48,8 +48,8 @@ importers:
         specifier: ^1.2.4
         version: 1.2.4(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@steel-cut/steel-lib':
-        specifier: file:steel-cut-steel-lib-0.1.89.tgz
-        version: file:steel-cut-steel-lib-0.1.89.tgz(@tanstack/react-query@5.90.21(react@19.2.4))(@types/node@24.10.15)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(lucide-react@0.540.0(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3)(use-sync-external-store@1.6.0(react@19.2.4))(vite@7.3.1(@types/node@24.10.15)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0))
+        specifier: file:steel-cut-steel-lib-0.1.97.tgz
+        version: file:steel-cut-steel-lib-0.1.97.tgz(@tanstack/react-query@5.90.21(react@19.2.4))(@types/node@24.10.15)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(lucide-react@0.540.0(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3)(use-sync-external-store@1.6.0(react@19.2.4))(vite@7.3.1(@types/node@24.10.15)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0))
       '@steel-cut/trpc-shared':
         specifier: file:steel-cut-trpc-shared-0.0.23.tgz
         version: steel-cut-trpc-shared@file:steel-cut-trpc-shared-0.0.23.tgz(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.8.3))(typescript@5.8.3))(@supabase/supabase-js@2.99.0)(@tanstack/react-query@5.90.21(react@19.2.4))(@trpc/client@11.10.0(@trpc/server@11.10.0(typescript@5.8.3))(typescript@5.8.3))(@trpc/server@11.10.0(typescript@5.8.3))(@trpc/tanstack-react-query@11.10.0(@tanstack/react-query@5.90.21(react@19.2.4))(@trpc/client@11.10.0(@trpc/server@11.10.0(typescript@5.8.3))(typescript@5.8.3))(@trpc/server@11.10.0(typescript@5.8.3))(react@19.2.4)(typescript@5.8.3))(@types/node@24.10.15)(react@19.2.4)(rollup@4.59.0)(typescript@5.8.3)(vite@7.3.1(@types/node@24.10.15)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0))(zod@4.3.6)
@@ -2047,9 +2047,9 @@ packages:
   '@standard-schema/utils@0.3.0':
     resolution: {integrity: sha512-e7Mew686owMaPJVNNLs55PUvgz371nKgwsc4vxE49zsODpJEnxgxRo2y/OKrqueavXgZNMDVj3DdHFlaSAeU8g==}
 
-  '@steel-cut/steel-lib@file:steel-cut-steel-lib-0.1.89.tgz':
-    resolution: {integrity: sha512-ddnJxCM1DrHTNSxbQ4B6DQy4JZrP2j6Lxlk5G5Ljg4w7pQSESWjWESdlw/inhHmW6k3QWO8nkD7K/bhp7TyROA==, tarball: file:steel-cut-steel-lib-0.1.89.tgz}
-    version: 0.1.89
+  '@steel-cut/steel-lib@file:steel-cut-steel-lib-0.1.97.tgz':
+    resolution: {integrity: sha512-BQzakQ2HJ21Inq6VJKE4axrj1DnbXqLMx+OO3gTWyfTyFn68WhWx78fIiVRproUMRJkZdGHpFnW6qpoKEzfxKA==, tarball: file:steel-cut-steel-lib-0.1.97.tgz}
+    version: 0.1.97
     peerDependencies:
       '@tanstack/react-query': ^5.0.0
       lucide-react: ^0.577.0
@@ -6901,7 +6901,7 @@ snapshots:
       express: 5.2.1
       express-rate-limit: 8.3.1(express@5.2.1)
       hono: 4.12.5
-      jose: 6.1.3
+      jose: 6.2.1
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
       raw-body: 3.0.2
@@ -7999,7 +7999,7 @@ snapshots:
 
   '@standard-schema/utils@0.3.0': {}
 
-  '@steel-cut/steel-lib@file:steel-cut-steel-lib-0.1.89.tgz(@tanstack/react-query@5.90.21(react@19.2.4))(@types/node@24.10.15)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(lucide-react@0.540.0(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3)(use-sync-external-store@1.6.0(react@19.2.4))(vite@7.3.1(@types/node@24.10.15)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0))':
+  '@steel-cut/steel-lib@file:steel-cut-steel-lib-0.1.97.tgz(@tanstack/react-query@5.90.21(react@19.2.4))(@types/node@24.10.15)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(lucide-react@0.540.0(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3)(use-sync-external-store@1.6.0(react@19.2.4))(vite@7.3.1(@types/node@24.10.15)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0))':
     dependencies:
       '@fontsource-variable/geist': 5.2.8
       '@hookform/resolvers': 5.2.2(react-hook-form@7.71.2(react@19.2.4))
