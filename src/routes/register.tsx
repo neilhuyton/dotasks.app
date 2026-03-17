@@ -1,8 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Logo } from "@/components/Logo";
 import { useAuthStore } from "@/store/authStore";
-import { RegisterForm, type RegisterFormValues } from "@steel-cut/steel-lib";
+import {
+  Logo,
+  RegisterForm,
+  type RegisterFormValues,
+} from "@steel-cut/steel-lib";
 import { useState } from "react";
+import { APP_CONFIG } from "@/appConfig";
 
 export const Route = createFileRoute("/register")({
   component: RegisterPage,
@@ -34,7 +38,7 @@ function RegisterPage() {
   return (
     <div className="min-h-dvh flex flex-col items-center p-1 sm:p-2 lg:p-3">
       <div className="pt-14">
-        <Logo />
+        <Logo appName={APP_CONFIG.appName} />
       </div>
 
       <RegisterForm
