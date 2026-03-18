@@ -3,7 +3,7 @@
   command = "npm run build" # ← your current build command, keep it here as default
 
 [context.production]
-  command = "npx prisma generate && npx prisma migrate deploy && npm run build"
+  command = "npx prisma generate && npm run build"
 
 [[redirects]]
   from = "/trpc/*"
