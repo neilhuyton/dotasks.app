@@ -264,7 +264,7 @@ export const taskRouter = router({
           where: { id: input.id },
           data: {
             isCurrent: true,
-            order: -1,
+            order: -1.0,
           },
         });
       });
