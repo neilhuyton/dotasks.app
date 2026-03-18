@@ -185,8 +185,8 @@ export const listRouter = router({
     .input(
       z.array(
         z.object({
-          id: z.string().uuid(),
-          order: z.number().int().min(0),
+          id: z.uuid(),
+          order: z.number(), 
         }),
       ),
     )

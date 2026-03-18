@@ -1,5 +1,3 @@
-// src/hooks/useLists.ts
-
 import { useState } from "react";
 import {
   useSuspenseQuery,
@@ -7,7 +5,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useTRPC } from "@/trpc";
-import { useBannerStore } from '@steel-cut/steel-lib'
+import { useBannerStore } from "@steel-cut/steel-lib";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/../server/trpc";
 
@@ -43,7 +41,10 @@ export function useLists() {
           return update ? { ...list, order: update.order } : list;
         });
 
-        newLists.sort((a, b) => a.order - b.order);
+        newLists.sort((a, b) => {
+          const diff = a.order - b.order;
+          return Math.abs(diff) < 1e-9 ? 0 : diff < 0 ? -1 : 1;
+        });
 
         setPendingReorder(newLists);
         queryClient.setQueryData(listsQueryKey, newLists);
