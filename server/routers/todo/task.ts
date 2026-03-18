@@ -88,7 +88,12 @@ export const taskRouter = router({
 
       return ctx.prisma.task.create({
         data: {
-          ...input,
+          title: input.title,
+          description: input.description,
+          dueDate: input.dueDate,
+          priority: input.priority,
+          listId: input.listId,
+          userId: ctx.userId,
           order: nextOrder,
           isCompleted: false,
           isCurrent: false,
@@ -111,7 +116,7 @@ export const taskRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { id, ...inputData } = input;
+      const { id, ...data } = input;
 
       const task = await ctx.prisma.task.findUnique({
         where: { id },
@@ -131,11 +136,11 @@ export const taskRouter = router({
         throw new TRPCError({ code: "FORBIDDEN" });
       }
 
-      const finalData: Prisma.TaskUpdateInput = { ...inputData };
+      const finalData: Prisma.TaskUpdateInput = { ...data };
 
       const isOrWillBeCompleted =
-        inputData.isCompleted === true ||
-        (inputData.isCompleted === undefined && task.isCompleted);
+        data.isCompleted === true ||
+        (data.isCompleted === undefined && task.isCompleted);
 
       if (isOrWillBeCompleted) {
         finalData.isPinned = false;
