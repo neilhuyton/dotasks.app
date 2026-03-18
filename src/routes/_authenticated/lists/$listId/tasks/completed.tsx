@@ -27,7 +27,12 @@ function CompletedTasksPage() {
     clearCurrentTaskPending,
   } = useListTasks(listId);
 
-  const completedTasks = tasks.filter((t) => t.isCompleted);
+  const completedTasks = tasks
+    .filter((t) => t.isCompleted)
+    .sort(
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    );
 
   const handleBack = () => {
     navigate({
