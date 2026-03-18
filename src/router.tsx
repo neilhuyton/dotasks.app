@@ -3,7 +3,6 @@ import { createRouter } from "@tanstack/react-router";
 import { getQueryClient } from "@/queryClient";
 import { routeTree } from "./types/routeTree.gen";
 import { RouteError } from "@steel-cut/steel-lib";
-import { useUIStore } from "@/store/uiStore";
 
 export interface RouterContext {
   queryClient: ReturnType<typeof getQueryClient>;
@@ -19,10 +18,9 @@ export const router = createRouter({
     <RouteError error={error} reset={reset} />
   ),
 
-  defaultPreload: () => {
-    const isDragging = useUIStore.getState().isDragging;
-    return isDragging ? false : "intent";
-  },
+  defaultPreload: "intent",
+  defaultPreloadDelay: 150,
+  preloadGcTime: 0,
 });
 
 declare module "@tanstack/react-router" {

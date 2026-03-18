@@ -19,6 +19,7 @@ import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import type { Task } from "@/hooks/useListTasks";
 import { SortableTaskItem } from "@/components/tasks/SortableTaskItem";
 import { useUIStore } from "@/store/uiStore";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface SortableTaskListProps {
   tasks: Task[];
@@ -49,6 +50,7 @@ export function SortableTaskList({
   updateTaskOrder,
   isReordering,
 }: SortableTaskListProps) {
+  const queryClient = useQueryClient();
   const { setIsDragging } = useUIStore();
 
   const sensors = useSensors(
@@ -67,6 +69,17 @@ export function SortableTaskList({
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
+
+  function handleDragStart() {
+    setIsDragging(true);
+    queryClient.cancelQueries({
+      predicate: (query) =>
+        query.queryKey.some(
+          (k) =>
+            typeof k === "string" && (k.includes("list") || k.includes("task")),
+        ),
+    });
+  }
 
   function handleDragEnd(event: DragEndEvent) {
     setIsDragging(false);
@@ -111,10 +124,6 @@ export function SortableTaskList({
     const updates = [{ id: draggedId, order: newOrder }];
 
     updateTaskOrder(updates);
-  }
-
-  function handleDragStart() {
-    setIsDragging(true);
   }
 
   const activeTasks = tasks.filter((t) => !t.isCompleted);
