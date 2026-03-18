@@ -18,6 +18,8 @@ import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 
 import type { Task } from "@/hooks/useListTasks";
 import { SortableTaskItem } from "@/components/tasks/SortableTaskItem";
+import { useUIStore } from "@/store/uiStore";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface SortableTaskListProps {
   tasks: Task[];
@@ -48,6 +50,9 @@ export function SortableTaskList({
   updateTaskOrder,
   isReordering,
 }: SortableTaskListProps) {
+  const queryClient = useQueryClient();
+  const { setIsDragging } = useUIStore();
+
   const sensors = useSensors(
     useSensor(MouseSensor, {
       activationConstraint: {
@@ -65,7 +70,20 @@ export function SortableTaskList({
     }),
   );
 
+  function handleDragStart() {
+    setIsDragging(true);
+    queryClient.cancelQueries({
+      predicate: (query) =>
+        query.queryKey.some(
+          (k) =>
+            typeof k === "string" && (k.includes("list") || k.includes("task")),
+        ),
+    });
+  }
+
   function handleDragEnd(event: DragEndEvent) {
+    setIsDragging(false);
+
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
@@ -123,6 +141,7 @@ export function SortableTaskList({
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
+      onDragStart={handleDragStart}
       modifiers={[restrictToVerticalAxis]}
     >
       <SortableContext

@@ -37,7 +37,7 @@ export function useListTasks(listId: string | null | undefined) {
     placeholderData: keepPreviousData,
   });
 
-  useTaskRealtime({ listId });
+  useTaskRealtime();
 
   const [pendingReorder, setPendingReorder] = useState<Task[] | null>(null);
   const [pendingToggleIds, setPendingToggleIds] = useState<Set<string>>(
