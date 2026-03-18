@@ -1,5 +1,3 @@
-// src/features/tasks/components/SortableTaskItem.tsx
-
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 

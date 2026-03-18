@@ -1,5 +1,3 @@
-// src/features/tasks/components/TaskItem.tsx
-
 import { cn } from "@/lib/utils";
 import { type Task } from "@/hooks/useListTasks";
 

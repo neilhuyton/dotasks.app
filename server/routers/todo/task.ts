@@ -104,7 +104,7 @@ export const taskRouter = router({
         description: z.string().optional().nullable(),
         dueDate: z.date().optional().nullable(),
         priority: z.number().int().min(0).max(5).optional().nullable(),
-        order: z.number().int().optional(),
+        order: z.number().optional(),
         isCompleted: z.boolean().optional(),
         isCurrent: z.boolean().optional(),
         isPinned: z.boolean().optional(),
@@ -336,11 +336,7 @@ export const taskRouter = router({
     }),
 
   reorder: protectedProcedure
-    .input(
-      z.array(
-        z.object({ id: z.string().uuid(), order: z.number().int().min(0) }),
-      ),
-    )
+    .input(z.array(z.object({ id: z.string().uuid(), order: z.number() })))
     .mutation(async ({ ctx, input }) => {
       await ctx.prisma.$transaction(
         input.map(({ id, order }) =>

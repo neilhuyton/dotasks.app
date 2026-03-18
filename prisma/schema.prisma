@@ -8,7 +8,6 @@ datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
   directUrl  = env("DIRECT_URL")
-  // shadowDatabaseUrl = env("SHADOW_DATABASE_URL")   // uncomment later when you add a shadow db
 }
 
 model User {
@@ -31,7 +30,7 @@ model TodoList {
   color       String?     
   icon        String?   
   isArchived  Boolean   @default(false)
-  order       Int       @default(0)
+  order       Float     @default(0)
   isPinned    Boolean   @default(false)
 
   userId      String    @db.Uuid
@@ -56,7 +55,7 @@ model Task {
   isCompleted Boolean   @default(false)
   dueDate     DateTime?
   priority    Int?
-  order       Int       @default(0)
+  order       Float     @default(0)
 
   listId      String    @db.Uuid
   list        TodoList  @relation(fields: [listId], references: [id], onDelete: Cascade)

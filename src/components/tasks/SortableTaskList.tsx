@@ -1,5 +1,3 @@
-// src/features/tasks/components/SortableTaskList.tsx
-
 import {
   DndContext,
   closestCenter,
@@ -80,10 +78,32 @@ export function SortableTaskList({
 
     const newActiveTasks = arrayMove(activeTasks, oldIndex, newIndex);
 
-    const updates = newActiveTasks.map((task, idx) => ({
-      id: task.id,
-      order: idx,
-    }));
+    const draggedId = active.id as string;
+
+    let prevOrder: number | null = null;
+    let nextOrder: number | null = null;
+
+    const draggedNewIdx = newActiveTasks.findIndex((t) => t.id === draggedId);
+
+    if (draggedNewIdx > 0) {
+      prevOrder = newActiveTasks[draggedNewIdx - 1].order;
+    }
+    if (draggedNewIdx < newActiveTasks.length - 1) {
+      nextOrder = newActiveTasks[draggedNewIdx + 1].order;
+    }
+
+    let newOrder: number;
+    if (prevOrder === null && nextOrder === null) {
+      newOrder = 0;
+    } else if (prevOrder === null) {
+      newOrder = nextOrder! - 1000;
+    } else if (nextOrder === null) {
+      newOrder = prevOrder + 1000;
+    } else {
+      newOrder = (prevOrder + nextOrder) / 2;
+    }
+
+    const updates = [{ id: draggedId, order: newOrder }];
 
     updateTaskOrder(updates);
   }
