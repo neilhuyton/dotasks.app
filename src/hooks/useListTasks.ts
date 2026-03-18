@@ -9,8 +9,8 @@ import { useTRPC } from "@/trpc";
 
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/../server/trpc";
-import { useTaskRealtime } from "@/hooks/useTaskRealtime";
 import { useBannerStore } from "@steel-cut/steel-lib";
+import { useAuthStore } from "@/store/authStore";
 
 type RouterOutput = inferRouterOutputs<AppRouter>;
 export type Task = RouterOutput["task"]["getByList"][number];
@@ -19,8 +19,9 @@ export function useListTasks(listId: string | null | undefined) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const { show: showBanner } = useBannerStore();
+  const userId = useAuthStore((s) => s.user?.id);
 
-  const enabled = !!listId;
+  const enabled = !!listId && !!userId;
   const input = useMemo(() => ({ listId: listId! }), [listId]);
 
   const queryKey = trpc.task.getByList.queryKey(input);
@@ -36,8 +37,6 @@ export function useListTasks(listId: string | null | undefined) {
     gcTime: 2 * 60 * 60 * 1000,
     placeholderData: keepPreviousData,
   });
-
-  useTaskRealtime();
 
   const [pendingReorder, setPendingReorder] = useState<Task[] | null>(null);
   const [pendingToggleIds, setPendingToggleIds] = useState<Set<string>>(
@@ -133,6 +132,7 @@ export function useListTasks(listId: string | null | undefined) {
           title: newTaskInput.title,
           description: newTaskInput.description ?? null,
           listId: newTaskInput.listId,
+          userId: userId!,
           order: previous.length,
           isCompleted: false,
           isCurrent: false,

@@ -20,7 +20,6 @@ export const router = createRouter({
 
   defaultPreload: "intent",
   defaultPreloadDelay: 150,
-  preloadGcTime: 0,
 });
 
 declare module "@tanstack/react-router" {
