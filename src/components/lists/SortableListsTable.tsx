@@ -17,6 +17,7 @@ import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 
 import type { List } from "@/hooks/useLists";
 import { SortableListItem } from "./SortableListItem";
+import { useUIStore } from "@/store/uiStore";
 
 interface SortableListsTableProps {
   lists: List[];
@@ -29,6 +30,8 @@ export function SortableListsTable({
   updateListOrder,
   isReordering,
 }: SortableListsTableProps) {
+  const { setIsDragging } = useUIStore();
+
   const sensors = useSensors(
     useSensor(MouseSensor, {
       activationConstraint: {
@@ -45,6 +48,8 @@ export function SortableListsTable({
   );
 
   function handleDragEnd(event: DragEndEvent) {
+    setIsDragging(false);
+
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
@@ -85,6 +90,10 @@ export function SortableListsTable({
     updateListOrder(updates);
   }
 
+  function handleDragStart() {
+    setIsDragging(true);
+  }
+
   if (lists.length === 0) {
     return (
       <div className="py-16 text-center text-muted-foreground">
@@ -101,6 +110,7 @@ export function SortableListsTable({
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
+      onDragStart={handleDragStart}
       modifiers={[restrictToVerticalAxis]}
     >
       <SortableContext
