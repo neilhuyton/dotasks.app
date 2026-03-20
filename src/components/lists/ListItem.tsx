@@ -18,8 +18,8 @@ export function ListItem({ list, isDragging = false }: ListItemProps) {
     <Item
       variant="outline"
       className={cn(
-        "min-h-[52px]",
-        "px-3 py-2",
+        "min-h-[56px]",
+        "px-3 py-3",
         "transition-colors duration-150",
         "border",
         isDragging
@@ -30,14 +30,14 @@ export function ListItem({ list, isDragging = false }: ListItemProps) {
       )}
     >
       <div className="flex items-center justify-between w-full gap-3">
-        <ItemContent className="min-w-0 flex-1 py-0.5">
+        <ItemContent className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <ItemTitle className="text-sm font-medium leading-tight truncate">
+            <ItemTitle className="text-sm font-medium leading-tight">
               {list.title}
             </ItemTitle>
             <ChevronRight
               className={cn(
-                "h-4 w-4 text-muted-foreground/70",
+                "h-4 w-4 text-muted-foreground/70 shrink-0",
                 "transition-transform duration-150",
                 "group-hover:translate-x-0.5 group-hover:text-muted-foreground/90",
               )}
@@ -46,7 +46,7 @@ export function ListItem({ list, isDragging = false }: ListItemProps) {
           </div>
 
           {list.description && (
-            <p className="mt-0.5 text-xs text-muted-foreground leading-tight line-clamp-1">
+            <p className="mt-0.5 text-xs text-muted-foreground leading-snug whitespace-pre-wrap">
               {list.description}
             </p>
           )}
