@@ -20,7 +20,7 @@ import { Route as AuthenticatedProfileRouteImport } from './../routes/_authentic
 import { Route as AuthenticatedHomeRouteImport } from './../routes/_authenticated/home'
 import { Route as AuthenticatedListsIndexRouteImport } from './../routes/_authenticated/lists/index'
 import { Route as AuthenticatedListsNewRouteImport } from './../routes/_authenticated/lists/new'
-import { Route as AuthenticatedListsListIdRouteImport } from './../routes/_authenticated/lists/$listId'
+import { Route as AuthenticatedListsListIdIndexRouteImport } from './../routes/_authenticated/lists/$listId/index'
 import { Route as AuthenticatedListsListIdEditRouteImport } from './../routes/_authenticated/lists/$listId/edit'
 import { Route as AuthenticatedListsListIdDeleteRouteImport } from './../routes/_authenticated/lists/$listId/delete'
 import { Route as AuthenticatedListsListIdTasksNewRouteImport } from './../routes/_authenticated/lists/$listId/tasks/new'
@@ -82,47 +82,47 @@ const AuthenticatedListsNewRoute = AuthenticatedListsNewRouteImport.update({
   path: '/lists/new',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedListsListIdRoute =
-  AuthenticatedListsListIdRouteImport.update({
-    id: '/lists/$listId',
-    path: '/lists/$listId',
+const AuthenticatedListsListIdIndexRoute =
+  AuthenticatedListsListIdIndexRouteImport.update({
+    id: '/lists/$listId/',
+    path: '/lists/$listId/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedListsListIdEditRoute =
   AuthenticatedListsListIdEditRouteImport.update({
-    id: '/edit',
-    path: '/edit',
-    getParentRoute: () => AuthenticatedListsListIdRoute,
+    id: '/lists/$listId/edit',
+    path: '/lists/$listId/edit',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedListsListIdDeleteRoute =
   AuthenticatedListsListIdDeleteRouteImport.update({
-    id: '/delete',
-    path: '/delete',
-    getParentRoute: () => AuthenticatedListsListIdRoute,
+    id: '/lists/$listId/delete',
+    path: '/lists/$listId/delete',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedListsListIdTasksNewRoute =
   AuthenticatedListsListIdTasksNewRouteImport.update({
-    id: '/tasks/new',
-    path: '/tasks/new',
-    getParentRoute: () => AuthenticatedListsListIdRoute,
+    id: '/lists/$listId/tasks/new',
+    path: '/lists/$listId/tasks/new',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedListsListIdTasksCompletedRoute =
   AuthenticatedListsListIdTasksCompletedRouteImport.update({
-    id: '/tasks/completed',
-    path: '/tasks/completed',
-    getParentRoute: () => AuthenticatedListsListIdRoute,
+    id: '/lists/$listId/tasks/completed',
+    path: '/lists/$listId/tasks/completed',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedListsListIdTasksTaskIdEditRoute =
   AuthenticatedListsListIdTasksTaskIdEditRouteImport.update({
-    id: '/tasks/$taskId/edit',
-    path: '/tasks/$taskId/edit',
-    getParentRoute: () => AuthenticatedListsListIdRoute,
+    id: '/lists/$listId/tasks/$taskId/edit',
+    path: '/lists/$listId/tasks/$taskId/edit',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedListsListIdTasksTaskIdDeleteRoute =
   AuthenticatedListsListIdTasksTaskIdDeleteRouteImport.update({
-    id: '/tasks/$taskId/delete',
-    path: '/tasks/$taskId/delete',
-    getParentRoute: () => AuthenticatedListsListIdRoute,
+    id: '/lists/$listId/tasks/$taskId/delete',
+    path: '/lists/$listId/tasks/$taskId/delete',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -134,11 +134,11 @@ export interface FileRoutesByFullPath {
   '/update-password': typeof UpdatePasswordRoute
   '/home': typeof AuthenticatedHomeRoute
   '/profile': typeof AuthenticatedProfileRoute
-  '/lists/$listId': typeof AuthenticatedListsListIdRouteWithChildren
   '/lists/new': typeof AuthenticatedListsNewRoute
   '/lists/': typeof AuthenticatedListsIndexRoute
   '/lists/$listId/delete': typeof AuthenticatedListsListIdDeleteRoute
   '/lists/$listId/edit': typeof AuthenticatedListsListIdEditRoute
+  '/lists/$listId/': typeof AuthenticatedListsListIdIndexRoute
   '/lists/$listId/tasks/completed': typeof AuthenticatedListsListIdTasksCompletedRoute
   '/lists/$listId/tasks/new': typeof AuthenticatedListsListIdTasksNewRoute
   '/lists/$listId/tasks/$taskId/delete': typeof AuthenticatedListsListIdTasksTaskIdDeleteRoute
@@ -153,11 +153,11 @@ export interface FileRoutesByTo {
   '/update-password': typeof UpdatePasswordRoute
   '/home': typeof AuthenticatedHomeRoute
   '/profile': typeof AuthenticatedProfileRoute
-  '/lists/$listId': typeof AuthenticatedListsListIdRouteWithChildren
   '/lists/new': typeof AuthenticatedListsNewRoute
   '/lists': typeof AuthenticatedListsIndexRoute
   '/lists/$listId/delete': typeof AuthenticatedListsListIdDeleteRoute
   '/lists/$listId/edit': typeof AuthenticatedListsListIdEditRoute
+  '/lists/$listId': typeof AuthenticatedListsListIdIndexRoute
   '/lists/$listId/tasks/completed': typeof AuthenticatedListsListIdTasksCompletedRoute
   '/lists/$listId/tasks/new': typeof AuthenticatedListsListIdTasksNewRoute
   '/lists/$listId/tasks/$taskId/delete': typeof AuthenticatedListsListIdTasksTaskIdDeleteRoute
@@ -174,11 +174,11 @@ export interface FileRoutesById {
   '/update-password': typeof UpdatePasswordRoute
   '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
-  '/_authenticated/lists/$listId': typeof AuthenticatedListsListIdRouteWithChildren
   '/_authenticated/lists/new': typeof AuthenticatedListsNewRoute
   '/_authenticated/lists/': typeof AuthenticatedListsIndexRoute
   '/_authenticated/lists/$listId/delete': typeof AuthenticatedListsListIdDeleteRoute
   '/_authenticated/lists/$listId/edit': typeof AuthenticatedListsListIdEditRoute
+  '/_authenticated/lists/$listId/': typeof AuthenticatedListsListIdIndexRoute
   '/_authenticated/lists/$listId/tasks/completed': typeof AuthenticatedListsListIdTasksCompletedRoute
   '/_authenticated/lists/$listId/tasks/new': typeof AuthenticatedListsListIdTasksNewRoute
   '/_authenticated/lists/$listId/tasks/$taskId/delete': typeof AuthenticatedListsListIdTasksTaskIdDeleteRoute
@@ -195,11 +195,11 @@ export interface FileRouteTypes {
     | '/update-password'
     | '/home'
     | '/profile'
-    | '/lists/$listId'
     | '/lists/new'
     | '/lists/'
     | '/lists/$listId/delete'
     | '/lists/$listId/edit'
+    | '/lists/$listId/'
     | '/lists/$listId/tasks/completed'
     | '/lists/$listId/tasks/new'
     | '/lists/$listId/tasks/$taskId/delete'
@@ -214,11 +214,11 @@ export interface FileRouteTypes {
     | '/update-password'
     | '/home'
     | '/profile'
-    | '/lists/$listId'
     | '/lists/new'
     | '/lists'
     | '/lists/$listId/delete'
     | '/lists/$listId/edit'
+    | '/lists/$listId'
     | '/lists/$listId/tasks/completed'
     | '/lists/$listId/tasks/new'
     | '/lists/$listId/tasks/$taskId/delete'
@@ -234,11 +234,11 @@ export interface FileRouteTypes {
     | '/update-password'
     | '/_authenticated/home'
     | '/_authenticated/profile'
-    | '/_authenticated/lists/$listId'
     | '/_authenticated/lists/new'
     | '/_authenticated/lists/'
     | '/_authenticated/lists/$listId/delete'
     | '/_authenticated/lists/$listId/edit'
+    | '/_authenticated/lists/$listId/'
     | '/_authenticated/lists/$listId/tasks/completed'
     | '/_authenticated/lists/$listId/tasks/new'
     | '/_authenticated/lists/$listId/tasks/$taskId/delete'
@@ -334,100 +334,87 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedListsNewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/lists/$listId': {
-      id: '/_authenticated/lists/$listId'
+    '/_authenticated/lists/$listId/': {
+      id: '/_authenticated/lists/$listId/'
       path: '/lists/$listId'
-      fullPath: '/lists/$listId'
-      preLoaderRoute: typeof AuthenticatedListsListIdRouteImport
+      fullPath: '/lists/$listId/'
+      preLoaderRoute: typeof AuthenticatedListsListIdIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/lists/$listId/edit': {
       id: '/_authenticated/lists/$listId/edit'
-      path: '/edit'
+      path: '/lists/$listId/edit'
       fullPath: '/lists/$listId/edit'
       preLoaderRoute: typeof AuthenticatedListsListIdEditRouteImport
-      parentRoute: typeof AuthenticatedListsListIdRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/lists/$listId/delete': {
       id: '/_authenticated/lists/$listId/delete'
-      path: '/delete'
+      path: '/lists/$listId/delete'
       fullPath: '/lists/$listId/delete'
       preLoaderRoute: typeof AuthenticatedListsListIdDeleteRouteImport
-      parentRoute: typeof AuthenticatedListsListIdRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/lists/$listId/tasks/new': {
       id: '/_authenticated/lists/$listId/tasks/new'
-      path: '/tasks/new'
+      path: '/lists/$listId/tasks/new'
       fullPath: '/lists/$listId/tasks/new'
       preLoaderRoute: typeof AuthenticatedListsListIdTasksNewRouteImport
-      parentRoute: typeof AuthenticatedListsListIdRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/lists/$listId/tasks/completed': {
       id: '/_authenticated/lists/$listId/tasks/completed'
-      path: '/tasks/completed'
+      path: '/lists/$listId/tasks/completed'
       fullPath: '/lists/$listId/tasks/completed'
       preLoaderRoute: typeof AuthenticatedListsListIdTasksCompletedRouteImport
-      parentRoute: typeof AuthenticatedListsListIdRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/lists/$listId/tasks/$taskId/edit': {
       id: '/_authenticated/lists/$listId/tasks/$taskId/edit'
-      path: '/tasks/$taskId/edit'
+      path: '/lists/$listId/tasks/$taskId/edit'
       fullPath: '/lists/$listId/tasks/$taskId/edit'
       preLoaderRoute: typeof AuthenticatedListsListIdTasksTaskIdEditRouteImport
-      parentRoute: typeof AuthenticatedListsListIdRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/lists/$listId/tasks/$taskId/delete': {
       id: '/_authenticated/lists/$listId/tasks/$taskId/delete'
-      path: '/tasks/$taskId/delete'
+      path: '/lists/$listId/tasks/$taskId/delete'
       fullPath: '/lists/$listId/tasks/$taskId/delete'
       preLoaderRoute: typeof AuthenticatedListsListIdTasksTaskIdDeleteRouteImport
-      parentRoute: typeof AuthenticatedListsListIdRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
 
-interface AuthenticatedListsListIdRouteChildren {
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
+  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedListsNewRoute: typeof AuthenticatedListsNewRoute
+  AuthenticatedListsIndexRoute: typeof AuthenticatedListsIndexRoute
   AuthenticatedListsListIdDeleteRoute: typeof AuthenticatedListsListIdDeleteRoute
   AuthenticatedListsListIdEditRoute: typeof AuthenticatedListsListIdEditRoute
+  AuthenticatedListsListIdIndexRoute: typeof AuthenticatedListsListIdIndexRoute
   AuthenticatedListsListIdTasksCompletedRoute: typeof AuthenticatedListsListIdTasksCompletedRoute
   AuthenticatedListsListIdTasksNewRoute: typeof AuthenticatedListsListIdTasksNewRoute
   AuthenticatedListsListIdTasksTaskIdDeleteRoute: typeof AuthenticatedListsListIdTasksTaskIdDeleteRoute
   AuthenticatedListsListIdTasksTaskIdEditRoute: typeof AuthenticatedListsListIdTasksTaskIdEditRoute
 }
 
-const AuthenticatedListsListIdRouteChildren: AuthenticatedListsListIdRouteChildren =
-  {
-    AuthenticatedListsListIdDeleteRoute: AuthenticatedListsListIdDeleteRoute,
-    AuthenticatedListsListIdEditRoute: AuthenticatedListsListIdEditRoute,
-    AuthenticatedListsListIdTasksCompletedRoute:
-      AuthenticatedListsListIdTasksCompletedRoute,
-    AuthenticatedListsListIdTasksNewRoute:
-      AuthenticatedListsListIdTasksNewRoute,
-    AuthenticatedListsListIdTasksTaskIdDeleteRoute:
-      AuthenticatedListsListIdTasksTaskIdDeleteRoute,
-    AuthenticatedListsListIdTasksTaskIdEditRoute:
-      AuthenticatedListsListIdTasksTaskIdEditRoute,
-  }
-
-const AuthenticatedListsListIdRouteWithChildren =
-  AuthenticatedListsListIdRoute._addFileChildren(
-    AuthenticatedListsListIdRouteChildren,
-  )
-
-interface AuthenticatedRouteRouteChildren {
-  AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
-  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
-  AuthenticatedListsListIdRoute: typeof AuthenticatedListsListIdRouteWithChildren
-  AuthenticatedListsNewRoute: typeof AuthenticatedListsNewRoute
-  AuthenticatedListsIndexRoute: typeof AuthenticatedListsIndexRoute
-}
-
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedHomeRoute: AuthenticatedHomeRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
-  AuthenticatedListsListIdRoute: AuthenticatedListsListIdRouteWithChildren,
   AuthenticatedListsNewRoute: AuthenticatedListsNewRoute,
   AuthenticatedListsIndexRoute: AuthenticatedListsIndexRoute,
+  AuthenticatedListsListIdDeleteRoute: AuthenticatedListsListIdDeleteRoute,
+  AuthenticatedListsListIdEditRoute: AuthenticatedListsListIdEditRoute,
+  AuthenticatedListsListIdIndexRoute: AuthenticatedListsListIdIndexRoute,
+  AuthenticatedListsListIdTasksCompletedRoute:
+    AuthenticatedListsListIdTasksCompletedRoute,
+  AuthenticatedListsListIdTasksNewRoute: AuthenticatedListsListIdTasksNewRoute,
+  AuthenticatedListsListIdTasksTaskIdDeleteRoute:
+    AuthenticatedListsListIdTasksTaskIdDeleteRoute,
+  AuthenticatedListsListIdTasksTaskIdEditRoute:
+    AuthenticatedListsListIdTasksTaskIdEditRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

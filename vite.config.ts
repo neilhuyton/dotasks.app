@@ -37,6 +37,7 @@ export default defineConfig(({ mode }) => {
       strictPort: false,
     },
     test: {
+      cache: false,
       silent: false,
       environment: "jsdom",
       setupFiles: ["./__tests__/setupTests.ts"],
@@ -47,7 +48,7 @@ export default defineConfig(({ mode }) => {
       globals: true,
       testTimeout: 15000,
       deps: {
-        inline: ['@steel-cut/steel-lib'], 
+        inline: ["@steel-cut/steel-lib"],
         optimizer: {
           web: {
             include: [

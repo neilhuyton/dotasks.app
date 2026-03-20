@@ -69,36 +69,14 @@ export function SortableListsTable({
     const oldIndex = lists.findIndex((l) => l.id === active.id);
     const newIndex = lists.findIndex((l) => l.id === over.id);
 
-    if (oldIndex === -1 || newIndex === -1) return;
+    if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
 
     const newLists = arrayMove(lists, oldIndex, newIndex);
 
-    const draggedId = active.id as string;
-
-    let prevOrder: number | null = null;
-    let nextOrder: number | null = null;
-
-    const draggedNewIdx = newLists.findIndex((l) => l.id === draggedId);
-
-    if (draggedNewIdx > 0) {
-      prevOrder = newLists[draggedNewIdx - 1].order;
-    }
-    if (draggedNewIdx < newLists.length - 1) {
-      nextOrder = newLists[draggedNewIdx + 1].order;
-    }
-
-    let newOrder: number;
-    if (prevOrder === null && nextOrder === null) {
-      newOrder = 0;
-    } else if (prevOrder === null) {
-      newOrder = nextOrder! - 1000;
-    } else if (nextOrder === null) {
-      newOrder = prevOrder + 1000;
-    } else {
-      newOrder = (prevOrder + nextOrder) / 2;
-    }
-
-    const updates = [{ id: draggedId, order: newOrder }];
+    const updates = newLists.map((list, index) => ({
+      id: list.id,
+      order: index * 10000,
+    }));
 
     updateListOrder(updates);
   }

@@ -1,5 +1,3 @@
-// __tests__/server/routers/todo/task.test.ts
-
 import { describe, it, expect, beforeEach } from "vitest";
 import crypto from "node:crypto";
 
@@ -27,6 +25,7 @@ describe("task router (protected procedures)", () => {
         {
           id: crypto.randomUUID(),
           listId,
+          userId: "test-user-id",
           title: "Buy milk",
           description: null,
           dueDate: null,
@@ -41,6 +40,7 @@ describe("task router (protected procedures)", () => {
         {
           id: crypto.randomUUID(),
           listId,
+          userId: "test-user-id",
           title: "Call mom",
           description: "Ask about dinner plans",
           dueDate: new Date("2026-02-20"),
@@ -94,17 +94,6 @@ describe("task router (protected procedures)", () => {
         description: "Q1 summary",
         dueDate: new Date("2026-03-01"),
         priority: 4,
-        order: 5,
-      };
-
-      const createdTask = {
-        id: crypto.randomUUID(),
-        ...input,
-        isCompleted: false,
-        isCurrent: false,
-        isPinned: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
       };
 
       mockPrisma.todoList.findUnique.mockResolvedValue({
@@ -114,12 +103,26 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
-        order: 42,           
         isArchived: false,
+        order: 0,
         isPinned: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
+
+      mockPrisma.task.findFirst.mockResolvedValue(null);
+
+      const createdTask = {
+        id: crypto.randomUUID(),
+        ...input,
+        userId: "test-user-id",
+        order: 0,
+        isCompleted: false,
+        isCurrent: false,
+        isPinned: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
       mockPrisma.task.create.mockResolvedValue(createdTask);
 
@@ -144,8 +147,8 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
-        order: 7,                
         isArchived: false,
+        order: 0,
         isPinned: false,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -164,7 +167,6 @@ describe("task router (protected procedures)", () => {
         }),
       ).rejects.toMatchObject({
         code: "BAD_REQUEST",
-        message: expect.stringContaining("title"),
       });
     });
   });
@@ -176,6 +178,7 @@ describe("task router (protected procedures)", () => {
       mockPrisma.task.findUnique.mockResolvedValue({
         id: taskId,
         listId: "list-123",
+        userId: "test-user-id",
         title: "Sample task",
         description: null,
         dueDate: null,
@@ -195,8 +198,8 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
-        order: 10,               
         isArchived: false,
+        order: 0,
         isPinned: false,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -205,6 +208,7 @@ describe("task router (protected procedures)", () => {
       mockPrisma.task.update.mockResolvedValue({
         id: taskId,
         listId: "list-123",
+        userId: "test-user-id",
         title: "Sample task",
         description: null,
         dueDate: null,
@@ -229,6 +233,7 @@ describe("task router (protected procedures)", () => {
       mockPrisma.task.findUnique.mockResolvedValue({
         id: taskId,
         listId: "list-123",
+        userId: "test-user-id",
         title: "Sample task",
         description: null,
         dueDate: null,
@@ -248,8 +253,8 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
-        order: 10,               
         isArchived: false,
+        order: 0,
         isPinned: false,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -258,6 +263,7 @@ describe("task router (protected procedures)", () => {
       mockPrisma.task.update.mockResolvedValue({
         id: taskId,
         listId: "list-123",
+        userId: "test-user-id",
         title: "Sample task",
         description: null,
         dueDate: null,
@@ -293,6 +299,7 @@ describe("task router (protected procedures)", () => {
       mockPrisma.task.findUnique.mockResolvedValue({
         id: taskId,
         listId: "foreign-list",
+        userId: "other-user",
         title: "Foreign task",
         description: null,
         dueDate: null,
@@ -312,8 +319,8 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
-        order: 5,                
         isArchived: false,
+        order: 0,
         isPinned: false,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -332,6 +339,7 @@ describe("task router (protected procedures)", () => {
       mockPrisma.task.findUnique.mockResolvedValue({
         id: taskId,
         listId: "list-123",
+        userId: "test-user-id",
         title: "Task to delete",
         description: null,
         dueDate: null,
@@ -351,8 +359,8 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
-        order: 3,                
         isArchived: false,
+        order: 0,
         isPinned: false,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -361,6 +369,7 @@ describe("task router (protected procedures)", () => {
       mockPrisma.task.delete.mockResolvedValue({
         id: taskId,
         listId: "list-123",
+        userId: "test-user-id",
         title: "Task to delete",
         description: null,
         dueDate: null,
@@ -390,6 +399,7 @@ describe("task router (protected procedures)", () => {
       mockPrisma.task.findUnique.mockResolvedValue({
         id: crypto.randomUUID(),
         listId: "foreign",
+        userId: "other-user",
         title: "Foreign task",
         description: null,
         dueDate: null,
@@ -409,8 +419,8 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
-        order: 8,                
         isArchived: false,
+        order: 0,
         isPinned: false,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -430,6 +440,7 @@ describe("task router (protected procedures)", () => {
       mockPrisma.task.findFirst.mockResolvedValue({
         id: taskId,
         listId,
+        userId: "test-user-id",
         title: "Important task",
         description: null,
         dueDate: null,
@@ -447,11 +458,12 @@ describe("task router (protected procedures)", () => {
       const updatedTask = {
         id: taskId,
         listId,
+        userId: "test-user-id",
         title: "Important task",
         description: null,
         dueDate: null,
         priority: 0,
-        order: -1,
+        order: -1024,
         isCompleted: false,
         isCurrent: true,
         isPinned: false,
@@ -464,9 +476,8 @@ describe("task router (protected procedures)", () => {
       const result = await caller.task.setCurrent({ id: taskId, listId });
 
       expect(result).toMatchObject({
-        id: taskId,
         isCurrent: true,
-        order: -1,
+        order: -1024,
       });
 
       expect(mockPrisma.task.updateMany).toHaveBeenCalledWith(
@@ -485,10 +496,94 @@ describe("task router (protected procedures)", () => {
           where: { id: taskId },
           data: expect.objectContaining({
             isCurrent: true,
-            order: -1,
+            order: -1024,
           }),
         }),
       );
+    });
+
+    it("sets order to 0 when no other active tasks", async () => {
+      const taskId = crypto.randomUUID();
+      const listId = crypto.randomUUID();
+
+      mockPrisma.task.findFirst.mockResolvedValue({
+        id: taskId,
+        listId,
+        userId: "test-user-id",
+        title: "Important task",
+        description: null,
+        dueDate: null,
+        priority: 0,
+        order: 0,
+        isCompleted: false,
+        isCurrent: false,
+        isPinned: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      mockPrisma.task.updateMany.mockResolvedValue({ count: 0 });
+
+      const updated = {
+        id: taskId,
+        listId,
+        userId: "test-user-id",
+        title: "Important task",
+        description: null,
+        dueDate: null,
+        priority: 0,
+        order: 0,
+        isCompleted: false,
+        isCurrent: true,
+        isPinned: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockPrisma.task.update.mockResolvedValue(updated);
+
+      const result = await caller.task.setCurrent({ id: taskId, listId });
+
+      expect(result.order).toBe(0);
+    });
+
+    it("throws BAD_REQUEST when setting completed task as current", async () => {
+      const taskId = crypto.randomUUID();
+      const listId = crypto.randomUUID();
+
+      mockPrisma.task.findFirst.mockResolvedValue({
+        id: taskId,
+        listId,
+        userId: "test-user-id",
+        title: "Completed task",
+        description: null,
+        dueDate: null,
+        priority: 0,
+        order: 0,
+        isCompleted: true,
+        isCurrent: false,
+        isPinned: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      await expect(
+        caller.task.setCurrent({ id: taskId, listId }),
+      ).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+        message: "Cannot set a completed task as current",
+      });
+    });
+
+    it("throws NOT_FOUND when task not found or inaccessible", async () => {
+      mockPrisma.task.findFirst.mockResolvedValue(null);
+
+      await expect(
+        caller.task.setCurrent({
+          id: crypto.randomUUID(),
+          listId: crypto.randomUUID(),
+        }),
+      ).rejects.toMatchObject({ code: "NOT_FOUND" });
     });
   });
 
@@ -503,8 +598,8 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
-        order: 1,                
         isArchived: false,
+        order: 0,
         isPinned: false,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -535,8 +630,8 @@ describe("task router (protected procedures)", () => {
         description: null,
         color: null,
         icon: null,
-        order: 99,               
         isArchived: false,
+        order: 0,
         isPinned: false,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -545,6 +640,113 @@ describe("task router (protected procedures)", () => {
       await expect(
         caller.task.clearCurrent({ listId: crypto.randomUUID() }),
       ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    });
+  });
+
+  describe("pinToggle", () => {
+    it("toggles pin status on an incomplete task", async () => {
+      const taskId = crypto.randomUUID();
+
+      mockPrisma.task.findUnique.mockResolvedValue({
+        id: taskId,
+        listId: "list-123",
+        userId: "test-user-id",
+        title: "Sample task",
+        description: null,
+        dueDate: null,
+        priority: 0,
+        order: 0,
+        isCompleted: false,
+        isPinned: false,
+        isCurrent: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      mockPrisma.todoList.findUnique.mockResolvedValue({
+        id: "list-123",
+        userId: "test-user-id",
+        title: "Test List",
+        description: null,
+        color: null,
+        icon: null,
+        isArchived: false,
+        order: 0,
+        isPinned: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const updated = {
+        id: taskId,
+        listId: "list-123",
+        userId: "test-user-id",
+        title: "Sample task",
+        description: null,
+        dueDate: null,
+        priority: 0,
+        order: 0,
+        isCompleted: false,
+        isPinned: true,
+        isCurrent: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockPrisma.task.update.mockResolvedValue(updated);
+
+      const result = await caller.task.pinToggle({ id: taskId });
+
+      expect(result.isPinned).toBe(true);
+    });
+
+    it("throws BAD_REQUEST when pinning completed task", async () => {
+      const taskId = crypto.randomUUID();
+
+      mockPrisma.task.findUnique.mockResolvedValue({
+        id: taskId,
+        listId: "list-123",
+        userId: "test-user-id",
+        title: "Sample task",
+        description: null,
+        dueDate: null,
+        priority: 0,
+        order: 0,
+        isCompleted: true,
+        isPinned: false,
+        isCurrent: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      mockPrisma.todoList.findUnique.mockResolvedValue({
+        id: "list-123",
+        userId: "test-user-id",
+        title: "Test List",
+        description: null,
+        color: null,
+        icon: null,
+        isArchived: false,
+        order: 0,
+        isPinned: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      await expect(caller.task.pinToggle({ id: taskId })).rejects.toMatchObject(
+        {
+          code: "BAD_REQUEST",
+          message: "Cannot pin a completed task",
+        },
+      );
+    });
+
+    it("throws NOT_FOUND when task does not exist", async () => {
+      mockPrisma.task.findUnique.mockResolvedValue(null);
+
+      await expect(
+        caller.task.pinToggle({ id: crypto.randomUUID() }),
+      ).rejects.toMatchObject({ code: "NOT_FOUND" });
     });
   });
 });

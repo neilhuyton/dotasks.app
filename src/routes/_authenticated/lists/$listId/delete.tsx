@@ -51,10 +51,12 @@ function DeleteListConfirmPage() {
 
   const listQueryInput = { id: listId ?? "" };
   const allListsQueryKey = trpcHook.list.getAll.queryKey();
+  const listOneQueryKey = trpcHook.list.getOne.queryKey(listQueryInput);
 
   const { data: list, isPending: isListPending } = useQuery(
     trpcHook.list.getOne.queryOptions(listQueryInput, {
-      staleTime: 5 * 60 * 1000,
+      staleTime: Infinity,
+      gcTime: 30 * 60 * 1000,
       enabled: !!listId,
     }),
   );
@@ -88,6 +90,10 @@ function DeleteListConfirmPage() {
 
       onSettled: () => {
         queryClient.invalidateQueries({ queryKey: allListsQueryKey });
+        queryClient.invalidateQueries({
+          queryKey: listOneQueryKey,
+          exact: true,
+        });
       },
 
       onSuccess: () => {
@@ -112,6 +118,7 @@ function DeleteListConfirmPage() {
 
   const isPending = deleteMutation.isPending;
   const listTitle = list?.title ?? "this list";
+  const taskCount = list?._count?.tasks ?? 0;
 
   if (!listId) {
     return (
@@ -166,8 +173,12 @@ function DeleteListConfirmPage() {
                 Delete "{listTitle}"?
               </h1>
               <p className="text-lg text-muted-foreground">
-                This action cannot be undone. All tasks in this list will also
-                be permanently deleted.
+                This action cannot be undone.{" "}
+                {taskCount > 0
+                  ? `This list contains ${taskCount} task${
+                      taskCount === 1 ? "" : "s"
+                    } that will also be permanently deleted.`
+                  : "This list has no tasks."}
               </p>
             </div>
 

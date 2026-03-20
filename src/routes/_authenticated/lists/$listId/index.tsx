@@ -1,4 +1,4 @@
-import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
 import { useListTasks } from "@/hooks/useListTasks";
 import { trpc } from "@/trpc";
@@ -9,7 +9,7 @@ import { useAuthStore } from "@/store/authStore";
 import { FabButton, RouteError } from "@steel-cut/steel-lib";
 import { useNavigate } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/_authenticated/lists/$listId")({
+export const Route = createFileRoute("/_authenticated/lists/$listId/")({
   loader: async ({ context: { queryClient }, params }) => {
     const { listId } = params;
 
@@ -206,7 +206,6 @@ function ListDetailPage() {
         testId="fab-add-task"
       />
 
-      <Outlet />
     </>
   );
 }

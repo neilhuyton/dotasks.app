@@ -6,31 +6,57 @@ import { useAuthStore } from "@/store/authStore";
 import { renderWithProviders } from "../../utils/test-helpers";
 import { suppressActWarnings } from "../../utils/act-suppress";
 import { APP_CONFIG } from "@/appConfig";
+import type { AuthState } from "@steel-cut/steel-lib";
+import type { User } from "@supabase/supabase-js";
 
 suppressActWarnings();
 
 vi.mock("@/store/authStore", () => {
   const mockHook = vi.fn();
-
   return {
     useAuthStore: mockHook,
   };
 });
 
-const createMockAuthState = (overrides = {}) => ({
+const createMockAuthState = (
+  overrides: Partial<AuthState> = {},
+): AuthState => ({
   user: null,
   session: null,
   loading: false,
   error: null,
   isInitialized: true,
+  lastRefreshFailed: false,
   initialize: vi.fn().mockResolvedValue(undefined),
   signIn: vi.fn().mockResolvedValue({ error: null }),
-  signOut: vi.fn().mockResolvedValue({ error: null }),
   signUp: vi.fn().mockResolvedValue({ error: null }),
+  signOut: vi.fn().mockResolvedValue(undefined),
   waitUntilReady: vi.fn().mockResolvedValue(null),
-  updateUserEmail: vi.fn().mockResolvedValue({ error: null }),
+  updateUserEmail: vi.fn(),
+  changeUserEmail: vi.fn().mockResolvedValue({ error: null }),
   updateUserPassword: vi.fn().mockResolvedValue({ error: null }),
   setSession: vi.fn(),
+  setLastRefreshFailed: vi.fn(),
+  ...overrides,
+});
+
+const createMockUser = (overrides: Partial<User> = {}): User => ({
+  id: "user-123",
+  email: "test@example.com",
+  app_metadata: {},
+  user_metadata: {},
+  aud: "authenticated",
+  created_at: "2025-01-01T00:00:00Z",
+  role: "authenticated",
+  email_confirmed_at: "2025-01-01T00:00:00Z",
+  phone: undefined,
+  confirmation_sent_at: undefined,
+  confirmed_at: "2025-01-01T00:00:00Z",
+  recovery_sent_at: undefined,
+  last_sign_in_at: "2025-01-01T00:00:00Z",
+  updated_at: "2025-01-01T00:00:00Z",
+  identities: undefined,
+  factors: undefined,
   ...overrides,
 });
 
@@ -38,15 +64,13 @@ describe("Authenticated Layout Route (/_authenticated)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    const mockGetState = vi.fn();
-
     vi.mocked(useAuthStore).mockImplementation((selector) => {
       const state = createMockAuthState();
       return selector ? selector(state) : state;
     });
 
     Object.defineProperty(useAuthStore, "getState", {
-      value: mockGetState,
+      value: vi.fn().mockReturnValue(createMockAuthState()),
       writable: true,
     });
   });
@@ -54,9 +78,9 @@ describe("Authenticated Layout Route (/_authenticated)", () => {
   it("shows loading screen when loading is true", async () => {
     const loadingState = createMockAuthState({ loading: true });
 
-    vi.mocked(useAuthStore).mockImplementation((selector) => {
-      return selector ? selector(loadingState) : loadingState;
-    });
+    vi.mocked(useAuthStore).mockImplementation((selector) =>
+      selector ? selector(loadingState) : loadingState,
+    );
 
     Object.defineProperty(useAuthStore, "getState", {
       value: vi.fn().mockReturnValue(loadingState),
@@ -75,9 +99,9 @@ describe("Authenticated Layout Route (/_authenticated)", () => {
   it("does not redirect immediately when loading is true", async () => {
     const loadingState = createMockAuthState({ loading: true });
 
-    vi.mocked(useAuthStore).mockImplementation((selector) => {
-      return selector ? selector(loadingState) : loadingState;
-    });
+    vi.mocked(useAuthStore).mockImplementation((selector) =>
+      selector ? selector(loadingState) : loadingState,
+    );
 
     Object.defineProperty(useAuthStore, "getState", {
       value: vi.fn().mockReturnValue(loadingState),
@@ -96,13 +120,16 @@ describe("Authenticated Layout Route (/_authenticated)", () => {
   });
 
   it("renders ProfileIcon in the header when authenticated", async () => {
-    const mockUser = { id: "user-123", email: "test@example.com" };
+    const mockUser = createMockUser();
 
-    const authState = createMockAuthState({ user: mockUser, loading: false });
-
-    vi.mocked(useAuthStore).mockImplementation((selector) => {
-      return selector ? selector(authState) : authState;
+    const authState = createMockAuthState({
+      user: mockUser,
+      loading: false,
     });
+
+    vi.mocked(useAuthStore).mockImplementation((selector) =>
+      selector ? selector(authState) : authState,
+    );
 
     Object.defineProperty(useAuthStore, "getState", {
       value: vi.fn().mockReturnValue(authState),
@@ -123,13 +150,16 @@ describe("Authenticated Layout Route (/_authenticated)", () => {
   it("navigates to /profile when ProfileIcon is clicked", async () => {
     const user = userEvent.setup();
 
-    const mockUser = { id: "user-123", email: "test@example.com" };
+    const mockUser = createMockUser();
 
-    const authState = createMockAuthState({ user: mockUser, loading: false });
-
-    vi.mocked(useAuthStore).mockImplementation((selector) => {
-      return selector ? selector(authState) : authState;
+    const authState = createMockAuthState({
+      user: mockUser,
+      loading: false,
     });
+
+    vi.mocked(useAuthStore).mockImplementation((selector) =>
+      selector ? selector(authState) : authState,
+    );
 
     Object.defineProperty(useAuthStore, "getState", {
       value: vi.fn().mockReturnValue(authState),

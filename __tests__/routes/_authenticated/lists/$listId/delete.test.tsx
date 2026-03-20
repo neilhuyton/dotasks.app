@@ -98,6 +98,12 @@ describe("Delete List Confirmation Page (/_authenticated/lists/$listId/delete)",
       screen.getByText(/This action cannot be undone/i),
     ).toBeInTheDocument();
 
+    expect(
+      screen.getByText(
+        /This list contains 3 tasks that will also be permanently deleted/i,
+      ),
+    ).toBeInTheDocument();
+
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
 
     expect(

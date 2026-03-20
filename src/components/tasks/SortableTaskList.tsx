@@ -88,7 +88,6 @@ export function SortableTaskList({
     if (!over || active.id === over.id) return;
 
     const activeTasks = tasks.filter((t) => !t.isCompleted);
-
     const oldIndex = activeTasks.findIndex((t) => t.id === active.id);
     const newIndex = activeTasks.findIndex((t) => t.id === over.id);
 
@@ -96,32 +95,10 @@ export function SortableTaskList({
 
     const newActiveTasks = arrayMove(activeTasks, oldIndex, newIndex);
 
-    const draggedId = active.id as string;
-
-    let prevOrder: number | null = null;
-    let nextOrder: number | null = null;
-
-    const draggedNewIdx = newActiveTasks.findIndex((t) => t.id === draggedId);
-
-    if (draggedNewIdx > 0) {
-      prevOrder = newActiveTasks[draggedNewIdx - 1].order;
-    }
-    if (draggedNewIdx < newActiveTasks.length - 1) {
-      nextOrder = newActiveTasks[draggedNewIdx + 1].order;
-    }
-
-    let newOrder: number;
-    if (prevOrder === null && nextOrder === null) {
-      newOrder = 0;
-    } else if (prevOrder === null) {
-      newOrder = nextOrder! - 1000;
-    } else if (nextOrder === null) {
-      newOrder = prevOrder + 1000;
-    } else {
-      newOrder = (prevOrder + nextOrder) / 2;
-    }
-
-    const updates = [{ id: draggedId, order: newOrder }];
+    const updates = newActiveTasks.map((task, index) => ({
+      id: task.id,
+      order: index * 10000,
+    }));
 
     updateTaskOrder(updates);
   }

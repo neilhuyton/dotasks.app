@@ -1,5 +1,3 @@
-// __mocks__/handlers/tasks.ts
-//
 import { TRPCError } from "@trpc/server";
 import { trpcMsw } from "../trpcMsw";
 

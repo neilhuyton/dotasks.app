@@ -1,5 +1,3 @@
-// __mocks__/handlers/lists.ts
-
 import { TRPCError } from "@trpc/server";
 import { trpcMsw } from "../trpcMsw";
 
@@ -15,6 +13,7 @@ type MockList = {
   updatedAt: Date;
   order: number;
   isPinned: boolean;
+  _count?: { tasks: number };
 };
 
 type ListCreateInput = {
@@ -50,6 +49,7 @@ function initializeDefaultLists() {
       updatedAt: now1,
       order: 0,
       isPinned: false,
+      _count: { tasks: 5 },
     },
     {
       id: "l2",
@@ -63,6 +63,7 @@ function initializeDefaultLists() {
       updatedAt: now2,
       order: 1,
       isPinned: false,
+      _count: { tasks: 2 },
     },
   ];
 }
@@ -87,6 +88,7 @@ const detailPageListPreset: Omit<MockList, "createdAt" | "updatedAt"> = {
   isArchived: false,
   order: 0,
   isPinned: false,
+  _count: { tasks: 3 },
 };
 
 function addDetailPageListToMock(): void {
@@ -108,7 +110,7 @@ function formatListForResponse(list: MockList) {
     ...list,
     createdAt: list.createdAt.toISOString(),
     updatedAt: list.updatedAt.toISOString(),
-    _count: { tasks: 0 },
+    _count: { tasks: list._count?.tasks ?? 0 },
     tasks: [],
   };
 }
@@ -127,6 +129,7 @@ function createListFromInput(input: ListCreateInput): MockList {
     updatedAt: now,
     order: mockLists.length,
     isPinned: false,
+    _count: { tasks: 0 },
   };
 }
 
@@ -150,6 +153,7 @@ function updateListInMock(id: string, updates: ListUpdateInput): MockList {
     isArchived: updates.isArchived ?? mockLists[index].isArchived,
     order: updates.order ?? mockLists[index].order,
     isPinned: updates.isPinned ?? mockLists[index].isPinned,
+    _count: mockLists[index]._count ?? { tasks: 0 },
   };
 
   mockLists[index] = updated;
@@ -157,7 +161,11 @@ function updateListInMock(id: string, updates: ListUpdateInput): MockList {
 }
 
 export const listGetAllHandler = trpcMsw.list.getAll.query(() => {
-  return mockLists.map(formatListForResponse);
+  const lists = [...mockLists];
+  if (!lists.some((l) => l.id === TEST_LIST_DETAIL_ID)) {
+    addDetailPageListToMock();
+  }
+  return lists.map(formatListForResponse);
 });
 
 export const listGetAllEmptyHandler = trpcMsw.list.getAll.query(() => {
@@ -200,7 +208,7 @@ export const listGetOneDetailPagePreset = trpcMsw.list.getOne.query(
 
     return {
       ...formatListForResponse(list),
-      _count: { tasks: 1 },
+      _count: { tasks: list._count?.tasks ?? 0 },
     };
   },
 );
@@ -346,3 +354,5 @@ export const listHandlers = [
 
   listDeleteHandler,
 ] as const;
+
+export { formatListForResponse };
