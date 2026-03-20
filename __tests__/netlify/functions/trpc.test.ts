@@ -1,5 +1,3 @@
-// __tests__/netlify/functions/trpc.test.ts
-
 import { describe, it, expect, beforeAll, afterEach, afterAll } from "vitest";
 import { http, HttpResponse } from "msw";
 import { server } from "../../../__mocks__/server";

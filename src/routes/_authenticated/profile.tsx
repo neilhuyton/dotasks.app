@@ -1,6 +1,7 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  BackButton,
   InstallPWA,
   LogoutSection,
   useBannerStore,
@@ -9,7 +10,6 @@ import { useAuthStore } from "@/store/authStore";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
-import { ArrowLeft } from "lucide-react";
 import {
   ProfileHeader,
   CurrentEmailSection,
@@ -108,15 +108,11 @@ function ProfilePage() {
       )}
     >
       <div className="relative flex min-h-full flex-col overflow-y-auto px-6 pb-20 pt-20 sm:px-8">
-        <button
-          type="button"
+        <BackButton
           onClick={handleClose}
+          ariaLabel="Close profile"
           className="absolute left-4 top-6 sm:left-6 sm:top-8 z-[10000]"
-          aria-label="Close profile"
-          data-testid="close-profile"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
+        />
 
         <div className="flex flex-1 flex-col items-center justify-center">
           <div className="w-full max-w-2xl space-y-10">

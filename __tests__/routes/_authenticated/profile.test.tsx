@@ -72,7 +72,9 @@ describe("ProfilePage", () => {
       renderWithProviders({ initialEntries: ["/profile"] });
     });
 
-    expect(screen.getByTestId("close-profile")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /close profile/i }),
+    ).toBeInTheDocument();
   });
 
   it("shows the back arrow icon inside the close button", async () => {
@@ -80,7 +82,7 @@ describe("ProfilePage", () => {
       renderWithProviders({ initialEntries: ["/profile"] });
     });
 
-    const closeBtn = screen.getByTestId("close-profile");
+    const closeBtn = screen.getByRole("button", { name: /close profile/i });
     expect(closeBtn.querySelector("svg")).toBeInTheDocument();
   });
 
@@ -96,7 +98,7 @@ describe("ProfilePage", () => {
     const mockNavigate = vi.fn();
     vi.spyOn(router, "navigate").mockImplementation(mockNavigate);
 
-    await user.click(screen.getByTestId("close-profile"));
+    await user.click(screen.getByRole("button", { name: /close profile/i }));
 
     expect(mockNavigate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -118,7 +120,7 @@ describe("ProfilePage", () => {
     const mockBack = vi.fn();
     vi.spyOn(router.history, "back").mockImplementation(mockBack);
 
-    await user.click(screen.getByTestId("close-profile"));
+    await user.click(screen.getByRole("button", { name: /close profile/i }));
 
     expect(mockBack).toHaveBeenCalled();
   });
