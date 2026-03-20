@@ -1,5 +1,3 @@
-// src/features/lists/components/ListActionsDropdown.tsx
-
 import { Pencil, Trash2, MoreHorizontal } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";

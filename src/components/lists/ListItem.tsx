@@ -1,5 +1,3 @@
-// src/features/lists/components/ListItem.tsx
-
 import { cn } from "@/lib/utils";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "server/trpc";
