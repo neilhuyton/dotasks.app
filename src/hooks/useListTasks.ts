@@ -162,8 +162,6 @@ export function useListTasks(listId: string | null | undefined) {
           variant: "success",
           duration: 3000,
         }),
-
-      onSettled: () => queryClient.invalidateQueries({ queryKey }),
     }),
   );
 
@@ -211,7 +209,6 @@ export function useListTasks(listId: string | null | undefined) {
           next.delete(vars.id);
           return next;
         });
-        queryClient.invalidateQueries({ queryKey });
       },
     }),
   );
@@ -236,8 +233,6 @@ export function useListTasks(listId: string | null | undefined) {
           duration: 4000,
         });
       },
-
-      onSettled: () => queryClient.invalidateQueries({ queryKey }),
     }),
   );
 
@@ -274,7 +269,13 @@ export function useListTasks(listId: string | null | undefined) {
         });
       },
 
-      onSettled: () => queryClient.invalidateQueries({ queryKey }),
+      onSuccess: () => {
+        showBanner({
+          message: "Current task set",
+          variant: "success",
+          duration: 2000,
+        });
+      },
     }),
   );
 
@@ -301,7 +302,13 @@ export function useListTasks(listId: string | null | undefined) {
         });
       },
 
-      onSettled: () => queryClient.invalidateQueries({ queryKey }),
+      onSuccess: () => {
+        showBanner({
+          message: "Current task cleared",
+          variant: "success",
+          duration: 2000,
+        });
+      },
     }),
   );
 

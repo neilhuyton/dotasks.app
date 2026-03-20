@@ -265,11 +265,23 @@ export const taskRouter = router({
           data: { isCurrent: false },
         });
 
+        const firstActive = await tx.task.findFirst({
+          where: {
+            listId: input.listId,
+            isCompleted: false,
+            id: { not: input.id },
+          },
+          orderBy: [{ isCurrent: "desc" }, { order: "asc" }],
+          select: { order: true },
+        });
+
+        const newOrder = firstActive ? firstActive.order - 1024 : 0;
+
         return tx.task.update({
           where: { id: input.id },
           data: {
             isCurrent: true,
-            order: -1.0,
+            order: newOrder,
           },
         });
       });
