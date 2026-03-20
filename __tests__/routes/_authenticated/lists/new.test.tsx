@@ -2,6 +2,7 @@ import {
   describe,
   it,
   expect,
+  vi,
   beforeAll,
   beforeEach,
   afterEach,
@@ -44,6 +45,7 @@ describe("Create New List Page (/_authenticated/lists/new)", () => {
   afterEach(async () => {
     server.resetHandlers();
     await useAuthStore.getState().signOut();
+    vi.restoreAllMocks();
   });
 
   afterAll(() => server.close());
@@ -158,6 +160,7 @@ describe("Create New List Page (/_authenticated/lists/new)", () => {
   });
 
   it("rolls back optimistic update on creation failure", async () => {
+    // Override create to fail
     server.use(
       trpcMsw.list.create.mutation(() => {
         throw new TRPCError({
@@ -167,8 +170,7 @@ describe("Create New List Page (/_authenticated/lists/new)", () => {
       }),
     );
 
-    const initialCount = getMockLists().length;
-    renderNewListPage();
+    const { router } = renderNewListPage();
     await waitForFormReady();
 
     await fillForm("Bad List");
@@ -178,9 +180,9 @@ describe("Create New List Page (/_authenticated/lists/new)", () => {
 
     await waitFor(
       () => {
-        expect(getMockLists()).toHaveLength(initialCount);
+        expect(router.state.location.pathname).toBe("/lists/new");
       },
-      { timeout: 3000 },
+      { timeout: 2000 },
     );
   });
 

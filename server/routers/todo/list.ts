@@ -42,6 +42,22 @@ export const listRouter = router({
     .query(async ({ ctx, input }) => {
       const list = await ctx.prisma.todoList.findUnique({
         where: { id: input.id },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          color: true,
+          icon: true,
+          isArchived: true,
+          order: true,
+          isPinned: true,
+          userId: true,
+          createdAt: true,
+          updatedAt: true,
+          _count: {
+            select: { tasks: true },
+          },
+        },
       });
 
       if (!list || list.userId !== ctx.userId) {
@@ -185,8 +201,8 @@ export const listRouter = router({
     .input(
       z.array(
         z.object({
-          id: z.uuid(),
-          order: z.number(), 
+          id: z.string().uuid(),
+          order: z.number(),
         }),
       ),
     )

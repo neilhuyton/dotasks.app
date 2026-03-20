@@ -55,6 +55,10 @@ export function useListTasks(listId: string | null | undefined) {
     }
   };
 
+  const listOneInput = useMemo(() => ({ id: listId ?? "" }), [listId]);
+  const listOneQueryKey = trpc.list.getOne.queryKey(listOneInput);
+  const listAllQueryKey = trpc.list.getAll.queryKey();
+
   const reorder = useMutation(
     trpc.task.reorder.mutationOptions({
       onMutate: async (updates: { id: string; order: number }[]) => {
@@ -121,6 +125,8 @@ export function useListTasks(listId: string | null | undefined) {
         listId: string;
         description?: string;
       }) => {
+        console.log("GOT HERE A");
+
         if (!enabled) return { previous: [] as Task[] };
 
         await queryClient.cancelQueries({ queryKey });
@@ -145,6 +151,8 @@ export function useListTasks(listId: string | null | undefined) {
 
         setOptimisticTasks((prev) => [...prev, optimisticTask]);
 
+        console.log("GOT HERE B");
+
         return { previous };
       },
       onError: (_, __, ctx) => {
@@ -155,13 +163,26 @@ export function useListTasks(listId: string | null | undefined) {
           duration: 4000,
         });
       },
-
-      onSuccess: () =>
+      onSuccess: () => {
         showBanner({
           message: "Task added",
           variant: "success",
           duration: 3000,
-        }),
+        });
+        queryClient.invalidateQueries({ queryKey });
+        queryClient.invalidateQueries({
+          queryKey: listOneQueryKey,
+          exact: true,
+        });
+        queryClient.invalidateQueries({
+          queryKey: listAllQueryKey,
+          exact: true,
+        });
+        console.log(
+          "Task created successfully — invalidating list.getOne for:",
+          listId,
+        );
+      },
     }),
   );
 
@@ -209,6 +230,11 @@ export function useListTasks(listId: string | null | undefined) {
           next.delete(vars.id);
           return next;
         });
+        queryClient.invalidateQueries({ queryKey });
+        queryClient.invalidateQueries({
+          queryKey: listOneQueryKey,
+          exact: true,
+        });
       },
     }),
   );
@@ -231,6 +257,18 @@ export function useListTasks(listId: string | null | undefined) {
           message: "Failed to delete task",
           variant: "error",
           duration: 4000,
+        });
+      },
+
+      onSettled: () => {
+        queryClient.invalidateQueries({ queryKey });
+        queryClient.invalidateQueries({
+          queryKey: listOneQueryKey,
+          exact: true,
+        });
+        queryClient.invalidateQueries({
+          queryKey: listAllQueryKey,
+          exact: true,
         });
       },
     }),
@@ -276,6 +314,14 @@ export function useListTasks(listId: string | null | undefined) {
           duration: 2000,
         });
       },
+
+      onSettled: () => {
+        queryClient.invalidateQueries({ queryKey });
+        queryClient.invalidateQueries({
+          queryKey: listOneQueryKey,
+          exact: true,
+        });
+      },
     }),
   );
 
@@ -307,6 +353,14 @@ export function useListTasks(listId: string | null | undefined) {
           message: "Current task cleared",
           variant: "success",
           duration: 2000,
+        });
+      },
+
+      onSettled: () => {
+        queryClient.invalidateQueries({ queryKey });
+        queryClient.invalidateQueries({
+          queryKey: listOneQueryKey,
+          exact: true,
         });
       },
     }),

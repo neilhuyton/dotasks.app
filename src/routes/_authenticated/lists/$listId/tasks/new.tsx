@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { trpc, useTRPC } from "@/trpc";
 import { useBannerStore } from "@steel-cut/steel-lib";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuthStore } from "@/store/authStore";
 
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/../server/trpc";
@@ -19,6 +20,7 @@ type Tasks = RouterOutput["task"]["getByList"];
 function createOptimisticTask(
   input: { title: string; description?: string; listId: string },
   prevLength: number,
+  userId: string,
 ): TaskItem {
   const now = new Date().toISOString();
   return {
@@ -26,6 +28,7 @@ function createOptimisticTask(
     title: input.title,
     description: input.description ?? null,
     listId: input.listId,
+    userId,
     dueDate: null,
     priority: null,
     order: prevLength,
@@ -82,10 +85,13 @@ function NewTaskPage() {
   const queryClient = useQueryClient();
   const { show: showBanner } = useBannerStore();
   const trpcHook = useTRPC();
+  const userId = useAuthStore((s) => s.user?.id);
 
   const [title, setTitle] = useState("");
 
   const tasksQueryKey = trpcHook.task.getByList.queryKey({ listId });
+  const listOneQueryKey = trpcHook.list.getOne.queryKey({ id: listId });
+  const listAllQueryKey = trpcHook.list.getAll.queryKey();
 
   const mutation = useMutation(
     trpcHook.task.create.mutationOptions({
@@ -93,7 +99,7 @@ function NewTaskPage() {
         await queryClient.cancelQueries({ queryKey: tasksQueryKey });
 
         const prev = queryClient.getQueryData<Tasks>(tasksQueryKey) ?? [];
-        const optimistic = createOptimisticTask(input, prev.length);
+        const optimistic = createOptimisticTask(input, prev.length, userId!);
 
         queryClient.setQueryData<Tasks>(tasksQueryKey, [...prev, optimistic]);
 
@@ -119,6 +125,15 @@ function NewTaskPage() {
         queryClient.setQueryData<Tasks>(tasksQueryKey, (old = []) =>
           old.map((t) => (t.id.startsWith("temp-") ? { ...t, ...newTask } : t)),
         );
+
+        queryClient.invalidateQueries({
+          queryKey: listOneQueryKey,
+          exact: true,
+        });
+        queryClient.invalidateQueries({
+          queryKey: listAllQueryKey,
+          exact: true,
+        });
 
         showBanner({
           message: "Task created successfully.",

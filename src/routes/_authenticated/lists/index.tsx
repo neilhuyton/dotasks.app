@@ -1,4 +1,4 @@
-import { Outlet, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useLists } from "@/hooks/useLists";
 import { SortableListsTable } from "@/components/lists/SortableListsTable";
 import { useAuthStore } from "@/store/authStore";
@@ -81,8 +81,6 @@ function ListsPage() {
             pulse={true}
           />
         </div>
-
-        <Outlet />
       </>
     );
   }
@@ -112,8 +110,6 @@ function ListsPage() {
         testId="fab-add-list"
         pulse={listCount < 1}
       />
-
-      <Outlet />
     </>
   );
 }
