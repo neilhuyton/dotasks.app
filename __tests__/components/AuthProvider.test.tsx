@@ -29,14 +29,12 @@ describe("AuthProvider", () => {
 
       waitUntilReady: vi.fn().mockResolvedValue(null),
 
-      // ── Required missing fields ────────────────────────────────────────
-      lastRefreshFailed: false, // ← add this
-      setLastRefreshFailed: vi.fn(), // ← add this
+      lastRefreshFailed: false,
+      setLastRefreshFailed: vi.fn(),
 
-      changeUserEmail: vi.fn().mockResolvedValue(undefined), // ← add this
-      updateUserPassword: vi.fn().mockResolvedValue(undefined), // ← add this
+      changeUserEmail: vi.fn().mockResolvedValue(undefined),
+      updateUserPassword: vi.fn().mockResolvedValue(undefined),
 
-      // Optional / already present
       updateUserEmail: vi.fn(),
       setSession: vi.fn(),
     };

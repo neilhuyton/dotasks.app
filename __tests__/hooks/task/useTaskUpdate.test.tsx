@@ -17,8 +17,8 @@ vi.mock("@steel-cut/steel-lib", async (importOriginal) => {
     ...actual,
     useBannerStore: vi.fn(() => ({
       show: vi.fn(),
-      banner: null, // mock required property
-      hide: vi.fn(), // mock required property
+      banner: null, 
+      hide: vi.fn(), 
     })),
   };
 });

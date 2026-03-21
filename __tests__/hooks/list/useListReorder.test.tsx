@@ -1,4 +1,3 @@
-// __tests__/hooks/list/useListReorder.test.tsx
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'

@@ -1,4 +1,3 @@
-// __tests__/components/Root.test.tsx
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, waitFor, screen } from "@testing-library/react";
 import { Root } from "@/components/Root";
