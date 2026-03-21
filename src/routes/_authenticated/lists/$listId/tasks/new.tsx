@@ -1,54 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { type QueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { trpc, useTRPC } from "@/trpc";
+import { trpc } from "@/trpc";
 import { useBannerStore } from "@steel-cut/steel-lib";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuthStore } from "@/store/authStore";
-
-import type { inferRouterOutputs } from "@trpc/server";
-import type { AppRouter } from "@/../server/trpc";
-
-type RouterOutput = inferRouterOutputs<AppRouter>;
-type TaskItem = RouterOutput["task"]["getByList"][number];
-type Tasks = RouterOutput["task"]["getByList"];
-
-function createOptimisticTask(
-  input: { title: string; description?: string; listId: string },
-  prevLength: number,
-  userId: string,
-): TaskItem {
-  const now = new Date().toISOString();
-  return {
-    id: `temp-${crypto.randomUUID()}`,
-    title: input.title,
-    description: input.description ?? null,
-    listId: input.listId,
-    userId,
-    dueDate: null,
-    priority: null,
-    order: prevLength,
-    isCompleted: false,
-    isCurrent: false,
-    isPinned: false,
-    createdAt: now,
-    updatedAt: now,
-  } satisfies TaskItem;
-}
+import { useTaskCreate } from "@/hooks/task/useTaskCreate";
 
 export const Route = createFileRoute("/_authenticated/lists/$listId/tasks/new")(
   {
-    loader: async ({
-      context: { queryClient },
-      params,
-    }: {
-      context: { queryClient: QueryClient };
-      params: { listId: string };
-    }) => {
+    loader: async ({ context: { queryClient }, params }) => {
       const { listId } = params;
 
       if (!listId) return {};
@@ -82,82 +44,28 @@ export const Route = createFileRoute("/_authenticated/lists/$listId/tasks/new")(
 function NewTaskPage() {
   const { listId } = Route.useParams();
   const navigate = Route.useNavigate();
-  const queryClient = useQueryClient();
   const { show: showBanner } = useBannerStore();
-  const trpcHook = useTRPC();
-  const userId = useAuthStore((s) => s.user?.id);
+
+  const { createTask, createTaskPending } = useTaskCreate(listId);
 
   const [title, setTitle] = useState("");
-
-  const tasksQueryKey = trpcHook.task.getByList.queryKey({ listId });
-  const listOneQueryKey = trpcHook.list.getOne.queryKey({ id: listId });
-  const listAllQueryKey = trpcHook.list.getAll.queryKey();
-
-  const mutation = useMutation(
-    trpcHook.task.create.mutationOptions({
-      onMutate: async (input) => {
-        await queryClient.cancelQueries({ queryKey: tasksQueryKey });
-
-        const prev = queryClient.getQueryData<Tasks>(tasksQueryKey) ?? [];
-        const optimistic = createOptimisticTask(input, prev.length, userId!);
-
-        queryClient.setQueryData<Tasks>(tasksQueryKey, [...prev, optimistic]);
-
-        return { prev };
-      },
-
-      onError: (_, __, ctx) => {
-        if (ctx?.prev) {
-          queryClient.setQueryData(tasksQueryKey, ctx.prev);
-        }
-        showBanner({
-          message: "Failed to create task. Please try again.",
-          variant: "error",
-          duration: 4000,
-        });
-      },
-
-      onSettled: () => {
-        queryClient.invalidateQueries({ queryKey: tasksQueryKey });
-      },
-
-      onSuccess: (newTask) => {
-        queryClient.setQueryData<Tasks>(tasksQueryKey, (old = []) =>
-          old.map((t) => (t.id.startsWith("temp-") ? { ...t, ...newTask } : t)),
-        );
-
-        queryClient.invalidateQueries({
-          queryKey: listOneQueryKey,
-          exact: true,
-        });
-        queryClient.invalidateQueries({
-          queryKey: listAllQueryKey,
-          exact: true,
-        });
-
-        showBanner({
-          message: "Task created successfully.",
-          variant: "success",
-          duration: 3000,
-        });
-
-        navigate({
-          to: "/lists/$listId",
-          params: { listId },
-          replace: true,
-        });
-      },
-    }),
-  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = title.trim();
     if (!trimmed) return;
 
-    mutation.mutate({
-      title: trimmed,
-      listId,
+    createTask({ title: trimmed, listId }, () => {
+      showBanner({
+        message: "Task created successfully.",
+        variant: "success",
+        duration: 3000,
+      });
+      navigate({
+        to: "/lists/$listId",
+        params: { listId },
+        replace: true,
+      });
     });
   };
 
@@ -169,7 +77,7 @@ function NewTaskPage() {
     });
   };
 
-  const isPending = mutation.isPending;
+  const isPending = createTaskPending;
 
   return (
     <div

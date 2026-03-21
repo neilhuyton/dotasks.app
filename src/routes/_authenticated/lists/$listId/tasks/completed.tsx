@@ -2,7 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TaskItem } from "@/components/tasks/TaskItem";
-import { useListTasks } from "@/hooks/useListTasks";
+import { useTaskRead } from "@/hooks/task/useTaskRead";
+import { useTaskToggle } from "@/hooks/task/useTaskToggle";
+import { useTaskCurrent } from "@/hooks/task/useTaskCurrent";
+import { useTaskDelete } from "@/hooks/task/useTaskDelete";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute(
@@ -15,17 +18,18 @@ function CompletedTasksPage() {
   const { listId } = Route.useParams();
   const navigate = Route.useNavigate();
 
+  const { tasks, isLoadingTasks } = useTaskRead(listId);
+
+  const { toggleTask, pendingToggleIds } = useTaskToggle(listId);
+
   const {
-    tasks,
-    isLoadingTasks,
-    toggleTask,
-    pendingToggleIds,
-    deleteTaskPending,
     setCurrentTask,
     setCurrentTaskPending,
     clearCurrentTask,
     clearCurrentTaskPending,
-  } = useListTasks(listId);
+  } = useTaskCurrent(listId);
+
+  const { deleteTaskPending } = useTaskDelete(listId);
 
   const completedTasks = tasks
     .filter((t) => t.isCompleted)

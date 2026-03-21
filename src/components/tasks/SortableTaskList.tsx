@@ -16,10 +16,14 @@ import {
 } from "@dnd-kit/sortable";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 
-import type { Task } from "@/hooks/useListTasks";
+import type { AppRouter } from "@/../server/trpc";
 import { SortableTaskItem } from "@/components/tasks/SortableTaskItem";
 import { useUIStore } from "@/store/uiStore";
 import { useQueryClient } from "@tanstack/react-query";
+import type { inferRouterOutputs } from "@trpc/server";
+
+type RouterOutput = inferRouterOutputs<AppRouter>;
+type Task = RouterOutput["task"]["getByList"][number];
 
 interface SortableTaskListProps {
   tasks: Task[];
