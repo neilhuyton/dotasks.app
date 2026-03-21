@@ -17,10 +17,10 @@ import {
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 
 import type { AppRouter } from "@/../server/trpc";
-import { SortableTaskItem } from "@/components/tasks/SortableTaskItem";
 import { useUIStore } from "@/store/uiStore";
 import { useQueryClient } from "@tanstack/react-query";
 import type { inferRouterOutputs } from "@trpc/server";
+import { SortableTaskItem } from "./SortableTaskItem";
 
 type RouterOutput = inferRouterOutputs<AppRouter>;
 type Task = RouterOutput["task"]["getByList"][number];

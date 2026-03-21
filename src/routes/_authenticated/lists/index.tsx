@@ -1,9 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { SortableListsTable } from "@/components/lists/SortableListsTable";
+
 import { FabButton, RouteError } from "@steel-cut/steel-lib";
 import { useListRead } from "@/hooks/list/useListRead";
 import { useListReorder } from "@/hooks/list/useListReorder";
 import { trpc } from "@/trpc";
+import { SortableListsTable } from "@/features/lists/SortableListsTable";
 
 export const Route = createFileRoute("/_authenticated/lists/")({
   loader: async ({ context: { queryClient } }) => {

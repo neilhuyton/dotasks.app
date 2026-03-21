@@ -3,7 +3,7 @@ import { ChevronLeft } from "lucide-react";
 import { trpc } from "@/trpc";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import TaskList from "@/components/tasks/TaskList";
+
 import { useAuthStore } from "@/store/authStore";
 import { FabButton, RouteError } from "@steel-cut/steel-lib";
 import { useNavigate } from "@tanstack/react-router";
@@ -12,6 +12,7 @@ import { useTaskCurrent } from "@/hooks/task/useTaskCurrent";
 import { useTaskToggle } from "@/hooks/task/useTaskToggle";
 import { useTaskDelete } from "@/hooks/task/useTaskDelete";
 import { useTaskRead } from "@/hooks/task/useTaskRead";
+import TaskList from "@/features/tasks/TaskList";
 
 export const Route = createFileRoute("/_authenticated/lists/$listId/")({
   loader: async ({ context: { queryClient }, params }) => {
