@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useLists } from "@/hooks/useLists";
-import { SortableListsTable } from "@/components/lists/SortableListsTable";
+import { useLists } from "@/features/lists/hooks/useLists";
+import { SortableListsTable } from "@/features/lists/SortableListsTable";
 import { useAuthStore } from "@/store/authStore";
 import { trpc } from "@/trpc";
 import { FabButton, RouteError } from "@steel-cut/steel-lib";

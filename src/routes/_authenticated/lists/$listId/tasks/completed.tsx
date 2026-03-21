@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { TaskItem } from "@/components/tasks/TaskItem";
-import { useListTasks } from "@/hooks/useListTasks";
+
+import { useListTasks } from "@/features/tasks/hooks/useListTasks";
 import { cn } from "@/lib/utils";
+import { TaskItem } from "@/features/tasks/TaskItem";
 
 export const Route = createFileRoute(
   "/_authenticated/lists/$listId/tasks/completed",

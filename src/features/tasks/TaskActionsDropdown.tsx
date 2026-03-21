@@ -1,6 +1,6 @@
 import { Star, Trash2, Pencil, MoreHorizontal } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { type Task } from "@/hooks/useListTasks";
+import { type Task } from "@/features/tasks/hooks/useListTasks";
 
 import { Button } from "@/components/ui/button";
 import {

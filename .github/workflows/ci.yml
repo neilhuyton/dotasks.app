@@ -84,6 +84,7 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           SUPABASE_JWT_SECRET: ${{ secrets.SUPABASE_JWT_SECRET }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          VITE_APP_NAME: Do Tasks App
 
   # e2e-tests:
   #   name: Run E2E Tests

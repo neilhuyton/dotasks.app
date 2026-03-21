@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { type Task } from "@/hooks/useListTasks";
+import { type Task } from "@/features/tasks/hooks/useListTasks";
 
 import { Item, ItemContent, ItemTitle, ItemMedia } from "@/components/ui/item";
 import { TaskCheckbox } from "@/components/ui/task-checkbox";

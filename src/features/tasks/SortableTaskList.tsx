@@ -16,10 +16,11 @@ import {
 } from "@dnd-kit/sortable";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 
-import type { Task } from "@/hooks/useListTasks";
-import { SortableTaskItem } from "@/components/tasks/SortableTaskItem";
+import type { Task } from "@/features/tasks/hooks/useListTasks";
+
 import { useUIStore } from "@/store/uiStore";
 import { useQueryClient } from "@tanstack/react-query";
+import { SortableTaskItem } from "./SortableTaskItem";
 
 interface SortableTaskListProps {
   tasks: Task[];

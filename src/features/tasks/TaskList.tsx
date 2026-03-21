@@ -1,4 +1,4 @@
-import { type Task } from "@/hooks/useListTasks";
+import { type Task } from "@/features/tasks/hooks/useListTasks";
 import { Link } from "@tanstack/react-router";
 import { SortableTaskList } from "./SortableTaskList";
 

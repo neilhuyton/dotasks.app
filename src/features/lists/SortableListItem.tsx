@@ -2,7 +2,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 import { ListItem } from "./ListItem";
-import type { List } from "@/hooks/useLists"; 
+import type { List } from "@/features/lists/hooks/useLists";
 import { Link } from "@tanstack/react-router";
 
 interface SortableListItemProps {
@@ -26,13 +26,13 @@ export function SortableListItem({
     disabled: isReordering,
   });
 
-const style = {
-  transform: CSS.Transform.toString(transform),
-  transition:
-    transition ||
-    "transform 0.18s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.18s ease",
-  opacity: isDragging ? 0.75 : 1,
-};
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition:
+      transition ||
+      "transform 0.18s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.18s ease",
+    opacity: isDragging ? 0.75 : 1,
+  };
 
   const content = (
     <div
@@ -51,7 +51,9 @@ const style = {
 
   // Only wrap in Link when NOT dragging
   // (prevents navigation during drag + keeps ref stable)
-  return isDragging ? content : (
+  return isDragging ? (
+    content
+  ) : (
     <Link
       to="/lists/$listId"
       params={{ listId: list.id }}
