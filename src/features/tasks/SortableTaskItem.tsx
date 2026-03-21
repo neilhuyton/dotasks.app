@@ -1,9 +1,14 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-import type { Task } from "@/features/tasks/hooks/useListTasks";
 import { cn } from "@/lib/utils";
 import { TaskItem } from "./TaskItem";
+
+import type { AppRouter } from "server/trpc";
+import type { inferRouterOutputs } from "@trpc/server";
+
+type RouterOutput = inferRouterOutputs<AppRouter>;
+type Task = RouterOutput["task"]["getByList"][number];
 
 interface SortableTaskItemProps {
   task: Task;

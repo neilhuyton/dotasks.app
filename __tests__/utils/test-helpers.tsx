@@ -32,6 +32,17 @@ export function createTestQueryClient(): QCType {
   });
 }
 
+export function renderIsolated(ui: React.ReactNode) {
+  const queryClient = createTestQueryClient();
+  return render(
+    <BannerProvider>
+      <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
+        <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+      </TRPCProvider>
+    </BannerProvider>,
+  );
+}
+
 // ────────────────────────────────────────────────
 // Type for the router returned by renderWithProviders
 // ────────────────────────────────────────────────

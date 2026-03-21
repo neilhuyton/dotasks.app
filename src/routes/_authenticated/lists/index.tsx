@@ -1,20 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useLists } from "@/features/lists/hooks/useLists";
-import { SortableListsTable } from "@/features/lists/SortableListsTable";
-import { useAuthStore } from "@/store/authStore";
-import { trpc } from "@/trpc";
+
 import { FabButton, RouteError } from "@steel-cut/steel-lib";
+import { useListRead } from "@/hooks/list/useListRead";
+import { useListReorder } from "@/hooks/list/useListReorder";
+import { trpc } from "@/trpc";
+import { SortableListsTable } from "@/features/lists/SortableListsTable";
 
 export const Route = createFileRoute("/_authenticated/lists/")({
   loader: async ({ context: { queryClient } }) => {
-    const { user } = useAuthStore.getState();
-
-    if (!user) {
-      return {};
-    }
-
     await queryClient.ensureQueryData(trpc.list.getAll.queryOptions(undefined));
-
     return {};
   },
 
@@ -53,9 +47,14 @@ export const Route = createFileRoute("/_authenticated/lists/")({
 
 function ListsPage() {
   const navigate = useNavigate();
-  const { lists = [], updateListOrder, isReordering } = useLists();
 
-  const listCount = lists.length;
+  const { lists } = useListRead();
+
+  const { pendingReorder, updateListOrder, isReordering } = useListReorder();
+
+  const displayedLists = pendingReorder ?? lists;
+
+  const listCount = displayedLists.length;
 
   const handleCreateNew = () => {
     navigate({ to: "/lists/new" });
@@ -98,7 +97,7 @@ function ListsPage() {
         </div>
 
         <SortableListsTable
-          lists={lists}
+          lists={displayedLists}
           updateListOrder={updateListOrder}
           isReordering={isReordering}
         />

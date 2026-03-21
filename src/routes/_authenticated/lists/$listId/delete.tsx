@@ -2,9 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { trpc, useTRPC } from "@/trpc";
-import { RouteError, useBannerStore } from "@steel-cut/steel-lib";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { trpc } from "@/trpc";
+import { RouteError } from "@steel-cut/steel-lib";
+import { useQuery } from "@tanstack/react-query";
+import { useListDelete } from "@/hooks/list/useListDelete";
+import { useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/lists/$listId/delete")({
   loader: async ({ context: { queryClient }, params }) => {
@@ -45,66 +47,19 @@ export const Route = createFileRoute("/_authenticated/lists/$listId/delete")({
 function DeleteListConfirmPage() {
   const { listId } = Route.useParams();
   const navigate = Route.useNavigate();
-  const { show: showBanner } = useBannerStore();
-  const queryClient = useQueryClient();
-  const trpcHook = useTRPC();
+
+  const { deleteList, isDeleting } = useListDelete();
+
+  const [deleted, setDeleted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const listQueryInput = { id: listId ?? "" };
-  const allListsQueryKey = trpcHook.list.getAll.queryKey();
-  const listOneQueryKey = trpcHook.list.getOne.queryKey(listQueryInput);
 
   const { data: list, isPending: isListPending } = useQuery(
-    trpcHook.list.getOne.queryOptions(listQueryInput, {
+    trpc.list.getOne.queryOptions(listQueryInput, {
       staleTime: Infinity,
       gcTime: 30 * 60 * 1000,
-      enabled: !!listId,
-    }),
-  );
-
-  const deleteMutation = useMutation(
-    trpcHook.list.delete.mutationOptions({
-      onMutate: async ({ id }) => {
-        await queryClient.cancelQueries({ queryKey: allListsQueryKey });
-
-        const previousLists = queryClient.getQueryData(allListsQueryKey) ?? [];
-
-        queryClient.setQueryData<typeof previousLists>(
-          allListsQueryKey,
-          (old = []) => old.filter((l) => l.id !== id),
-        );
-
-        return { previousLists };
-      },
-
-      onError: (_, __, context) => {
-        if (context?.previousLists) {
-          queryClient.setQueryData(allListsQueryKey, context.previousLists);
-        }
-
-        showBanner({
-          message: "Failed to delete list. Please try again.",
-          variant: "error",
-          duration: 5000,
-        });
-      },
-
-      onSettled: () => {
-        queryClient.invalidateQueries({ queryKey: allListsQueryKey });
-        queryClient.invalidateQueries({
-          queryKey: listOneQueryKey,
-          exact: true,
-        });
-      },
-
-      onSuccess: () => {
-        showBanner({
-          message: "List deleted successfully.",
-          variant: "success",
-          duration: 3000,
-        });
-
-        navigate({ to: "/lists", replace: true });
-      },
+      enabled: !!listId && !deleted,
     }),
   );
 
@@ -116,9 +71,22 @@ function DeleteListConfirmPage() {
     });
   };
 
-  const isPending = deleteMutation.isPending;
-  const listTitle = list?.title ?? "this list";
-  const taskCount = list?._count?.tasks ?? 0;
+  const handleDelete = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!listId) return;
+
+    setIsSubmitting(true);
+    deleteList(listId, {
+      onSuccess: () => {
+        setDeleted(true);
+        setIsSubmitting(false);
+        navigate({ to: "/lists", replace: true });
+      },
+      onError: () => {
+        setIsSubmitting(false);
+      },
+    });
+  };
 
   if (!listId) {
     return (
@@ -128,7 +96,7 @@ function DeleteListConfirmPage() {
     );
   }
 
-  if (isListPending) {
+  if (isListPending && !deleted && !isSubmitting) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -136,13 +104,38 @@ function DeleteListConfirmPage() {
     );
   }
 
-  if (!list) {
+  // Only show "not found" AFTER successful deletion or if truly missing (not during pending/error)
+  if (deleted) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center text-center px-6">
+        <div className="max-w-md space-y-6">
+          <h1 className="text-3xl font-bold tracking-tight">
+            List no longer exists
+          </h1>
+          <p className="text-lg text-muted-foreground">
+            This list has already been deleted or never existed.
+          </p>
+          <Button onClick={() => navigate({ to: "/lists", replace: true })}>
+            Back to Lists
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // During mutation (pending or error), keep showing confirmation UI with disabled buttons
+  const showConfirmation = !deleted && (list || isSubmitting || isDeleting);
+
+  if (!showConfirmation) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center text-muted-foreground">
         List not found or you don't have access.
       </div>
     );
   }
+
+  const listTitle = list?.title ?? "this list";
+  const taskCount = list?._count?.tasks ?? 0;
 
   return (
     <div
@@ -161,7 +154,7 @@ function DeleteListConfirmPage() {
           className="absolute left-4 top-6 sm:left-6 sm:top-8 z-[10000]"
           aria-label="Cancel and return to list"
           onClick={handleCancel}
-          disabled={isPending}
+          disabled={isDeleting || isSubmitting}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -183,10 +176,7 @@ function DeleteListConfirmPage() {
             </div>
 
             <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                deleteMutation.mutate({ id: listId });
-              }}
+              onSubmit={handleDelete}
               className="space-y-8"
               data-testid="delete-confirm-form"
             >
@@ -194,21 +184,21 @@ function DeleteListConfirmPage() {
                 <Button
                   type="submit"
                   variant="destructive"
-                  disabled={isPending}
+                  disabled={isDeleting || isSubmitting}
                   className="w-full sm:w-44"
                   data-testid="delete-confirm-button"
                 >
-                  {isPending && (
+                  {(isDeleting || isSubmitting) && (
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   )}
-                  {isPending ? "Deleting..." : "Delete List"}
+                  {isDeleting || isSubmitting ? "Deleting..." : "Delete List"}
                 </Button>
 
                 <Button
                   type="button"
                   variant="outline"
                   onClick={handleCancel}
-                  disabled={isPending}
+                  disabled={isDeleting || isSubmitting}
                   className="w-full sm:w-32"
                 >
                   Cancel

@@ -1,10 +1,14 @@
 import { cn } from "@/lib/utils";
-import { type Task } from "@/features/tasks/hooks/useListTasks";
 
 import { Item, ItemContent, ItemTitle, ItemMedia } from "@/components/ui/item";
 import { TaskCheckbox } from "@/components/ui/task-checkbox";
 import { TaskActionsDropdown } from "./TaskActionsDropdown";
 import { Loader2 } from "lucide-react";
+import type { inferRouterOutputs } from "@trpc/server";
+import type { AppRouter } from "server/trpc";
+
+type RouterOutput = inferRouterOutputs<AppRouter>;
+type Task = RouterOutput["task"]["getByList"][number];
 
 interface TaskItemProps {
   task: Task;

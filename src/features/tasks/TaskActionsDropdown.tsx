@@ -1,6 +1,5 @@
 import { Star, Trash2, Pencil, MoreHorizontal } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { type Task } from "@/features/tasks/hooks/useListTasks";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +9,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import type { AppRouter } from "server/trpc";
+import type { inferRouterOutputs } from "@trpc/server";
+
+type RouterOutput = inferRouterOutputs<AppRouter>;
+type Task = RouterOutput["task"]["getByList"][number];
 
 interface TaskActionsDropdownProps {
   task: Task;

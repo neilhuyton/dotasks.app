@@ -74,7 +74,7 @@ export default defineConfig(({ mode }) => {
           "**/*.config.*",
           "**/*.test.*",
           "**/*.spec.*",
-          "src/app/components/ui",
+          "src/components/ui",
           "src/types",
         ],
         all: true,
