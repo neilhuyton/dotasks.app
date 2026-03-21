@@ -172,7 +172,13 @@ function ListDetailPage() {
           </Link>
 
           <h1 className="flex-1 truncate text-2xl font-bold tracking-tight sm:text-3xl">
-            {list.title}
+            <Link
+              to="/lists"
+              aria-label="Back to all lists"
+              title="Back to all lists"
+            >
+              {list.title}
+            </Link>
           </h1>
         </div>
 
