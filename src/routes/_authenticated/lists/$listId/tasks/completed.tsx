@@ -29,7 +29,7 @@ function CompletedTasksPage() {
     clearCurrentTaskPending,
   } = useTaskCurrent(listId);
 
-  const { deleteTaskPending } = useTaskDelete(listId);
+  const { isDeleting } = useTaskDelete(listId);
 
   const completedTasks = tasks
     .filter((t) => t.isCompleted)
@@ -110,7 +110,7 @@ function CompletedTasksPage() {
                     params: { listId, taskId },
                   })
                 }
-                isDeleting={deleteTaskPending}
+                isDeleting={isDeleting}
                 setCurrentTask={setCurrentTask}
                 isSettingCurrent={setCurrentTaskPending}
                 clearCurrentTask={clearCurrentTask}

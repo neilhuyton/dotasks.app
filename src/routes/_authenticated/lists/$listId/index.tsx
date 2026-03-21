@@ -119,7 +119,7 @@ function ListDetailPage() {
 
   const { toggleTask, pendingToggleIds } = useTaskToggle(listId);
 
-  const { deleteTaskPending } = useTaskDelete(listId);
+  const { isDeleting } = useTaskDelete(listId);
 
   const displayedTasks = pendingReorder ?? tasks;
 
@@ -192,7 +192,7 @@ function ListDetailPage() {
               params: { listId, taskId },
             })
           }
-          isDeleting={deleteTaskPending}
+          isDeleting={isDeleting}
           setCurrentTask={setCurrentTask}
           isSettingCurrent={setCurrentTaskPending}
           clearCurrentTask={clearCurrentTask}
