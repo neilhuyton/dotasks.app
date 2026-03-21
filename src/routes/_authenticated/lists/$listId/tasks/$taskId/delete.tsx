@@ -3,8 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/trpc";
-import { RouteError, useBannerStore } from "@steel-cut/steel-lib";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { RouteError } from "@steel-cut/steel-lib";
+import { useQuery } from "@tanstack/react-query";
+import { useTaskDelete } from "@/hooks/task/useTaskDelete";
+
 export const Route = createFileRoute(
   "/_authenticated/lists/$listId/tasks/$taskId/delete",
 )({
@@ -46,11 +48,10 @@ export const Route = createFileRoute(
 function DeleteTaskConfirmPage() {
   const { listId, taskId } = Route.useParams();
   const navigate = Route.useNavigate();
-  const queryClient = useQueryClient();
-  const { show: showBanner } = useBannerStore();
+
+  const { deleteTask, isDeleting } = useTaskDelete(listId);
 
   const queryInput = { listId: listId ?? "" };
-  const queryKey = trpc.task.getByList.queryKey(queryInput);
 
   const { data: tasks = [], isPending: isTasksPending } = useQuery(
     trpc.task.getByList.queryOptions(queryInput, {
@@ -60,50 +61,7 @@ function DeleteTaskConfirmPage() {
   );
 
   const task = tasks.find((t) => t.id === taskId);
-
-  const deleteMutation = useMutation(
-    trpc.task.delete.mutationOptions({
-      onMutate: async () => {
-        await queryClient.cancelQueries({ queryKey });
-        return {
-          previousTasks: queryClient.getQueryData<typeof tasks>(queryKey),
-        };
-      },
-
-      onError: (_, __, context) => {
-        if (context?.previousTasks) {
-          queryClient.setQueryData(queryKey, context.previousTasks);
-        }
-        showBanner({
-          message: "Failed to delete task. Please try again.",
-          variant: "error",
-          duration: 4000,
-        });
-      },
-
-      onSuccess: () => {
-        queryClient.setQueryData<typeof tasks>(queryKey, (old = []) =>
-          old.filter((t) => t.id !== taskId),
-        );
-
-        showBanner({
-          message: "Task deleted successfully.",
-          variant: "success",
-          duration: 3000,
-        });
-
-        navigate({
-          to: "/lists/$listId",
-          params: { listId },
-          replace: true,
-        });
-      },
-
-      onSettled: () => {
-        queryClient.invalidateQueries({ queryKey });
-      },
-    }),
-  );
+  const taskTitle = task?.title ?? "this task";
 
   const handleCancel = () => {
     navigate({
@@ -113,8 +71,20 @@ function DeleteTaskConfirmPage() {
     });
   };
 
-  const isPending = deleteMutation.isPending;
-  const taskTitle = task?.title ?? "this task";
+  const handleDelete = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!taskId) return;
+
+    deleteTask(taskId, {
+      onSuccess: () => {
+        navigate({
+          to: "/lists/$listId",
+          params: { listId },
+          replace: true,
+        });
+      },
+    });
+  };
 
   if (!listId || !taskId) {
     return (
@@ -132,7 +102,8 @@ function DeleteTaskConfirmPage() {
     );
   }
 
-  if (!task) {
+  // Hide "not found" during deletion — optimistic removal means task disappears from cache
+  if (!task && !isDeleting) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center text-muted-foreground">
         Task not found or you don't have access.
@@ -157,7 +128,7 @@ function DeleteTaskConfirmPage() {
           className="absolute left-4 top-6 sm:left-6 sm:top-8 z-[10000]"
           aria-label="Cancel and return to list"
           onClick={handleCancel}
-          disabled={isPending}
+          disabled={isDeleting}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -174,10 +145,7 @@ function DeleteTaskConfirmPage() {
             </div>
 
             <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                deleteMutation.mutate({ id: taskId });
-              }}
+              onSubmit={handleDelete}
               className="space-y-8"
               data-testid="delete-confirm-form"
             >
@@ -185,21 +153,21 @@ function DeleteTaskConfirmPage() {
                 <Button
                   type="submit"
                   variant="destructive"
-                  disabled={isPending}
+                  disabled={isDeleting}
                   className="w-full sm:w-44"
                   data-testid="delete-confirm-button"
                 >
-                  {isPending && (
+                  {isDeleting && (
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   )}
-                  {isPending ? "Deleting..." : "Delete Task"}
+                  {isDeleting ? "Deleting..." : "Delete Task"}
                 </Button>
 
                 <Button
                   type="button"
                   variant="outline"
                   onClick={handleCancel}
-                  disabled={isPending}
+                  disabled={isDeleting}
                   className="w-full sm:w-32"
                 >
                   Cancel

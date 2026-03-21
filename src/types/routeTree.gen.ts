@@ -17,7 +17,6 @@ import { Route as EmailChangeRouteImport } from './../routes/email-change'
 import { Route as AuthenticatedRouteRouteImport } from './../routes/_authenticated/route'
 import { Route as IndexRouteImport } from './../routes/index'
 import { Route as AuthenticatedProfileRouteImport } from './../routes/_authenticated/profile'
-import { Route as AuthenticatedHomeRouteImport } from './../routes/_authenticated/home'
 import { Route as AuthenticatedListsIndexRouteImport } from './../routes/_authenticated/lists/index'
 import { Route as AuthenticatedListsNewRouteImport } from './../routes/_authenticated/lists/new'
 import { Route as AuthenticatedListsListIdIndexRouteImport } from './../routes/_authenticated/lists/$listId/index'
@@ -65,11 +64,6 @@ const IndexRoute = IndexRouteImport.update({
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
-  id: '/home',
-  path: '/home',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedListsIndexRoute = AuthenticatedListsIndexRouteImport.update({
@@ -132,7 +126,6 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/update-password': typeof UpdatePasswordRoute
-  '/home': typeof AuthenticatedHomeRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/lists/new': typeof AuthenticatedListsNewRoute
   '/lists/': typeof AuthenticatedListsIndexRoute
@@ -151,7 +144,6 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/update-password': typeof UpdatePasswordRoute
-  '/home': typeof AuthenticatedHomeRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/lists/new': typeof AuthenticatedListsNewRoute
   '/lists': typeof AuthenticatedListsIndexRoute
@@ -172,7 +164,6 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/update-password': typeof UpdatePasswordRoute
-  '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/lists/new': typeof AuthenticatedListsNewRoute
   '/_authenticated/lists/': typeof AuthenticatedListsIndexRoute
@@ -193,7 +184,6 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-password'
     | '/update-password'
-    | '/home'
     | '/profile'
     | '/lists/new'
     | '/lists/'
@@ -212,7 +202,6 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-password'
     | '/update-password'
-    | '/home'
     | '/profile'
     | '/lists/new'
     | '/lists'
@@ -232,7 +221,6 @@ export interface FileRouteTypes {
     | '/register'
     | '/reset-password'
     | '/update-password'
-    | '/_authenticated/home'
     | '/_authenticated/profile'
     | '/_authenticated/lists/new'
     | '/_authenticated/lists/'
@@ -313,13 +301,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/home': {
-      id: '/_authenticated/home'
-      path: '/home'
-      fullPath: '/home'
-      preLoaderRoute: typeof AuthenticatedHomeRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/lists/': {
       id: '/_authenticated/lists/'
       path: '/lists'
@@ -387,7 +368,6 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedListsNewRoute: typeof AuthenticatedListsNewRoute
   AuthenticatedListsIndexRoute: typeof AuthenticatedListsIndexRoute
@@ -401,7 +381,6 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedHomeRoute: AuthenticatedHomeRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedListsNewRoute: AuthenticatedListsNewRoute,
   AuthenticatedListsIndexRoute: AuthenticatedListsIndexRoute,

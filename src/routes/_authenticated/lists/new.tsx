@@ -4,34 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useListCreate } from "@/hooks/list/useListCreate";
 import { trpc } from "@/trpc";
-import { useBannerStore } from "@steel-cut/steel-lib";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { inferRouterOutputs } from "@trpc/server";
-import type { AppRouter } from "@/../server/trpc";
-
-type RouterOutput = inferRouterOutputs<AppRouter>;
-type Lists = RouterOutput["list"]["getAll"];
-
-function createOptimisticList(
-  input: { title: string; description?: string },
-  prevLength: number,
-) {
-  const now = new Date().toISOString();
-  return {
-    id: `temp-${crypto.randomUUID()}`,
-    title: input.title,
-    description: input.description ?? null,
-    color: null,
-    icon: null,
-    order: prevLength,
-    isPinned: false,
-    createdAt: now,
-    updatedAt: now,
-    _count: { tasks: 0 },
-    tasks: [],
-  };
-}
 
 export const Route = createFileRoute("/_authenticated/lists/new")({
   loader: async ({ context: { queryClient } }) => {
@@ -48,76 +22,29 @@ export const Route = createFileRoute("/_authenticated/lists/new")({
 
 function CreateListPage() {
   const navigate = Route.useNavigate();
-  const queryClient = useQueryClient();
-  const { show: showBanner } = useBannerStore();
+
+  const { createList, isCreating } = useListCreate();
 
   const [title, setTitle] = useState("");
-  const allListsQueryKey = trpc.list.getAll.queryKey();
-
-  const mutation = useMutation(
-    trpc.list.create.mutationOptions({
-      onMutate: async (input) => {
-        await queryClient.cancelQueries({ queryKey: allListsQueryKey });
-
-        const prev = queryClient.getQueryData<Lists>(allListsQueryKey) ?? [];
-
-        const optimistic = createOptimisticList(input, prev.length);
-
-        queryClient.setQueryData<Lists>(allListsQueryKey, [
-          ...prev,
-          optimistic,
-        ]);
-
-        return { prev };
-      },
-
-      onError: (_, __, ctx) => {
-        if (ctx?.prev) {
-          queryClient.setQueryData(allListsQueryKey, ctx.prev);
-        }
-        showBanner({
-          message: "Failed to create list. Please try again.",
-          variant: "error",
-          duration: 4000,
-        });
-      },
-
-      onSettled: () => {
-        queryClient.invalidateQueries({ queryKey: allListsQueryKey });
-      },
-
-      onSuccess: (newList) => {
-        queryClient.setQueryData<Lists>(allListsQueryKey, (old = []) =>
-          old.map((item) =>
-            item.id.startsWith("temp-") ? { ...item, ...newList } : item,
-          ),
-        );
-
-        showBanner({
-          message: "List has been created successfully.",
-          variant: "success",
-          duration: 3000,
-        });
-
-        navigate({ to: "/lists", replace: true });
-      },
-    }),
-  );
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    const trimmed = title.trim();
+    if (!trimmed) return;
 
-    mutation.mutate({
-      title: title.trim(),
-    });
+    createList(
+      { title: trimmed },
+      {
+        onSuccess: () => {
+          navigate({ to: "/lists", replace: true });
+        },
+      },
+    );
   };
 
   const handleCancel = () => {
     navigate({ to: "/lists", replace: true });
   };
-
-  const isPending = mutation.isPending;
 
   return (
     <div
@@ -136,7 +63,7 @@ function CreateListPage() {
           className="absolute left-4 top-6 sm:left-6 sm:top-8 z-[10000]"
           aria-label="Cancel and return to lists"
           onClick={handleCancel}
-          disabled={isPending}
+          disabled={isCreating}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -169,7 +96,7 @@ function CreateListPage() {
                     placeholder="Work, Groceries, Ideas..."
                     autoFocus
                     required
-                    disabled={isPending}
+                    disabled={isCreating}
                     autoComplete="off"
                   />
                 </div>
@@ -178,21 +105,21 @@ function CreateListPage() {
               <div className="flex flex-col sm:flex-row gap-4 pt-8 justify-center">
                 <Button
                   type="submit"
-                  disabled={isPending || !title.trim()}
+                  disabled={isCreating || !title.trim()}
                   className="w-full sm:w-40"
                   data-testid="create-button"
                 >
-                  {isPending && (
+                  {isCreating && (
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   )}
-                  {isPending ? "Creating..." : "Create List"}
+                  {isCreating ? "Creating..." : "Create List"}
                 </Button>
 
                 <Button
                   type="button"
                   variant="outline"
                   onClick={handleCancel}
-                  disabled={isPending}
+                  disabled={isCreating}
                   className="w-full sm:w-32"
                   data-testid="cancel-button"
                 >

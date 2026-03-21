@@ -1,6 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
-import { useListTasks } from "@/hooks/useListTasks";
 import { trpc } from "@/trpc";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -8,6 +7,11 @@ import TaskList from "@/components/tasks/TaskList";
 import { useAuthStore } from "@/store/authStore";
 import { FabButton, RouteError } from "@steel-cut/steel-lib";
 import { useNavigate } from "@tanstack/react-router";
+import { useTaskReorder } from "@/hooks/task/useTaskReorder";
+import { useTaskCurrent } from "@/hooks/task/useTaskCurrent";
+import { useTaskToggle } from "@/hooks/task/useTaskToggle";
+import { useTaskDelete } from "@/hooks/task/useTaskDelete";
+import { useTaskRead } from "@/hooks/task/useTaskRead";
 
 export const Route = createFileRoute("/_authenticated/lists/$listId/")({
   loader: async ({ context: { queryClient }, params }) => {
@@ -44,7 +48,7 @@ export const Route = createFileRoute("/_authenticated/lists/$listId/")({
         ),
       ]);
     } catch {
-      // silent fail
+      // leave this comment here
     }
 
     return { session };
@@ -101,19 +105,22 @@ function ListDetailPage() {
     ),
   );
 
+  const { tasks, isLoadingTasks } = useTaskRead(listId);
+
+  const { pendingReorder, reorderTasks, isReordering } = useTaskReorder(listId);
+
   const {
-    tasks,
-    isLoadingTasks,
-    toggleTask,
-    pendingToggleIds,
-    deleteTaskPending,
     setCurrentTask,
     setCurrentTaskPending,
     clearCurrentTask,
     clearCurrentTaskPending,
-    updateTaskOrder,
-    isReordering,
-  } = useListTasks(listId);
+  } = useTaskCurrent(listId);
+
+  const { toggleTask, pendingToggleIds } = useTaskToggle(listId);
+
+  const { deleteTaskPending } = useTaskDelete(listId);
+
+  const displayedTasks = pendingReorder ?? tasks;
 
   if (!listId) {
     return (
@@ -175,7 +182,7 @@ function ListDetailPage() {
         )}
 
         <TaskList
-          tasks={tasks}
+          tasks={displayedTasks}
           toggleTask={toggleTask}
           pendingToggleIds={pendingToggleIds}
           onDelete={(taskId) =>
@@ -190,7 +197,7 @@ function ListDetailPage() {
           clearCurrentTask={clearCurrentTask}
           clearCurrentTaskPending={clearCurrentTaskPending}
           listId={listId}
-          updateTaskOrder={updateTaskOrder}
+          updateTaskOrder={reorderTasks}
           isReordering={isReordering}
         />
       </div>
@@ -205,7 +212,6 @@ function ListDetailPage() {
         label="Add new task"
         testId="fab-add-task"
       />
-
     </>
   );
 }

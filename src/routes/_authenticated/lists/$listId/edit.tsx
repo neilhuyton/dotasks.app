@@ -3,13 +3,14 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { trpc, useTRPC } from "@/trpc";
-import { RouteError, useBannerStore } from "@steel-cut/steel-lib";
+import { RouteError } from "@steel-cut/steel-lib";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { useListUpdate } from "@/hooks/list/useListUpdate";
 
 const editListSchema = z.object({
   title: z.string().min(1, "List name is required").trim(),
@@ -56,9 +57,8 @@ export const Route = createFileRoute("/_authenticated/lists/$listId/edit")({
 function EditListPage() {
   const { listId } = Route.useParams();
   const navigate = Route.useNavigate();
-  const { show: showBanner } = useBannerStore();
-  const queryClient = useQueryClient();
-  const trpcHook = useTRPC();
+
+  const { updateList, isUpdating } = useListUpdate();
 
   const form = useForm<EditListFormData>({
     resolver: zodResolver(editListSchema),
@@ -69,7 +69,7 @@ function EditListPage() {
     mode: "onChange",
   });
 
-  const listQueryKey = trpcHook.list.getOne.queryKey({ id: listId ?? "" });
+  const trpcHook = useTRPC();
 
   const { data: list, isPending: isListPending } = useQuery(
     trpcHook.list.getOne.queryOptions(
@@ -79,76 +79,6 @@ function EditListPage() {
         enabled: !!listId,
       },
     ),
-  );
-
-  const updateMutation = useMutation(
-    trpcHook.list.update.mutationOptions({
-      onMutate: async (input) => {
-        await queryClient.cancelQueries({ queryKey: listQueryKey });
-        await queryClient.cancelQueries({
-          queryKey: trpcHook.list.getAll.queryKey(),
-        });
-
-        const prevDetail = queryClient.getQueryData(listQueryKey);
-        const prevAll = queryClient.getQueryData(
-          trpcHook.list.getAll.queryKey(),
-        );
-
-        if (prevDetail) {
-          queryClient.setQueryData(listQueryKey, (old) => ({
-            ...old!,
-            ...input,
-            updatedAt: new Date().toISOString(),
-          }));
-        }
-
-        queryClient.setQueryData(trpcHook.list.getAll.queryKey(), (old = []) =>
-          old.map((l) =>
-            l.id === input.id
-              ? { ...l, ...input, updatedAt: new Date().toISOString() }
-              : l,
-          ),
-        );
-
-        return { prevDetail, prevAll };
-      },
-
-      onError: (_, __, context) => {
-        if (context?.prevDetail) {
-          queryClient.setQueryData(listQueryKey, context.prevDetail);
-        }
-        if (context?.prevAll) {
-          queryClient.setQueryData(
-            trpcHook.list.getAll.queryKey(),
-            context.prevAll,
-          );
-        }
-
-        showBanner({
-          message: "Failed to update list. Please try again.",
-          variant: "error",
-          duration: 4000,
-        });
-      },
-
-      onSettled: () => {
-        queryClient.invalidateQueries({ queryKey: listQueryKey });
-        queryClient.invalidateQueries({
-          queryKey: trpcHook.list.getAll.queryKey(),
-        });
-      },
-
-      onSuccess: () => {
-        showBanner({
-          message: "List updated successfully.",
-          variant: "success",
-          duration: 3000,
-        });
-
-        form.reset();
-        navigate({ to: "/lists", replace: true });
-      },
-    }),
   );
 
   useEffect(() => {
@@ -161,18 +91,26 @@ function EditListPage() {
   }, [list, form]);
 
   const handleSubmit = form.handleSubmit((data) => {
-    updateMutation.mutate({
-      id: listId!,
-      title: data.title,
-      description: data.description || undefined,
-    });
+    if (!listId) return;
+
+    updateList(
+      {
+        id: listId,
+        title: data.title,
+        description: data.description || undefined,
+      },
+      {
+        onSuccess: () => {
+          form.reset();
+          navigate({ to: "/lists", replace: true });
+        },
+      },
+    );
   });
 
   const handleCancel = () => {
     navigate({ to: "/lists/$listId", params: { listId }, replace: true });
   };
-
-  const isPending = updateMutation.isPending;
 
   if (!listId) {
     return (
@@ -215,7 +153,7 @@ function EditListPage() {
           className="absolute left-4 top-6 sm:left-6 sm:top-8 z-[10000]"
           aria-label="Cancel and return to list"
           onClick={handleCancel}
-          disabled={isPending}
+          disabled={isUpdating}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -243,7 +181,7 @@ function EditListPage() {
                     {...form.register("title")}
                     placeholder="Work, Groceries, Ideas..."
                     autoFocus
-                    disabled={isPending}
+                    disabled={isUpdating}
                     autoComplete="off"
                   />
                   {form.formState.errors.title && (
@@ -258,23 +196,23 @@ function EditListPage() {
                 <Button
                   type="submit"
                   disabled={
-                    isPending ||
+                    isUpdating ||
                     !form.formState.isValid ||
                     Object.keys(form.formState.dirtyFields).length === 0
                   }
                   className="w-full sm:w-40"
                 >
-                  {isPending && (
+                  {isUpdating && (
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   )}
-                  {isPending ? "Saving..." : "Save Changes"}
+                  {isUpdating ? "Saving..." : "Save Changes"}
                 </Button>
 
                 <Button
                   type="button"
                   variant="outline"
                   onClick={handleCancel}
-                  disabled={isPending}
+                  disabled={isUpdating}
                   className="w-full sm:w-32"
                 >
                   Cancel

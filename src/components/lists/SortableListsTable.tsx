@@ -15,7 +15,7 @@ import {
 } from "@dnd-kit/sortable";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 
-import type { List } from "@/hooks/useLists";
+import type { List } from "@/hooks/list/useListRead";
 import { SortableListItem } from "./SortableListItem";
 import { useUIStore } from "@/store/uiStore";
 import { useQueryClient } from "@tanstack/react-query";

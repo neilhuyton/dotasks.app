@@ -2,14 +2,15 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { trpc, useTRPC } from "@/trpc";
-import { RouteError, useBannerStore } from "@steel-cut/steel-lib";
+import { trpc } from "@/trpc";
+import { RouteError } from "@steel-cut/steel-lib";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { useTaskUpdate } from "@/hooks/task/useTaskUpdate";
 
 const editTaskSchema = z.object({
   title: z.string().min(1, "Task name is required").trim(),
@@ -61,15 +62,13 @@ export const Route = createFileRoute(
 function EditTaskPage() {
   const { listId, taskId } = Route.useParams();
   const navigate = Route.useNavigate();
-  const { show: showBanner } = useBannerStore();
-  const queryClient = useQueryClient();
-  const trpcHook = useTRPC();
+
+  const { updateTask, isUpdating } = useTaskUpdate(listId);
 
   const queryInput = { listId: listId ?? "" };
-  const queryKey = trpcHook.task.getByList.queryKey(queryInput);
 
   const { data: tasks = [], isPending: isTasksPending } = useQuery(
-    trpcHook.task.getByList.queryOptions(queryInput, {
+    trpc.task.getByList.queryOptions(queryInput, {
       staleTime: 5 * 60 * 1000,
       enabled: !!listId,
     }),
@@ -105,69 +104,26 @@ function EditTaskPage() {
     }
   }, [task, form]);
 
-  const updateMutation = useMutation(
-    trpcHook.task.update.mutationOptions({
-      onMutate: async (variables) => {
-        await queryClient.cancelQueries({ queryKey });
-
-        const previousTasks =
-          queryClient.getQueryData<typeof tasks>(queryKey) ?? [];
-
-        queryClient.setQueryData<typeof tasks>(queryKey, (old = []) =>
-          old.map((t) =>
-            t.id === taskId
-              ? {
-                  ...t,
-                  title: variables.title ?? t.title,
-                  description: variables.description ?? t.description ?? null,
-                  updatedAt: new Date().toISOString(),
-                }
-              : t,
-          ),
-        );
-
-        return { previousTasks };
-      },
-
-      onError: (_, __, context) => {
-        if (context?.previousTasks) {
-          queryClient.setQueryData(queryKey, context.previousTasks);
-        }
-        showBanner({
-          message: "Failed to update task. Please try again.",
-          variant: "error",
-          duration: 4000,
-        });
-      },
-
-      onSettled: () => {
-        queryClient.invalidateQueries({ queryKey });
-      },
-
-      onSuccess: () => {
-        showBanner({
-          message: "Task updated successfully.",
-          variant: "success",
-          duration: 3000,
-        });
-
-        form.reset();
-        navigate({
-          to: "/lists/$listId",
-          params: { listId },
-          replace: true,
-        });
-      },
-    }),
-  );
-
   const handleSubmit = form.handleSubmit((data) => {
     if (!taskId) return;
-    updateMutation.mutate({
-      id: taskId,
-      title: data.title,
-      description: data.description || undefined,
-    });
+
+    updateTask(
+      {
+        id: taskId,
+        title: data.title,
+        description: data.description,
+      },
+      {
+        onSuccess: () => {
+          form.reset();
+          navigate({
+            to: "/lists/$listId",
+            params: { listId },
+            replace: true,
+          });
+        },
+      },
+    );
   });
 
   const handleCancel = () => {
@@ -177,8 +133,6 @@ function EditTaskPage() {
       replace: true,
     });
   };
-
-  const isPending = updateMutation.isPending || isTasksPending;
 
   if (!listId || !taskId) {
     return (
@@ -221,7 +175,7 @@ function EditTaskPage() {
           className="absolute left-4 top-6 sm:left-6 sm:top-8 z-[10000]"
           aria-label="Cancel and return to task list"
           onClick={handleCancel}
-          disabled={isPending}
+          disabled={isUpdating}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -249,7 +203,7 @@ function EditTaskPage() {
                     {...form.register("title")}
                     placeholder="e.g. Finish quarterly report"
                     autoFocus
-                    disabled={isPending}
+                    disabled={isUpdating}
                     autoComplete="off"
                   />
                   {form.formState.errors.title && (
@@ -264,23 +218,23 @@ function EditTaskPage() {
                 <Button
                   type="submit"
                   disabled={
-                    isPending ||
+                    isUpdating ||
                     !form.formState.isValid ||
                     Object.keys(form.formState.dirtyFields).length === 0
                   }
                   className="w-full sm:w-40"
                 >
-                  {isPending && (
+                  {isUpdating && (
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   )}
-                  {isPending ? "Saving..." : "Save Changes"}
+                  {isUpdating ? "Saving..." : "Save Changes"}
                 </Button>
 
                 <Button
                   type="button"
                   variant="outline"
                   onClick={handleCancel}
-                  disabled={isPending}
+                  disabled={isUpdating}
                   className="w-full sm:w-32"
                 >
                   Cancel

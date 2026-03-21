@@ -1,35 +1,23 @@
+// src/hooks/list/useListReorder.ts
 import { useState } from "react";
-import {
-  useSuspenseQuery,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTRPC } from "@/trpc";
 import { useBannerStore } from "@steel-cut/steel-lib";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/../server/trpc";
 
-type RouterOutput = inferRouterOutputs<AppRouter>;
-export type List = RouterOutput["list"]["getAll"][number];
+type List = inferRouterOutputs<AppRouter>["list"]["getAll"][number];
 
-export function useLists() {
+export function useListReorder() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const { show: showBanner } = useBannerStore();
 
   const listsQueryKey = trpc.list.getAll.queryKey();
 
-  const { data: lists = [] } = useSuspenseQuery(
-    trpc.list.getAll.queryOptions(undefined, {
-      staleTime: 1000 * 60 * 30,
-      gcTime: 1000 * 60 * 60 * 24,
-    }),
-  );
-
   const [pendingReorder, setPendingReorder] = useState<List[] | null>(null);
-  const displayedLists = pendingReorder ?? lists;
 
-  const reorderMutation = useMutation(
+  const mutation = useMutation(
     trpc.list.reorder.mutationOptions({
       onMutate: async (updates: { id: string; order: number }[]) => {
         await queryClient.cancelQueries({ queryKey: listsQueryKey });
@@ -41,10 +29,7 @@ export function useLists() {
           return update ? { ...list, order: update.order } : list;
         });
 
-        newLists.sort((a, b) => {
-          const diff = a.order - b.order;
-          return Math.abs(diff) < 1e-9 ? 0 : diff < 0 ? -1 : 1;
-        });
+        newLists.sort((a, b) => a.order - b.order);
 
         setPendingReorder(newLists);
         queryClient.setQueryData(listsQueryKey, newLists);
@@ -78,9 +63,13 @@ export function useLists() {
     }),
   );
 
+  const updateListOrder = mutation.mutate;
+
+  const isReordering = mutation.isPending;
+
   return {
-    lists: displayedLists,
-    updateListOrder: reorderMutation.mutate,
-    isReordering: reorderMutation.isPending,
+    pendingReorder,
+    updateListOrder,
+    isReordering,
   };
 }

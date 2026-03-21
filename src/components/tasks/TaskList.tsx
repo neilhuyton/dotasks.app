@@ -1,6 +1,10 @@
-import { type Task } from "@/hooks/useListTasks";
 import { Link } from "@tanstack/react-router";
 import { SortableTaskList } from "./SortableTaskList";
+import type { AppRouter } from "server/trpc";
+import type { inferRouterOutputs } from "@trpc/server";
+
+type RouterOutput = inferRouterOutputs<AppRouter>;
+type Task = RouterOutput["task"]["getByList"][number];
 
 interface TaskListProps {
   tasks: Task[];

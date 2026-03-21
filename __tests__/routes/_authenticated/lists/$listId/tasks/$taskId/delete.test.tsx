@@ -216,6 +216,7 @@ describe("Delete Task Confirmation Page (/_authenticated/lists/$listId/tasks/$ta
           isPinned: false,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
+          userId: "user-test-123",
         },
       ]),
     );
