@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { TaskItem } from "@/components/tasks/TaskItem";
 import { useTaskRead } from "@/hooks/task/useTaskRead";
 import { useTaskToggle } from "@/hooks/task/useTaskToggle";
 import { useTaskCurrent } from "@/hooks/task/useTaskCurrent";
