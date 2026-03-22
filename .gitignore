@@ -32,6 +32,6 @@ dist-ssr
 
 .tanstack
 
-supabase
+supabase/*
 
 coverage
