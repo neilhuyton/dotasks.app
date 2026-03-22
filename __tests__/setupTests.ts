@@ -1,5 +1,3 @@
-// __tests__/setupTests.ts
-
 import { vi, beforeAll, afterEach, afterAll } from "vitest";
 import { server } from "../__mocks__/server";
 import fetch, { Request } from "node-fetch";
@@ -116,7 +114,7 @@ vi.mock("@/lib/supabase", () => {
 });
 
 beforeAll(() => {
-  server.listen({ onUnhandledRequest: "warn" });
+  server.listen({ onUnhandledRequest: "bypass" });
   server.use(
     http.get("https://*.supabase.co/realtime/v1/websocket", () => {
       return new HttpResponse(null, {

@@ -17,7 +17,7 @@ model User {
   updatedAt DateTime @updatedAt
 
   todoLists TodoList[]
-  tasks     Task[] // ← Added this: opposite side of the one-to-many relation
+  tasks     Task[]  
 
   @@index([createdAt])
   @@map("user")

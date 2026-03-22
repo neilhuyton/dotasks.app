@@ -1,4 +1,3 @@
-// netlify/functions/keep-trpc-warm.ts
 
 import type { Config } from "@netlify/functions";
 

@@ -1,5 +1,3 @@
-// __tests__/utils/testCaller.ts
-
 import { vi } from "vitest";
 import { mockDeep } from "vitest-mock-extended";
 import { PrismaClient, Prisma } from "@prisma/client";
@@ -41,8 +39,6 @@ export function createPublicCaller(overrides: Partial<Context> = {}) {
   return createCaller({
     prisma: mockPrisma,
     userId: null, 
-    email: null, 
-
     ...overrides,
   });
 }
@@ -51,7 +47,6 @@ export function createProtectedCaller(overrides: Partial<Context> = {}) {
   return createCaller({
     prisma: mockPrisma,
     userId: "test-user-id",
-    email: "test-user@example.com",
     ...overrides,
   });
 }
