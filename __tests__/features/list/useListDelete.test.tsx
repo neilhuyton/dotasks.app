@@ -3,7 +3,7 @@ import { renderHook, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpcMsw } from "../../../__mocks__/trpcMsw";
 import { server } from "../../../__mocks__/server";
-import { useListDelete } from "@/hooks/list/useListDelete";
+import { useListDelete } from "@/features/lists/useListDelete";
 import { TRPCError } from "@trpc/server";
 import { TRPCProvider } from "@/trpc";
 import { trpcClient } from "@/trpc";

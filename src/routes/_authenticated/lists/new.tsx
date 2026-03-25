@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { useListCreate } from "@/hooks/list/useListCreate";
+import { useListCreate } from "@/features/lists/useListCreate";
 import { trpc } from "@/trpc";
 
 export const Route = createFileRoute("/_authenticated/lists/new")({

@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { trpc } from "@/trpc";
 import { RouteError } from "@steel-cut/steel-lib";
 import { useQuery } from "@tanstack/react-query";
-import { useTaskDelete } from "@/hooks/task/useTaskDelete";
+import { useTaskDelete } from "@/features/tasks/useTaskDelete";
 
 export const Route = createFileRoute(
   "/_authenticated/lists/$listId/tasks/$taskId/delete",

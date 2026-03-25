@@ -6,7 +6,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/trpc";
 import { useBannerStore } from "@steel-cut/steel-lib";
-import { useTaskCreate } from "@/hooks/task/useTaskCreate";
+import { useTaskCreate } from "@/features/tasks/useTaskCreate";
 
 export const Route = createFileRoute("/_authenticated/lists/$listId/tasks/new")(
   {

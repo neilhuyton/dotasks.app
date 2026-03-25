@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import { FabButton, RouteError } from "@steel-cut/steel-lib";
-import { useListRead } from "@/hooks/list/useListRead";
-import { useListReorder } from "@/hooks/list/useListReorder";
+import { useListRead } from "@/features/lists/useListRead";
+import { useListReorder } from "@/features/lists/useListReorder";
 import { trpc } from "@/trpc";
 import { SortableListsTable } from "@/features/lists/SortableListsTable";
 

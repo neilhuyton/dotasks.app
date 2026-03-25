@@ -10,7 +10,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useTaskUpdate } from "@/hooks/task/useTaskUpdate";
+import { useTaskUpdate } from "@/features/tasks/useTaskUpdate";
 
 const editTaskSchema = z.object({
   title: z.string().min(1, "Task name is required").trim(),

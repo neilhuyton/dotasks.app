@@ -3,7 +3,7 @@ import { renderHook, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpcMsw } from "../../../__mocks__/trpcMsw";
 import { server } from "../../../__mocks__/server";
-import { useTaskUpdate } from "@/hooks/task/useTaskUpdate";
+import { useTaskUpdate } from "@/features/tasks/useTaskUpdate";
 import { TRPCProvider } from "@/trpc";
 import { trpcClient } from "@/trpc";
 import { trpc } from "@/trpc";
@@ -17,8 +17,8 @@ vi.mock("@steel-cut/steel-lib", async (importOriginal) => {
     ...actual,
     useBannerStore: vi.fn(() => ({
       show: vi.fn(),
-      banner: null, 
-      hide: vi.fn(), 
+      banner: null,
+      hide: vi.fn(),
     })),
   };
 });

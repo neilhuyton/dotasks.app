@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useListRealtime } from "@/hooks/list/useListRealtime";
+import { useListRealtime } from "@/features/lists/useListRealtime";
 import { useAuthStore } from "@/store/authStore";
 import { useRealtimeSubscription } from "@steel-cut/steel-lib";
 import { trpc } from "@/trpc";

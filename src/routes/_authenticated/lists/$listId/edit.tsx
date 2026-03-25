@@ -10,7 +10,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useListUpdate } from "@/hooks/list/useListUpdate";
+import { useListUpdate } from "@/features/lists/useListUpdate";
 
 const editListSchema = z.object({
   title: z.string().min(1, "List name is required").trim(),

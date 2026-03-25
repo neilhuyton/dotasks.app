@@ -3,7 +3,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpcMsw } from "../../../__mocks__/trpcMsw";
 import { server } from "../../../__mocks__/server";
-import { useTaskRead } from "@/hooks/task/useTaskRead";
+import { useTaskRead } from "@/features/tasks/useTaskRead";
 import { TRPCProvider } from "@/trpc";
 import { trpcClient } from "@/trpc";
 import type { inferRouterOutputs } from "@trpc/server";

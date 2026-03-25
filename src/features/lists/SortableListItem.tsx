@@ -2,7 +2,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 import { ListItem } from "./ListItem";
-import type { List } from "@/hooks/list/useListRead";
+import type { List } from "@/features/lists/useListRead";
 import { Link } from "@tanstack/react-router";
 
 interface SortableListItemProps {

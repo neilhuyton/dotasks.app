@@ -3,12 +3,12 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpcMsw } from "../../../__mocks__/trpcMsw";
 import { server } from "../../../__mocks__/server";
-import { useListUpdate } from "@/hooks/list/useListUpdate";
+import { useListUpdate } from "@/features/lists/useListUpdate";
 import { TRPCError } from "@trpc/server";
 import { TRPCProvider } from "@/trpc";
 import { trpcClient } from "@/trpc";
 import { trpc } from "@/trpc";
-import type { ListSummary, ListDetail } from "@/hooks/list/types";
+import type { ListSummary, ListDetail } from "@/features/lists/types";
 import { suppressActWarnings } from "../../utils/act-suppress";
 
 suppressActWarnings();

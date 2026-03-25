@@ -7,11 +7,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/authStore";
 import { FabButton, RouteError } from "@steel-cut/steel-lib";
 import { useNavigate } from "@tanstack/react-router";
-import { useTaskReorder } from "@/hooks/task/useTaskReorder";
-import { useTaskCurrent } from "@/hooks/task/useTaskCurrent";
-import { useTaskToggle } from "@/hooks/task/useTaskToggle";
-import { useTaskDelete } from "@/hooks/task/useTaskDelete";
-import { useTaskRead } from "@/hooks/task/useTaskRead";
+import { useTaskReorder } from "@/features/tasks/useTaskReorder";
+import { useTaskCurrent } from "@/features/tasks/useTaskCurrent";
+import { useTaskToggle } from "@/features/tasks/useTaskToggle";
+import { useTaskDelete } from "@/features/tasks/useTaskDelete";
+import { useTaskRead } from "@/features/tasks/useTaskRead";
 import TaskList from "@/features/tasks/TaskList";
 
 export const Route = createFileRoute("/_authenticated/lists/$listId/")({
