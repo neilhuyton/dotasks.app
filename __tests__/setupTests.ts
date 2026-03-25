@@ -116,7 +116,7 @@ vi.mock("@/lib/supabase", () => {
 });
 
 beforeAll(() => {
-  server.listen({ onUnhandledRequest: "warn" });
+  server.listen({ onUnhandledRequest: "bypass" });
   server.use(
     http.get("https://*.supabase.co/realtime/v1/websocket", () => {
       return new HttpResponse(null, {

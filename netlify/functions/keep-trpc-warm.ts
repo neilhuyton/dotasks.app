@@ -1,12 +1,10 @@
-// netlify/functions/keep-trpc-warm.ts
-
 import type { Config } from "@netlify/functions";
 
 export default async () => {
   const baseUrl =
     process.env.DEPLOY_PRIME_URL ||
     process.env.URL ||
-    "https://dotasksapp.netlify.app";
+    "https://exampleapp.netlify.app";
 
   const trpcEndpoint = `${baseUrl}/trpc`;
   const pingUrl = `${trpcEndpoint}/health.ping?batch=1`;

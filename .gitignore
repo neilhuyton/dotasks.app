@@ -28,15 +28,10 @@ dist-ssr
 # Local Netlify folder
 .netlify
 
-# Playwright
-/test-results/
-/playwright-report/
-/playwright/.cache/
-
 .env
 
 .tanstack
 
-supabase
+supabase/*
 
 coverage
