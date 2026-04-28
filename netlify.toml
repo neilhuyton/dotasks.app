@@ -1,6 +1,6 @@
 [build]
-  publish = "dist"          # ← change this if your output folder is different
-  command = "npm run build" # ← your current build command, keep it here as default
+  publish = "dist"        
+  command = "npm run build"
 
 [context.production]
   command = "npx prisma generate && npm run build"
@@ -10,7 +10,6 @@
   to = "/.netlify/functions/trpc/:splat"
   status = 200
   force = true
-  # This line forwards the Authorization header to the function
   headers = { Authorization = "{Authorization}" }
 
 [[redirects]]
